@@ -8,7 +8,8 @@
 <meta name="theme-color" content="#cfe3f2" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#081326" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icons/icon-192.png">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -56,9 +57,10 @@
         <button type="button" class="icon-btn glass" data-action="wind" aria-pressed="false" aria-label="Masquer le vent animé"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h7"/></svg></button>
         <button type="button" class="layer-btn glass" data-action="model" aria-label="Modèle de prévision"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18a4 4 0 0 1-.5-8A6 6 0 0 1 18 9a4.5 4.5 0 0 1-.5 9z"/></svg><span>AROME HD</span></button>
         <button type="button" class="layer-btn glass" data-action="layer" aria-label="Fond de carte"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 3 8l9 5 9-5-9-5z"/><path d="M3 13l9 5 9-5"/></svg><span>Plan</span></button>
-        <button type="button" class="icon-btn glass" data-action="overview" aria-label="Voir tous les spots"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
       </span>
     </div></div>
+    <!-- COMPOSANT: legend (visible en mode carte) -->
+    <div class="dock-row legend-row"><div class="dock-inner legend glass" id="legend" aria-label="Légende des marqueurs"></div></div>
     <!-- COMPOSANT: spot-carousel -->
     <div class="carousel" id="carousel" aria-label="Spots, du meilleur au moins bon"></div>
     <!-- COMPOSANT: time-scrubber -->

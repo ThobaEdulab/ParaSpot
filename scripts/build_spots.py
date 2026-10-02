@@ -469,7 +469,7 @@ GONFLAGE_EXTRA = [dict(
 
 def build():
     old = json.loads((ROOT / "data/spots.json").read_text())
-    gonflage = [s for s in old["spots"] if s["kind"] == "gonflage" and s["id"] != "mont-du-pere"]
+    gonflage = [s for s in old["spots"] if s["kind"] == "gonflage" and s["id"] == "bellangerais"]  # à Rennes, seule la Bellangerais est assez grande
     for s in gonflage:
         s.setdefault("region", "Rennes")
         s.setdefault("stations", [])

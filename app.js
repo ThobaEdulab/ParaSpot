@@ -22,7 +22,7 @@ const LEVEL_FFVL = { vert: { label: "Brevet initial", color: "#2e9d55" }, bleu: 
 
 /* Réglages : stockés sur l'appareil */
 const settings = Object.assign(
-  { level: "intermediaire", scoreMin: 55, firstDeparture: "07:00", lastTrain: "20:00", theme: "system", model: "arome", includeCar: true, notifEnabled: false },
+  { level: "intermediaire", scoreMin: 55, firstDeparture: "07:00", lastTrain: "20:00", theme: "system", model: "arome", includeCar: true, includeTreuil: false, hidden: [], kind: "tout", notifEnabled: false },
   store.get("fv-settings-v3", {})
 );
 const saveSettings = () => { const { notifEnabled, ...s } = settings; store.set("fv-settings-v3", s); };
@@ -58,7 +58,9 @@ function prepareSpots(data) {
   STATIONS = Object.values(st);
   applySpotFilter();
 }
-function applySpotFilter() { SPOTS = ALL_SPOTS.filter(s => settings.includeCar || s.access.mode !== "voiture"); }
+function applySpotFilter() {
+  SPOTS = ALL_SPOTS.filter(s => (settings.includeCar || s.access.mode !== "voiture") && (settings.includeTreuil || s.profile !== "treuil") && !settings.hidden.includes(s.id));
+}
 
 function buildDays(results) {
   const today = toLocalDate(new Date()), tomorrow = toLocalDate(new Date(Date.now() + 864e5));
@@ -624,7 +626,10 @@ function renderPanel(s, notifState, onbStep, subJson) {
       <div class="field"><div class="row"><label class="lbl" for="set-score">Score minimum d'un créneau</label><output class="big-val num" id="out-score">${s.scoreMin}</output></div><input type="range" id="set-score" min="30" max="90" step="5" value="${s.scoreMin}" data-setting="scoreMin"></div>
       <div class="field"><div class="row"><label class="lbl" for="set-dep">Premier départ de Rennes</label><input type="time" id="set-dep" value="${s.firstDeparture}" data-setting="firstDeparture"></div></div>
       <div class="field"><div class="row"><label class="lbl" for="set-last">Dernier train retour</label><input type="time" id="set-last" value="${s.lastTrain}" data-setting="lastTrain"></div><p class="hint">Les heures hors de cette fenêtre sont grisées sur le ruban du temps.</p></div>
-      <div class="field"><label class="check"><input type="checkbox" data-setting="includeCar" ${s.includeCar ? "checked" : ""}>Afficher aussi les sites sans gare proche (voiture, covoiturage club)</label></div>
+      <div class="field"><label class="check"><input type="checkbox" data-setting="includeCar" ${s.includeCar ? "checked" : ""}>Afficher aussi les sites sans gare proche (voiture, covoiturage club)</label>
+        <label class="check"><input type="checkbox" data-setting="includeTreuil" ${s.includeTreuil ? "checked" : ""}>Afficher les terrains de treuil</label>
+        <p class="hint">Treuils : ne se pratiquent qu'avec un club. Saint-Séglin et Massérac sont des terrains FFVL, Crocy et Martigny viennent de wikiparapente, Sougéal seulement de ParaglidingEarth : à confirmer auprès des clubs.</p></div>
+      <div class="field"><span class="lbl">Mes spots</span><p class="hint">Décoche les spots que tu ne veux pas voir sur la carte ni dans les cartes.</p>${renderSpotPicker(s)}</div>
     </div>
     <div class="group">
       <div class="field"><div class="row"><span class="lbl">Alertes créneaux</span><span class="status ${s.notifEnabled ? "status--on" : "status--off"}">${s.notifEnabled ? "Actives" : "Inactives"}</span></div>
@@ -632,6 +637,7 @@ function renderPanel(s, notifState, onbStep, subJson) {
       <div class="field"><div class="btn-row">${s.notifEnabled ? "" : `<button type="button" class="btn btn--wing" data-action="onb-start">${I.bell}Activer</button>`}<button type="button" class="btn btn--ghost" data-action="test-notif">Tester une notification</button></div>${notifState ? `<p class="hint" role="status">${esc(notifState)}</p>` : ""}${subJson ? `<label class="lbl" for="sub-box" style="font-size:14px">Abonnement de cet appareil (secret GitHub WEB_PUSH_SUBSCRIPTION)</label><textarea id="sub-box" class="sub-box" readonly>${esc(subJson)}</textarea><button type="button" class="btn btn--ghost" data-action="copy-sub">Copier l'abonnement</button>` : ""}</div>
     </div>
     <div class="group"><div class="field"><span class="lbl">Apparence</span>${seg("theme", [["system", "Système"], ["light", "Clair"], ["dark", "Sombre"]], s.theme)}</div></div>
+    <div class="group"><div class="field"><span class="lbl">Légende de la carte</span><div class="legend-in">${renderLegend()}</div></div></div>
     <div class="group"><div class="field"><span class="lbl">Installer sur le téléphone</span><p class="hint">Android (Chrome) : menu ⋮ puis « Installer l'application ». iPhone (Safari) : bouton Partager puis « Sur l'écran d'accueil ».</p>${installPrompt ? `<button type="button" class="btn btn--wing" data-action="install">Installer ParaSpot</button>` : ""}</div></div>
     <p class="hint">Prévisions Open-Meteo (AROME HD et AROME/ARPEGE Météo-France, ECMWF IFS, NOAA GFS ; CC BY 4.0), marées Open-Meteo Marine indicatives. Fiches : wikiparapente.fr, FFVL, ParaglidingEarth, spots.guru, clubs. Balises et carte : Spot Air. Fond de carte embarqué : Natural Earth. ${ALL_SPOTS.length} spots.</p>
   </div>`;
@@ -640,7 +646,7 @@ function renderPanel(s, notifState, onbStep, subJson) {
 /* =========================================================
    MOTEUR : caméra, champ de vent, ciel
    ========================================================= */
-const state = { subJson: "", windOn: true, layer: "plan", day: 0, kind: "tout", sel: null, hour: 14, playing: false, detail: false, panel: false, onbStep: -1, loading: false, offline: !navigator.onLine, notifState: "" };
+const state = { subJson: "", kindInit: true, windOn: true, layer: "plan", day: 0, kind: ["tout","gonflage","vol"].includes(settings.kind) ? settings.kind : "tout", sel: null, hour: 14, playing: false, detail: false, panel: false, onbStep: -1, loading: false, offline: !navigator.onLine, notifState: "" };
 const $ = s => document.querySelector(s);
 const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -652,7 +658,7 @@ const LAYERS = ["plan", "detail", "relief"];
 const LAYER_LABEL = { plan: "Plan", detail: "Détail", relief: "Relief" };
 const TILES = {
   plan: null,
-  detail: { light: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", dark: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", attr: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/attributions">CARTO</a>', max: 18 },
+  detail: { light: "https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png", dark: "https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png", attr: '© <a href="https://www.openstreetmap.org/copyright">contributeurs OpenStreetMap</a>, fond OpenStreetMap France', max: 19 },
   relief: { light: "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", dark: "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", attr: '© <a href="https://www.openstreetmap.org/copyright">contributeurs OpenStreetMap</a>, SRTM · style © <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)', max: 17 }
 };
 /* Couleurs du fond vectoriel embarqué (lues selon le thème) */
@@ -714,7 +720,7 @@ function setTiles() {
   buildBasemap(); $("#map").classList.toggle("has-tiles", !!t);
   document.querySelectorAll('[data-action="layer"]').forEach(b => { b.querySelector("span").textContent = LAYER_LABEL[state.layer]; b.setAttribute("aria-label", `Fond de carte : ${LAYER_LABEL[state.layer]}. Changer.`); });
   if (!t) { $("#attrib").innerHTML = 'Fond embarqué : <a href="https://www.naturalearthdata.com/">Natural Earth</a> (domaine public)'; return; }
-  tileLayer = L.tileLayer(t[dark ? "dark" : "light"], { maxZoom: t.max, subdomains: "abc", detectRetina: false, className: state.layer === "relief" && dark ? "tiles-dim" : "tiles-" + state.layer, crossOrigin: true }).addTo(map);
+  tileLayer = L.tileLayer(t[dark ? "dark" : "light"], { maxZoom: t.max, subdomains: "abc", detectRetina: false, className: dark ? (state.layer === "detail" ? "tiles-invert" : "tiles-dim") : "tiles-" + state.layer, crossOrigin: true }).addTo(map);
   $("#attrib").innerHTML = t.attr;
 }
 function viewPad() { return { paddingTopLeft: [28, $(".top").offsetHeight + 44], paddingBottomRight: [28, $(".dock").offsetHeight + 6] }; }
@@ -729,6 +735,7 @@ function frameAll(instant) { flyTo([...items().map(x => [x.spot.lat, x.spot.lon]
 function renderRoute(spot) {
   if (!routeLayer) return;
   routeLayer.clearLayers();
+  return; // tracé train / skate retiré (charge visuelle) : le trajet est détaillé dans le plan de vol
   const r = routeLatLngs(spot);
   if (r.train.length) { L.polyline(r.train, { className: "m-route-glow", interactive: false }).addTo(routeLayer); L.polyline(r.train, { className: "m-route-train", interactive: false }).addTo(routeLayer); }
   if (r.car) { L.polyline(r.car, { className: "m-route-glow", interactive: false }).addTo(routeLayer); L.polyline(r.car, { className: "m-route-car", interactive: false }).addTo(routeLayer); }
@@ -978,7 +985,7 @@ document.addEventListener("click", e => {
   const el = e.target.closest("[data-action]"); if (!el) return;
   const a = el.dataset.action;
   if (a === "day") { setMapFocus(false); state.day = +el.dataset.day; togglePlay(false); pickDefault(); renderAll(); }
-  else if (a === "kind") { setMapFocus(false); state.kind = el.dataset.kind; if (!items().some(x => x.spot.id === state.sel)) pickDefault(); renderAll(); }
+  else if (a === "kind") { setMapFocus(false); state.kind = el.dataset.kind; settings.kind = state.kind; saveSettings(); if (!items().some(x => x.spot.id === state.sel)) pickDefault(); renderAll(); }
   else if (a === "card") { if (el.dataset.spot === state.sel) openDetail(el.dataset.spot); else { state.sel = el.dataset.spot; syncSelection(true); el.scrollIntoView({ inline: "center", block: "nearest", behavior: reduce ? "instant" : "smooth" }); } }
   else if (a === "layer") { state.layer = LAYERS[(LAYERS.indexOf(state.layer) + 1) % LAYERS.length]; setTiles(); }
   else if (a === "model") { settings.model = MODEL_KEYS[(MODEL_KEYS.indexOf(settings.model) + 1) % MODEL_KEYS.length]; saveSettings(); buildForecast(); if (!state.detail) pickDefault(); renderAll(!state.detail); updateModelButton(); if (state.detail) openDetail(state.sel); }
@@ -1008,22 +1015,35 @@ document.addEventListener("input", e => {
   if (e.target.id === "set-score") $("#out-score").textContent = e.target.value;
 });
 document.addEventListener("change", e => {
+  if (e.target.dataset.spotToggle) {
+    const id = e.target.dataset.spotToggle;
+    settings.hidden = e.target.checked ? settings.hidden.filter(x => x !== id) : [...new Set([...settings.hidden, id])];
+    saveSettings(); applySpotFilter(); if (!items().some(x => x.spot.id === state.sel)) pickDefault(); renderAll(false); return;
+  }
+  if (e.target.dataset.regionToggle) {
+    const ids = ALL_SPOTS.filter(s => (s.region || "Autre") === e.target.dataset.regionToggle).map(s => s.id);
+    settings.hidden = e.target.checked ? settings.hidden.filter(x => !ids.includes(x)) : [...new Set([...settings.hidden, ...ids])];
+    saveSettings(); applySpotFilter(); if (!items().some(x => x.spot.id === state.sel)) pickDefault(); renderAll(false); renderPanelOnly(); return;
+  }
   const k = e.target.dataset.setting; if (!k) return;
   if (e.target.type === "checkbox") settings[k] = e.target.checked;
   else if (k === "scoreMin") settings[k] = +e.target.value;
   else if (e.target.value) settings[k] = e.target.value;
   saveSettings();
-  if (k === "includeCar") { applySpotFilter(); if (!items().some(x => x.spot.id === state.sel)) pickDefault(); }
-  if (["scoreMin", "firstDeparture", "lastTrain", "includeCar"].includes(k)) { buildForecast(); renderAll(false); }
+  if (["includeCar", "includeTreuil"].includes(k)) { applySpotFilter(); if (!items().some(x => x.spot.id === state.sel)) pickDefault(); }
+  if (["scoreMin", "firstDeparture", "lastTrain", "includeCar", "includeTreuil"].includes(k)) { buildForecast(); renderAll(false); renderPanelOnly(); }
 });
 document.addEventListener("keydown", e => { if (e.key === "Tab") document.body.classList.add("kbd"); });
 document.addEventListener("pointerdown", () => document.body.classList.remove("kbd"));
 document.addEventListener("keydown", e => { if (e.key === "Escape") { if (state.panel) closePanel(); else if (state.detail) closeDetail(); } });
 /* Le carrousel pilote la carte : la carte centrée devient la sélection */
-let scrollT = null;
+let scrollT = null, userScroll = false;
+["touchstart", "pointerdown", "wheel"].forEach(ev => $("#carousel").addEventListener(ev, () => { userScroll = true; }, { passive: true }));
 $("#carousel").addEventListener("scroll", () => {
+  if (!userScroll || document.body.classList.contains("map-focus")) return; // défilement provoqué par l'app : on ne change pas la sélection
   clearTimeout(scrollT);
   scrollT = setTimeout(() => {
+    userScroll = false;
     const mid = innerWidth / 2; let best = null, dist = 1e9;
     document.querySelectorAll(".card").forEach(c => { const r = c.getBoundingClientRect(), d = Math.abs(r.left + r.width / 2 - mid); if (d < dist) { dist = d; best = c; } });
     if (best && best.dataset.spot !== state.sel) { state.sel = best.dataset.spot; syncSelection(true); }
@@ -1104,6 +1124,21 @@ function renderSpotAir(spot) {
     <div class="links">${spot.links.spotair ? `<a class="lk" href="${esc(spot.links.spotair)}" target="_blank" rel="noopener">${I.ext}Fiche Spot Air du site</a>` : ""}<a class="lk" href="${esc(open)}" target="_blank" rel="noopener">${I.pin}Carte Spot Air</a></div>
     <p class="hint">Carte, décollages FFVL et balises en temps réel : Spot Air (spotair.mobi).${ids.length ? "" : " Pas de balise identifiée pour ce site : la carte montre les balises proches."}</p>
   </div>`;
+}
+function renderSpotPicker(s) {
+  const regions = {};
+  ALL_SPOTS.filter(x => (s.includeCar || x.access.mode !== "voiture") && (s.includeTreuil || x.profile !== "treuil")).forEach(x => { (regions[x.region || "Autre"] ||= []).push(x); });
+  return `<div class="picker">${Object.entries(regions).map(([r, list]) => {
+    const on = list.filter(x => !s.hidden.includes(x.id)).length;
+    return `<details class="pk-reg"><summary><label class="check" onclick="event.stopPropagation()"><input type="checkbox" data-region-toggle="${esc(r)}" ${on ? "checked" : ""}>${esc(r)}</label><span class="pk-n">${on}/${list.length}</span></summary>
+      ${list.map(x => `<label class="check pk-spot"><input type="checkbox" data-spot-toggle="${x.id}" ${s.hidden.includes(x.id) ? "" : "checked"}>${kindIcon(x.kind)}${esc(x.name)}</label>`).join("")}</details>`;
+  }).join("")}</div>`;
+}
+function renderLegend() {
+  const it = (cls, ic, txt) => `<span class="lg"><span class="mk ${cls}" style="width:30px;height:30px"><span class="mk-dot" style="animation:none">${ic}</span></span>${txt}</span>`;
+  return `${it("mk--top", renderVerdictIcon("top"), "Top")}${it("mk--ok", renderVerdictIcon("ok"), "Jouable")}${it("mk--limite", renderVerdictIcon("limite"), "Limite")}${it("mk--non", renderVerdictIcon("non"), "Non (vent ou pluie)")}${it("mk--off", renderVerdictIcon("non"), "Pas atteignable à cette heure")}
+    <span class="lg"><span class="mk-cluster c--top" style="width:30px;height:30px;border-width:3px;animation:none"><b style="font-size:12px">3</b></span>Plusieurs spots : touche pour zoomer</span>
+    <span class="lg"><span class="stn">${I.train}</span>Gare</span>`;
 }
 function updateModelButton() {
   document.querySelectorAll('[data-action="model"]').forEach(b => { b.querySelector("span").textContent = { arome: "AROME", ecmwf: "ECMWF", gfs: "GFS" }[settings.model]; b.setAttribute("aria-label", `Modèle de prévision : ${MODELS[settings.model].label}. Changer.`); });
@@ -1224,7 +1259,7 @@ function openFromUrl() {
   if (p.get("view") === "map") setMapFocus(true);
 }
 async function init() {
-  document.querySelector(".logo").innerHTML = sailSvg(26);
+  document.querySelector(".logo").innerHTML = '<img src="icons/icon.svg" alt="" width="44" height="44">';
   document.querySelector('[data-action="open-panel"]').innerHTML = ICON_GEAR;
   $(".glider").innerHTML = sailSvg(56);
   if ("serviceWorker" in navigator) {
@@ -1236,6 +1271,7 @@ async function init() {
   if ("Notification" in window && Notification.permission === "granted") settings.notifEnabled = true;
   windColors(); windResize();
   initMap(); map.setView([48.3, -2.0], 7); buildLabels(); zoomClasses();
+  $("#legend").innerHTML = renderLegend();
   applyTheme(); updateModelButton();
   windStart();
   try { prepareSpots(await (await fetch("data/spots.json")).json()); } catch { state.error = true; renderWaiting(); return; }

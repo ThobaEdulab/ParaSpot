@@ -17,7 +17,7 @@ const tomorrow = toLocalDate(new Date(now.getTime() + 86400000));
 const targetDays = mode === "morning" ? [today, tomorrow] : [tomorrow];
 
 const spots = spotsData.spots.filter(
-  (s) => !config.excludeSpots.includes(s.id) && config.notify[s.kind] !== false && (config.includeCar !== false || s.access.mode !== "voiture")
+  (s) => !config.excludeSpots.includes(s.id) && config.notify[s.kind] !== false && (config.includeCar !== false || s.access.mode !== "voiture") && (config.includeTreuil === true || s.profile !== "treuil")
 );
 
 // Mode test hors-ligne : MOCK=chemin/vers/reponses.json (format renvoyé par fetchAll)

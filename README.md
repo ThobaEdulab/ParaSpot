@@ -1,3 +1,5 @@
+<img src="assets/paraspot-logo.svg" alt="ParaSpot" height="64">
+
 # ParaSpot
 
 Application web installable (PWA) qui envoie sur ton téléphone les créneaux favorables pour :
@@ -14,7 +16,7 @@ Prévisions de **trois modèles au choix et comparés** (AROME HD de Météo-Fra
 | `basemap.js`, `vendor/leaflet.*` | Fond de carte embarqué (Natural Earth) et Leaflet, pour fonctionner hors-ligne |
 | `design/` | Maquettes Claude Design d'origine (données fictives), gardées comme référence |
 | `scoring.js` | Moteur de prévision partagé app + robot |
-| `data/spots.json` | 70 spots : 8 de gonflage, 62 de vol (Bretagne, Normandie dont Clécy, Pays de la Loire, treuils) |
+| `data/spots.json` | 64 spots : 2 de gonflage (Bellangerais à Rennes, Mont du Père en Suisse normande), 62 de vol (Bretagne, Normandie dont Clécy, Pays de la Loire, treuils) |
 | `scripts/build_spots.py`, `scripts/spots_md.py` | Fiches des spots et génération de `docs/SPOTS.md` |
 | `data/config.json` | Réglages des notifications |
 | `manifest.webmanifest`, `sw.js`, `icons/` | Tout ce qui fait de la page une PWA |

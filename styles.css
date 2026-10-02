@@ -164,6 +164,7 @@ svg.ic--fill{fill:currentColor;stroke:none}
 .topbar{display:flex;align-items:center;gap:10px}
 .logo{width:var(--tap);height:var(--tap);border-radius:14px;display:grid;place-items:center;color:#fff;background:linear-gradient(135deg,var(--wing),var(--wing-2));box-shadow:0 6px 18px rgba(255,90,54,.35);flex:none;border:0}
 .logo svg{width:26px;height:26px}
+.logo{background:#0b1b33;padding:0;overflow:hidden}.logo img{width:100%;height:100%;display:block}
 .days{flex:1;display:flex;padding:4px;border-radius:var(--r-pill);gap:2px;min-width:0}
 .days button{flex:1;min-height:36px;border:0;background:transparent;border-radius:var(--r-pill);font-weight:800;font-size:14px;color:var(--ink-2);white-space:nowrap;position:relative;transition:color .3s}
 .days button[aria-pressed="true"]{color:var(--ink);background:var(--glass-strong);box-shadow:0 2px 8px rgba(11,27,51,.12)}
@@ -531,3 +532,42 @@ path.m-route-car{vector-effect:none}
 
 .layer-btn span{white-space:nowrap}
 @media (max-width:440px){[data-action="layer"] span{display:none}[data-action="layer"]{padding:0 11px}}
+
+/* =========================================================
+   CORRECTIFS v3.1 (retours sur téléphone)
+   ========================================================= */
+/* Rien ne doit dépasser l'écran : les éléments de grille peuvent rétrécir */
+.top,.dock{grid-template-columns:minmax(0,1fr)}
+.top > *,.dock > *,.dock-row,.dock-inner{min-width:0;max-width:100%}
+.dock-head{flex-wrap:wrap;row-gap:8px}
+.tools{flex:none;margin-left:auto}
+.scrub-body{min-width:0}
+.scrub-hour{flex:none;min-width:52px}
+.attrib{white-space:normal;text-align:center}
+@media (max-width:420px){
+  .kinds button{padding:0 10px;font-size:13px}
+  [data-action="model"]{padding:0 10px}
+  [data-action="model"] svg{display:none}
+  .play{width:40px;height:40px}
+  .scrub{gap:8px}
+}
+/* Fond OpenStreetMap France en mode sombre */
+.tiles-invert{filter:invert(1) hue-rotate(180deg) brightness(.92) contrast(.9) saturate(.6)}
+/* Légende des marqueurs : visible seulement en mode carte */
+.legend-row{display:none}
+.map-focus .legend-row{display:block}
+.legend{display:flex;flex-wrap:wrap;gap:6px 12px;padding:10px 12px;border-radius:var(--r-lg);font-size:12px;font-weight:700;color:var(--ink-2)}
+.legend .lg,.legend-in .lg{display:inline-flex;align-items:center;gap:6px}
+.legend .mk,.legend-in .mk{position:relative;display:grid;place-items:center}
+.legend .mk-dot,.legend-in .mk-dot{width:22px;height:22px;border-width:2px}
+.legend .mk-dot svg,.legend-in .mk-dot svg{width:11px;height:11px}
+.legend .mk--top .mk-dot::after,.legend-in .mk--top .mk-dot::after{display:none}
+.legend-in{display:flex;flex-wrap:wrap;gap:10px 14px;font-size:13px;font-weight:700;color:var(--ink-2)}
+/* Sélecteur « Mes spots » */
+.picker{display:grid;gap:6px}
+.pk-reg{border:1px solid var(--hair);border-radius:var(--r-md);padding:4px 12px;background:var(--glass)}
+.pk-reg summary{display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;list-style:none}
+.pk-reg summary::-webkit-details-marker{display:none}
+.pk-n{font-size:12px;font-weight:800;color:var(--ink-3)}
+.pk-spot{min-height:38px;font-weight:600;font-size:14px;padding-left:8px}
+.pk-spot svg{width:16px;height:16px;color:var(--ink-3)}

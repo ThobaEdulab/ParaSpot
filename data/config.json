@@ -14,5 +14,6 @@
   "excludeSpots": [],
   "profiles": {},
   "model": "arome",
-  "includeCar": true
+  "includeCar": true,
+  "includeTreuil": false
 }

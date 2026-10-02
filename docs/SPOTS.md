@@ -1,6 +1,6 @@
 # Spots
 
-70 spots, générés depuis `data/spots.json` (script `scripts/spots_md.py`). Fiches compilées depuis wikiparapente.fr, la FFVL, ParaglidingEarth, spots.guru et les sites des clubs. Orientations et règles À VÉRIFIER sur la fiche FFVL et le panneau avant chaque vol. Accès (gare, distance, temps) : estimations.
+64 spots, générés depuis `data/spots.json` (script `scripts/spots_md.py`). Fiches compilées depuis wikiparapente.fr, la FFVL, ParaglidingEarth, spots.guru et les sites des clubs. Orientations et règles À VÉRIFIER sur la fiche FFVL et le panneau avant chaque vol. Accès (gare, distance, temps) : estimations.
 
 Pour ajouter ou corriger un spot : modifier `scripts/build_spots.py` puis lancer `python3 scripts/build_spots.py && python3 scripts/spots_md.py`.
 
@@ -9,12 +9,6 @@ Pour ajouter ou corriger un spot : modifier `scripts/build_spots.py` puis lancer
 | Spot | Type | Orientations | Accès depuis Rennes | Fiche | Fiabilité |
 |---|---|---|---|---|---|
 | Stade de la Bellangerais (Rennes (nord)) | Gonflage | toutes | Rennes, 3.2 km |  | moyenne |
-| Prairies Saint-Martin (Rennes (centre-nord)) | Gonflage | toutes | Rennes, 1.8 km |  | moyenne |
-| Parc des Gayeulles (Rennes (nord-est)) | Gonflage | toutes | Rennes, 5.9 km |  | moyenne |
-| Parc de Bréquigny (Rennes (sud)) | Gonflage | toutes | Rennes, 3.2 km |  | moyenne |
-| Prairies de la Prévalaye (Rennes (ouest)) | Gonflage | toutes | Rennes, 5.0 km |  | moyenne |
-| Étangs d'Apigné (Le Rheu (ouest de Rennes)) | Gonflage | toutes | Rennes, 6.5 km |  | moyenne |
-| Plaine de Baud (Rennes (est)) | Gonflage | toutes | Rennes, 2.2 km |  | faible |
 
 ## Suisse normande
 
