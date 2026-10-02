@@ -1,0 +1,3187 @@
+{
+ "version": "2026-10-02",
+ "note": "Fiches compilées depuis wikiparapente.fr, la FFVL, ParaglidingEarth, spots.guru et les sites des clubs. Orientations et règles À VÉRIFIER sur la fiche FFVL et le panneau avant chaque vol. Accès (gare, distance, temps) : estimations.",
+ "home": {
+  "name": "Rennes",
+  "lat": 48.1035,
+  "lon": -1.6725
+ },
+ "spots": [
+  {
+   "id": "bellangerais",
+   "name": "Stade de la Bellangerais",
+   "kind": "gonflage",
+   "profile": "gonflage",
+   "city": "Rennes (nord)",
+   "lat": 48.13183,
+   "lon": -1.6784,
+   "orientations": [
+    "N",
+    "NE",
+    "E",
+    "SE",
+    "S",
+    "SW",
+    "W",
+    "NW"
+   ],
+   "preferred": [
+    "W",
+    "SW",
+    "NW"
+   ],
+   "description": "Grand terrain en herbe (foot/rugby) dans un complexe avec piste d'athlétisme. Ouvert lun-sam 8h-22h, dim 8h-18h.",
+   "access": {
+    "mode": "local",
+    "summary": "Bus C5 ou 36 arrêt Bellangerais, ligne 14 arrêt Armorique. Vélo STAR à proximité.",
+    "travelMinutes": 16,
+    "rideKm": 3.2,
+    "ride": "Bus C5 ou 36 arrêt Bellangerais, ligne 14 arrêt Armorique. Vélo STAR à proximité."
+   },
+   "rules": [
+    "Équipement municipal : demander l'accord de la Direction des sports (ds@ville-rennes.fr, 02 23 62 15 35) avant d'y pratiquer.",
+    "Libérer le terrain dès qu'un créneau club ou scolaire commence."
+   ],
+   "warnings": [
+    "Tribune, bâtiments et arbres en bordure : rouleaux possibles. Se placer au centre, loin des obstacles (règle : 10 fois la hauteur de l'obstacle sous le vent)."
+   ],
+   "links": {
+    "fiche": "https://www.wiki-rennes.fr/Stade_de_la_Bellangerais"
+   },
+   "confidence": "moyenne",
+   "region": "Rennes",
+   "stations": [],
+   "sources": [
+    "Ville de Rennes",
+    "Office de tourisme"
+   ]
+  },
+  {
+   "id": "prairies-saint-martin",
+   "name": "Prairies Saint-Martin",
+   "kind": "gonflage",
+   "profile": "gonflage",
+   "city": "Rennes (centre-nord)",
+   "lat": 48.1222,
+   "lon": -1.6792,
+   "orientations": [
+    "N",
+    "NE",
+    "E",
+    "SE",
+    "S",
+    "SW",
+    "W",
+    "NW"
+   ],
+   "preferred": [
+    "SW",
+    "W",
+    "NE"
+   ],
+   "description": "Parc naturel urbain de 30 ha le long du canal d'Ille, grandes prairies. À 15 min à pied du centre.",
+   "access": {
+    "mode": "local",
+    "summary": "À pied ou en skate depuis le centre (rue de Saint-Malo / canal).",
+    "travelMinutes": 11,
+    "rideKm": 1.8,
+    "ride": "À pied ou en skate depuis le centre (rue de Saint-Malo / canal)."
+   },
+   "rules": [
+    "Espace public très fréquenté le week-end : pratiquer à l'écart des promeneurs.",
+    "Prairies en fauche tardive : herbe haute au printemps, éviter de piétiner les zones protégées."
+   ],
+   "warnings": [
+    "Haies et alignements d'arbres : choisir la prairie la plus dégagée face au vent.",
+    "Proximité de l'eau (canal, Ille)."
+   ],
+   "links": {
+    "fiche": "https://www.tourisme-rennes.com/decouvrir-rennes/nature/liste-jardins-parcs/"
+   },
+   "confidence": "moyenne",
+   "region": "Rennes",
+   "stations": [],
+   "sources": [
+    "Ville de Rennes",
+    "Office de tourisme"
+   ]
+  },
+  {
+   "id": "gayeulles",
+   "name": "Parc des Gayeulles",
+   "kind": "gonflage",
+   "profile": "gonflage",
+   "city": "Rennes (nord-est)",
+   "lat": 48.1335,
+   "lon": -1.6295,
+   "orientations": [
+    "N",
+    "NE",
+    "E",
+    "SE",
+    "S",
+    "SW",
+    "W",
+    "NW"
+   ],
+   "preferred": [
+    "W",
+    "SW"
+   ],
+   "description": "Le plus grand parc de Rennes (100 ha), grandes pelouses et plaines de jeux.",
+   "access": {
+    "mode": "local",
+    "summary": "Bus C3 / ligne 14 (arrêt Gayeulles) ou skate par la coulée verte.",
+    "travelMinutes": 25,
+    "rideKm": 5.9,
+    "ride": "Bus C3 / ligne 14 (arrêt Gayeulles) ou skate par la coulée verte."
+   },
+   "rules": [
+    "Espace public : rester à l'écart des familles, aires de jeux et parcours sportifs."
+   ],
+   "warnings": [
+    "Parc très boisé : ne garder que les grandes plaines dégagées, le vent y est souvent turbulent derrière les bois."
+   ],
+   "links": {
+    "fiche": "https://www.tourisme-rennes.com/decouvrir-rennes/nature/liste-jardins-parcs/"
+   },
+   "confidence": "moyenne",
+   "region": "Rennes",
+   "stations": [],
+   "sources": [
+    "Ville de Rennes",
+    "Office de tourisme"
+   ]
+  },
+  {
+   "id": "brequigny",
+   "name": "Parc de Bréquigny",
+   "kind": "gonflage",
+   "profile": "gonflage",
+   "city": "Rennes (sud)",
+   "lat": 48.0885,
+   "lon": -1.687,
+   "orientations": [
+    "N",
+    "NE",
+    "E",
+    "SE",
+    "S",
+    "SW",
+    "W",
+    "NW"
+   ],
+   "preferred": [
+    "W",
+    "SW"
+   ],
+   "description": "Parc de 20 ha avec de grands espaces ouverts.",
+   "access": {
+    "mode": "local",
+    "summary": "Métro a arrêt Henri Fréville puis 10 min à pied.",
+    "travelMinutes": 16,
+    "rideKm": 3.2,
+    "ride": "Métro a arrêt Henri Fréville puis 10 min à pied."
+   },
+   "rules": [
+    "Espace public très fréquenté : pratiquer en semaine ou tôt le matin."
+   ],
+   "warnings": [
+    "Arbres et bâtiments en périphérie."
+   ],
+   "links": {
+    "fiche": "https://www.tourisme-rennes.com/sortir/parc-de-brequigny/"
+   },
+   "confidence": "moyenne",
+   "region": "Rennes",
+   "stations": [],
+   "sources": [
+    "Ville de Rennes",
+    "Office de tourisme"
+   ]
+  },
+  {
+   "id": "prevalaye",
+   "name": "Prairies de la Prévalaye",
+   "kind": "gonflage",
+   "profile": "gonflage",
+   "city": "Rennes (ouest)",
+   "lat": 48.105,
+   "lon": -1.73,
+   "orientations": [
+    "N",
+    "NE",
+    "E",
+    "SE",
+    "S",
+    "SW",
+    "W",
+    "NW"
+   ],
+   "preferred": [
+    "W",
+    "SW",
+    "NE"
+   ],
+   "description": "Parc naturel et agricole de plusieurs centaines d'hectares au bord de la Vilaine, vastes prairies peu fréquentées.",
+   "access": {
+    "mode": "local",
+    "summary": "Skate par les bords de Vilaine (voie verte) depuis le centre.",
+    "travelMinutes": 22,
+    "rideKm": 5.0,
+    "ride": "Skate par les bords de Vilaine (voie verte) depuis le centre."
+   },
+   "rules": [
+    "Certaines parcelles sont cultivées ou pâturées : ne pas entrer dans les champs avec bétail ou cultures.",
+    "À proximité de l'aéroport Rennes Saint-Jacques : gonflage uniquement, aucun décollage."
+   ],
+   "warnings": [
+    "Haies bocagères : bien choisir une parcelle face au vent."
+   ],
+   "links": {},
+   "confidence": "moyenne",
+   "region": "Rennes",
+   "stations": [],
+   "sources": [
+    "Ville de Rennes",
+    "Office de tourisme"
+   ]
+  },
+  {
+   "id": "apigne",
+   "name": "Étangs d'Apigné",
+   "kind": "gonflage",
+   "profile": "gonflage",
+   "city": "Le Rheu (ouest de Rennes)",
+   "lat": 48.096,
+   "lon": -1.743,
+   "orientations": [
+    "N",
+    "NE",
+    "E",
+    "SE",
+    "S",
+    "SW",
+    "W",
+    "NW"
+   ],
+   "preferred": [
+    "W",
+    "SW"
+   ],
+   "description": "Base de loisirs avec grandes pelouses en bord d'étang, vent d'ouest souvent laminaire grâce au plan d'eau.",
+   "access": {
+    "mode": "local",
+    "summary": "Skate par la voie verte des bords de Vilaine (environ 8 km du centre).",
+    "travelMinutes": 27,
+    "rideKm": 6.5,
+    "ride": "Skate par la voie verte des bords de Vilaine (environ 8 km du centre)."
+   },
+   "rules": [
+    "Base très fréquentée l'été (baignade) : venir hors saison ou tôt.",
+    "Proche de l'aéroport : gonflage uniquement, aucun décollage."
+   ],
+   "warnings": [
+    "Eau à proximité : attention aux arrachages par vent fort."
+   ],
+   "links": {
+    "fiche": "https://www.tourisme-rennes.com/decouvrir-rennes/nature/liste-jardins-parcs/"
+   },
+   "confidence": "moyenne",
+   "region": "Rennes",
+   "stations": [],
+   "sources": [
+    "Ville de Rennes",
+    "Office de tourisme"
+   ]
+  },
+  {
+   "id": "plaine-de-baud",
+   "name": "Plaine de Baud",
+   "kind": "gonflage",
+   "profile": "gonflage",
+   "city": "Rennes (est)",
+   "lat": 48.111,
+   "lon": -1.656,
+   "orientations": [
+    "N",
+    "NE",
+    "E",
+    "SE",
+    "S",
+    "SW",
+    "W",
+    "NW"
+   ],
+   "preferred": [
+    "W",
+    "E"
+   ],
+   "description": "Espaces verts ouverts le long de la Vilaine (Plages de Baud), surface plus modeste.",
+   "access": {
+    "mode": "local",
+    "summary": "À pied ou skate par les quais de la Vilaine.",
+    "travelMinutes": 12,
+    "rideKm": 2.2,
+    "ride": "À pied ou skate par les quais de la Vilaine."
+   },
+   "rules": [
+    "Espace public : surface limitée, à réserver aux petites sessions et à faible fréquentation."
+   ],
+   "warnings": [
+    "Bâtiments proches : turbulences par vent fort."
+   ],
+   "links": {},
+   "confidence": "faible",
+   "region": "Rennes",
+   "stations": [],
+   "sources": [
+    "Ville de Rennes",
+    "Office de tourisme"
+   ]
+  },
+  {
+   "id": "mont-du-pere",
+   "name": "Mont du Père (pente école)",
+   "kind": "gonflage",
+   "profile": "gonflage",
+   "city": "Saint-Omer / Clécy (14)",
+   "region": "Suisse normande",
+   "lat": 48.9307,
+   "lon": -0.4448,
+   "orientations": [
+    "N",
+    "NE",
+    "E",
+    "SE",
+    "S",
+    "SW",
+    "W",
+    "NW"
+   ],
+   "description": "Terrain plat de gonflage et pente école près de Saint-Omer, avec un portique. Fonctionne avec toutes les orientations.",
+   "rules": [
+    "Pente école utilisée par les écoles locales : demander avant de s'installer."
+   ],
+   "warnings": [],
+   "links": {},
+   "stations": [
+    "ffvl/122"
+   ],
+   "tide": false,
+   "confidence": "moyenne",
+   "sources": [
+    "wikiparapente.fr",
+    "ParaglidingEarth"
+   ],
+   "access": {
+    "mode": "voiture",
+    "driveKm": 161,
+    "driveMinutes": 124,
+    "rideKm": 0,
+    "ride": "Pas de gare à moins de 10 km : voiture ou covoiturage club, environ 161 km depuis Rennes (estimation)."
+   }
+  },
+  {
+   "id": "guimorais",
+   "name": "La Guimorais - Pointe du Meinga",
+   "city": "Saint-Coulomb (35)",
+   "region": "Côte d'Émeraude",
+   "lat": 48.6953,
+   "lon": -1.93417,
+   "orientations": [
+    "N",
+    "NNW",
+    "NW"
+   ],
+   "elevation": 35,
+   "description": "Petit site de soaring côtier sur la pointe du Meinga, au-dessus de la plage de la Guimorais. Le site de vol le plus proche de Rennes.",
+   "level": "Pilote autonome",
+   "landing": "Haut de falaise, ou plage hors juillet-août.",
+   "rules": [
+    "Appeler la tour de Dinard avant et après chaque session : 02 99 46 93 49.",
+    "Pose sur la plage interdite en juillet et août.",
+    "Plage naturiste en contrebas : ne pas poser avant le rocher qui marque la limite, sauf nécessité.",
+    "Sentier côtier (GR34) : priorité aux randonneurs, pas de skate sur le sentier."
+   ],
+   "warnings": [
+    "Ne pas se faire enfermer sur les rochers par la marée montante.",
+    "Vent trop ouest : site vite débordé."
+   ],
+   "ffvlId": 240,
+   "links": {
+    "doc": "https://federation.ffvl.fr/sites/ffvl.fr/files/DINARD.pdf",
+    "ffvl": "https://federation.ffvl.fr/terrain/240",
+    "spotair": "https://www.spotair.mobi/spotpg/ffvl/240"
+   },
+   "confidence": "haute",
+   "sources": [
+    "spots.guru",
+    "FFVL",
+    "ParaglidingEarth"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "stations": [],
+   "tide": true,
+   "access": {
+    "mode": "train",
+    "station": "Saint-Malo",
+    "stationLat": 48.6475,
+    "stationLon": -2.0076,
+    "train": "TER BreizhGo direct Rennes - Saint-Malo",
+    "trainMinutes": 55,
+    "rideKm": 9.8,
+    "ride": "Route côtière par Paramé et Rothéneuf, environ 10 km (limite)."
+   },
+   "limit": false,
+   "levelFfvl": null
+  },
+  {
+   "id": "roselier",
+   "name": "Pointe du Roselier",
+   "city": "Plérin (22)",
+   "region": "Baie de Saint-Brieuc",
+   "lat": 48.5547,
+   "lon": -2.7158,
+   "orientations": [
+    "NNW",
+    "N",
+    "NNE",
+    "NE",
+    "SE"
+   ],
+   "elevation": 65,
+   "description": "Grand classique de la baie de Saint-Brieuc : déco N-NE au-dessus de la plage Martin et déco sud-est vers la baie. Par bonnes conditions, des kilomètres de falaises vers Binic.",
+   "level": "Pilote autonome",
+   "landing": "Plage Martin (escalier au milieu de la plage pour remonter).",
+   "rules": [
+    "Volable seulement environ 3 h avant et après la basse mer.",
+    "Priorité aux piétons sur le sentier.",
+    "Lire le panneau du site."
+   ],
+   "warnings": [
+    "La balise locale surestime le vent de 5 à 15 km/h : se fier plutôt à la balise Pioupiou proche.",
+    "Vent de terre (S-SO) dangereux."
+   ],
+   "ffvlId": 1571,
+   "links": {
+    "club": "https://www.goelandarmor.fr/index.php/les-sites-de-vol/pointe-du-roselier",
+    "ffvl": "https://federation.ffvl.fr/terrain/1571",
+    "spotair": "https://www.spotair.mobi/spotpg/ffvl/1571"
+   },
+   "confidence": "haute",
+   "sources": [
+    "spots.guru",
+    "infos-parapente.com",
+    "FFVL"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "stations": [],
+   "tide": true,
+   "access": {
+    "mode": "train",
+    "station": "Saint-Brieuc",
+    "stationLat": 48.5075,
+    "stationLon": -2.766,
+    "train": "TGV ou TER direct Rennes - Saint-Brieuc",
+    "trainMinutes": 50,
+    "rideKm": 8.3,
+    "ride": "Par Plérin et le port du Légué, environ 8 km avec une montée sérieuse.",
+    "climbM": 70
+   },
+   "limit": false,
+   "levelFfvl": null
+  },
+  {
+   "id": "tablettes",
+   "name": "Les Tablettes (Les Rosaires)",
+   "city": "Plérin (22)",
+   "region": "Baie de Saint-Brieuc",
+   "lat": 48.5597,
+   "lon": -2.7348,
+   "orientations": [
+    "NNW",
+    "N",
+    "NNE"
+   ],
+   "elevation": 70,
+   "description": "Falaise au-dessus de la plage des Rosaires.",
+   "level": "Pilote autonome",
+   "landing": "Plage des Rosaires selon la marée, ou haut de site.",
+   "rules": [
+    "Respecter les cultures autour du déco."
+   ],
+   "warnings": [
+    "Attention aux rouleaux.",
+    "Orientations différentes selon les sources (N-NO ou N-NE) : vérifier le panneau."
+   ],
+   "sources": [
+    "spots.guru",
+    "infos-parapente.com",
+    "ParaglidingEarth"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "links": {
+    "spotair": "https://www.spotair.mobi?lat=48.5597&lng=-2.7348&zoom=14&layers=spotpg,wind"
+   },
+   "stations": [],
+   "tide": true,
+   "confidence": "moyenne",
+   "access": {
+    "mode": "train",
+    "station": "Saint-Brieuc",
+    "stationLat": 48.5075,
+    "stationLon": -2.766,
+    "train": "TGV ou TER direct Rennes - Saint-Brieuc",
+    "trainMinutes": 50,
+    "rideKm": 8.1,
+    "ride": "Par Plérin, environ 8 km, dénivelé."
+   },
+   "limit": false,
+   "levelFfvl": null
+  },
+  {
+   "id": "tournemine",
+   "name": "Tournemine",
+   "city": "Pordic (22)",
+   "region": "Baie de Saint-Brieuc",
+   "lat": 48.5762,
+   "lon": -2.7757,
+   "orientations": [
+    "ENE",
+    "E",
+    "ESE"
+   ],
+   "elevation": 80,
+   "description": "Petit déco en bord de route, optimal par vent d'est plein.",
+   "level": "Pilote autonome",
+   "landing": "Grand champ derrière le déco ou grand champ à droite.",
+   "rules": [
+    "Se garer sur les côtés de la route sans gêner le passage."
+   ],
+   "warnings": [
+    "Ne pas se faire reculer dans la combe à droite.",
+    "Atterrissage technique et turbulent."
+   ],
+   "ffvlId": 5199,
+   "sources": [
+    "spots.guru",
+    "infos-parapente.com",
+    "Ouest Parapente"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "links": {
+    "ffvl": "https://federation.ffvl.fr/terrain/5199",
+    "spotair": "https://www.spotair.mobi/spotpg/ffvl/5199"
+   },
+   "stations": [],
+   "tide": true,
+   "confidence": "moyenne",
+   "access": {
+    "mode": "train",
+    "station": "Saint-Brieuc",
+    "stationLat": 48.5075,
+    "stationLon": -2.766,
+    "train": "TGV ou TER direct Rennes - Saint-Brieuc",
+    "trainMinutes": 50,
+    "rideKm": 10.0,
+    "ride": "Environ 10 km en skate depuis la gare (estimation)."
+   },
+   "limit": false,
+   "levelFfvl": null
+  },
+  {
+   "id": "vau-madec",
+   "name": "Vau Madec",
+   "city": "Pordic / Binic (22)",
+   "region": "Baie de Saint-Brieuc",
+   "lat": 48.5847,
+   "lon": -2.7964,
+   "orientations": [
+    "NNE",
+    "NE"
+   ],
+   "description": "Déco dans un champ (quand il n'est pas cultivé), décollage facile.",
+   "level": "Pilote autonome",
+   "landing": "Au déco ou sur la plage selon la marée.",
+   "rules": [
+    "Se garer au bord de la route et traverser le champ."
+   ],
+   "warnings": [
+    "Perturbations dues aux arbres proches.",
+    "À marée haute, la plage disparaît presque."
+   ],
+   "confidence": "moyenne",
+   "sources": [
+    "spots.guru"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "links": {
+    "spotair": "https://www.spotair.mobi?lat=48.5847&lng=-2.7964&zoom=14&layers=spotpg,wind"
+   },
+   "stations": [],
+   "tide": true,
+   "access": {
+    "mode": "train",
+    "station": "Saint-Brieuc",
+    "stationLat": 48.5075,
+    "stationLon": -2.766,
+    "train": "TGV ou TER direct Rennes - Saint-Brieuc",
+    "trainMinutes": 50,
+    "rideKm": 11.5,
+    "ride": "Environ 12 km en skate depuis la gare (estimation)."
+   },
+   "limit": true,
+   "levelFfvl": null,
+   "elevation": null
+  },
+  {
+   "id": "deco-henri",
+   "name": "Déco Henri",
+   "city": "Binic (22)",
+   "region": "Baie de Saint-Brieuc",
+   "lat": 48.5919,
+   "lon": -2.8105,
+   "orientations": [
+    "N",
+    "NNE",
+    "NE"
+   ],
+   "description": "Déco étroit et technique au nord de Binic.",
+   "level": "Pilote confirmé",
+   "landing": "Plage selon la marée.",
+   "warnings": [
+    "Déco étroit, approche technique.",
+    "Plateau rocheux découvert vers 4 m d'eau, rochers vers 6 m."
+   ],
+   "sources": [
+    "spots.guru"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "rules": [],
+   "links": {
+    "spotair": "https://www.spotair.mobi?lat=48.5919&lng=-2.8105&zoom=14&layers=spotpg,wind"
+   },
+   "stations": [],
+   "tide": true,
+   "confidence": "moyenne",
+   "access": {
+    "mode": "train",
+    "station": "Saint-Brieuc",
+    "stationLat": 48.5075,
+    "stationLon": -2.766,
+    "train": "TGV ou TER direct Rennes - Saint-Brieuc",
+    "trainMinutes": 50,
+    "rideKm": 12.9,
+    "ride": "Environ 13 km en skate depuis la gare (estimation)."
+   },
+   "limit": true,
+   "levelFfvl": null,
+   "elevation": null
+  },
+  {
+   "id": "la-chapelle",
+   "name": "La Chapelle",
+   "city": "Étables-sur-Mer (22)",
+   "region": "Baie de Saint-Brieuc",
+   "lat": 48.6324,
+   "lon": -2.8218,
+   "orientations": [
+    "NNE",
+    "NE",
+    "ENE"
+   ],
+   "description": "Spot côtier au nord de Binic.",
+   "level": "Pilote autonome",
+   "landing": "À confirmer sur place.",
+   "confidence": "faible",
+   "sources": [
+    "spots.guru"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "rules": [],
+   "warnings": [],
+   "links": {
+    "spotair": "https://www.spotair.mobi?lat=48.6324&lng=-2.8218&zoom=14&layers=spotpg,wind"
+   },
+   "stations": [],
+   "tide": true,
+   "access": {
+    "mode": "voiture",
+    "driveKm": 129,
+    "driveMinutes": 101,
+    "rideKm": 0,
+    "ride": "Pas de gare à moins de 10 km : voiture ou covoiturage club, environ 129 km depuis Rennes (estimation)."
+   },
+   "limit": false,
+   "levelFfvl": null,
+   "elevation": null
+  },
+  {
+   "id": "beliard",
+   "name": "Béliard",
+   "city": "Hillion (22)",
+   "region": "Baie de Saint-Brieuc",
+   "lat": 48.5414,
+   "lon": -2.6251,
+   "orientations": [
+    "WNW",
+    "NW",
+    "NNW"
+   ],
+   "description": "Spot de vent de nord-ouest et de marée basse. Quand le vent est bien établi, on longe les falaises sur des kilomètres.",
+   "level": "Pilote autonome",
+   "landing": "Plage à marée basse.",
+   "warnings": [
+    "Au-delà de 22 km/h à la balise d'Hillion, conditions trop fortes."
+   ],
+   "sources": [
+    "spots.guru"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "rules": [],
+   "links": {
+    "spotair": "https://www.spotair.mobi?lat=48.5414&lng=-2.6251&zoom=14&layers=spotpg,wind"
+   },
+   "stations": [],
+   "tide": true,
+   "confidence": "moyenne",
+   "access": {
+    "mode": "voiture",
+    "driveKm": 107,
+    "driveMinutes": 86,
+    "rideKm": 0,
+    "ride": "Pas de gare à moins de 10 km : voiture ou covoiturage club, environ 107 km depuis Rennes (estimation). Gare la plus proche : Saint-Brieuc, à environ 14 km.",
+    "nearStation": "Saint-Brieuc"
+   },
+   "limit": false,
+   "levelFfvl": null,
+   "elevation": null
+  },
+  {
+   "id": "saint-pabu-erquy",
+   "name": "Saint-Pabu (Ville-Berneuf)",
+   "city": "Erquy (22)",
+   "region": "Penthièvre",
+   "lat": 48.6025,
+   "lon": -2.5091,
+   "orientations": [
+    "NNW",
+    "NW"
+   ],
+   "elevation": 55,
+   "description": "Plage de la Ville-Berneuf : déco haut et déco bas selon la force du vent. Cross possible les bons jours.",
+   "level": "Facile par vent de plus de 15 km/h, contrôle face voile nécessaire",
+   "landing": "Plage selon la marée.",
+   "rules": [
+    "Prendre le chemin à gauche de la route principale, se garer dans le premier champ à droite."
+   ],
+   "sources": [
+    "spots.guru",
+    "infos-parapente.com",
+    "Ouest Parapente"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "warnings": [],
+   "links": {
+    "spotair": "https://www.spotair.mobi?lat=48.6025&lng=-2.5091&zoom=14&layers=spotpg,wind"
+   },
+   "stations": [],
+   "tide": true,
+   "confidence": "moyenne",
+   "access": {
+    "mode": "voiture",
+    "driveKm": 104,
+    "driveMinutes": 83,
+    "rideKm": 0,
+    "ride": "Pas de gare à moins de 10 km : voiture ou covoiturage club, environ 104 km depuis Rennes (estimation)."
+   },
+   "limit": false,
+   "levelFfvl": null
+  },
+  {
+   "id": "pleneuf-banc",
+   "name": "Pléneuf - Le Banc",
+   "city": "Pléneuf-Val-André (22)",
+   "region": "Penthièvre",
+   "lat": 48.5973,
+   "lon": -2.5447,
+   "orientations": [
+    "N",
+    "NNE"
+   ],
+   "description": "Zone compacte, déco technique, bon rendement thermique. Accès par le GR34.",
+   "level": "Pilote autonome (déco technique)",
+   "landing": "Champ de 30 m derrière le déco, ou plage jusqu'à la pleine mer.",
+   "ffvlId": 5025,
+   "sources": [
+    "spots.guru",
+    "FFVL"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "rules": [],
+   "warnings": [],
+   "links": {
+    "ffvl": "https://federation.ffvl.fr/terrain/5025",
+    "spotair": "https://www.spotair.mobi/spotpg/ffvl/5025"
+   },
+   "stations": [],
+   "tide": true,
+   "confidence": "moyenne",
+   "access": {
+    "mode": "voiture",
+    "driveKm": 106,
+    "driveMinutes": 85,
+    "rideKm": 0,
+    "ride": "Pas de gare à moins de 10 km : voiture ou covoiturage club, environ 106 km depuis Rennes (estimation)."
+   },
+   "limit": false,
+   "levelFfvl": null,
+   "elevation": null
+  },
+  {
+   "id": "les-hopitaux",
+   "name": "Les Hôpitaux (Sables-d'Or)",
+   "city": "Fréhel (22)",
+   "region": "Penthièvre",
+   "lat": 48.6394,
+   "lon": -2.4234,
+   "orientations": [
+    "NE",
+    "ENE"
+   ],
+   "description": "Déco au-dessus de la plage des Sables-d'Or. Parking en haut, ou en bas puis montée à pied.",
+   "level": "Pilote autonome",
+   "landing": "Plage selon la marée.",
+   "warnings": [
+    "Présence fréquente d'aéromodélistes."
+   ],
+   "sources": [
+    "spots.guru"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "rules": [],
+   "links": {
+    "spotair": "https://www.spotair.mobi?lat=48.6394&lng=-2.4234&zoom=14&layers=spotpg,wind"
+   },
+   "stations": [],
+   "tide": true,
+   "confidence": "moyenne",
+   "access": {
+    "mode": "voiture",
+    "driveKm": 102,
+    "driveMinutes": 82,
+    "rideKm": 0,
+    "ride": "Pas de gare à moins de 10 km : voiture ou covoiturage club, environ 102 km depuis Rennes (estimation)."
+   },
+   "limit": false,
+   "levelFfvl": null,
+   "elevation": null
+  },
+  {
+   "id": "pointe-du-chevet",
+   "name": "Pointe du Chevet",
+   "city": "Saint-Jacut-de-la-Mer (22)",
+   "region": "Côte d'Émeraude",
+   "lat": 48.6076,
+   "lon": -2.1918,
+   "orientations": [
+    "NE",
+    "E"
+   ],
+   "description": "Soaring de falaise par vent de nord-est à est.",
+   "level": "Pilote autonome",
+   "landing": "Plage selon la marée.",
+   "sources": [
+    "spots.guru",
+    "ParaglidingEarth (St Jacut : E)"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "rules": [],
+   "warnings": [],
+   "links": {
+    "spotair": "https://www.spotair.mobi?lat=48.6076&lng=-2.1918&zoom=14&layers=spotpg,wind"
+   },
+   "stations": [],
+   "tide": true,
+   "confidence": "moyenne",
+   "access": {
+    "mode": "train",
+    "station": "Plancoët",
+    "stationLat": 48.524,
+    "stationLon": -2.237,
+    "train": "Rennes - Dinan (via Dol) puis TER Dinan - Lamballe (arrêt Plancoët), à vérifier",
+    "trainMinutes": 95,
+    "rideKm": 12.8,
+    "ride": "Environ 13 km en skate depuis la gare (estimation)."
+   },
+   "limit": true,
+   "levelFfvl": null,
+   "elevation": null
+  },
+  {
+   "id": "notre-dame-de-la-garde",
+   "name": "Notre-Dame de la Garde",
+   "city": "Saint-Cast-le-Guildo (22)",
+   "region": "Côte d'Émeraude",
+   "lat": 48.6238,
+   "lon": -2.2407,
+   "orientations": [
+    "NNW",
+    "NW"
+   ],
+   "description": "Petit site de soaring, décollage depuis la stèle.",
+   "level": "Pilote autonome",
+   "landing": "Plage, attention à la marée.",
+   "sources": [
+    "spots.guru"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "rules": [],
+   "warnings": [],
+   "links": {
+    "spotair": "https://www.spotair.mobi?lat=48.6238&lng=-2.2407&zoom=14&layers=spotpg,wind"
+   },
+   "stations": [],
+   "tide": true,
+   "confidence": "moyenne",
+   "access": {
+    "mode": "voiture",
+    "driveKm": 89,
+    "driveMinutes": 73,
+    "rideKm": 0,
+    "ride": "Pas de gare à moins de 10 km : voiture ou covoiturage club, environ 89 km depuis Rennes (estimation). Gare la plus proche : Plancoët, à environ 14 km.",
+    "nearStation": "Plancoët"
+   },
+   "limit": false,
+   "levelFfvl": null,
+   "elevation": null
+  },
+  {
+   "id": "bilfot",
+   "name": "Pointe de Bilfot",
+   "city": "Plouézec (22)",
+   "region": "Goëlo",
+   "lat": 48.7657,
+   "lon": -2.9544,
+   "orientations": [
+    "W",
+    "WNW",
+    "NW"
+   ],
+   "elevation": 60,
+   "description": "Déco ouest à la pointe de Bilfot, parking fléché 500 m avant la pointe.",
+   "level": "Pilote autonome",
+   "landing": "Au déco ou sur la plage (place réduite à marée haute).",
+   "warnings": [
+    "Ajouter au moins 10 km/h à la balise de Milepat, située sous le vent.",
+    "Effets venturi fréquents.",
+    "Fortes turbulences par vent de travers gauche."
+   ],
+   "ffvlId": 1982,
+   "sources": [
+    "spots.guru",
+    "infos-parapente.com",
+    "FFVL"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "rules": [],
+   "links": {
+    "ffvl": "https://federation.ffvl.fr/terrain/1982",
+    "spotair": "https://www.spotair.mobi/spotpg/ffvl/1982"
+   },
+   "stations": [],
+   "tide": true,
+   "confidence": "moyenne",
+   "access": {
+    "mode": "train",
+    "station": "Paimpol",
+    "stationLat": 48.7768,
+    "stationLon": -3.049,
+    "train": "Rennes - Guingamp puis TER Guingamp - Paimpol (47 min)",
+    "trainMinutes": 120,
+    "rideKm": 9.2,
+    "ride": "Environ 9 km en skate depuis la gare (estimation)."
+   },
+   "limit": false,
+   "levelFfvl": null
+  },
+  {
+   "id": "milepat",
+   "name": "Milepat (Plouézec)",
+   "city": "Plouézec (22)",
+   "region": "Goëlo",
+   "lat": 48.762,
+   "lon": -2.986,
+   "orientations": [
+    "NNW",
+    "N",
+    "NNE"
+   ],
+   "elevation": 60,
+   "description": "Déco face à la baie de Paimpol. À marée basse, thermiques dans la baie : cross possible, jusqu'au Roselier.",
+   "level": "Facile",
+   "landing": "Partie droite du chemin réservée aux atterrissages.",
+   "rules": [
+    "Se garer dans l'herbe sur la gauche du chemin, la droite est réservée aux atterrissages."
+   ],
+   "sources": [
+    "spots.guru",
+    "infos-parapente.com",
+    "ParaglidingEarth"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "warnings": [],
+   "links": {
+    "spotair": "https://www.spotair.mobi?lat=48.762&lng=-2.986&zoom=14&layers=spotpg,wind"
+   },
+   "stations": [],
+   "tide": true,
+   "confidence": "moyenne",
+   "access": {
+    "mode": "train",
+    "station": "Paimpol",
+    "stationLat": 48.7768,
+    "stationLon": -3.049,
+    "train": "Rennes - Guingamp puis TER Guingamp - Paimpol (47 min)",
+    "trainMinutes": 120,
+    "rideKm": 6.4,
+    "ride": "Environ 6 km en skate depuis la gare (estimation)."
+   },
+   "limit": false,
+   "levelFfvl": null
+  },
+  {
+   "id": "croix-des-veuves",
+   "name": "La Croix des Veuves",
+   "city": "Plouézec / Paimpol (22)",
+   "region": "Goëlo",
+   "lat": 48.8033,
+   "lon": -3.0073,
+   "orientations": [
+    "NW",
+    "N",
+    "NE"
+   ],
+   "description": "Site de soaring côtier près de Paimpol, large secteur de vent nord.",
+   "level": "Pilote autonome",
+   "landing": "Haut de site ou plage selon marée.",
+   "sources": [
+    "ParaglidingEarth"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "rules": [],
+   "warnings": [],
+   "links": {
+    "spotair": "https://www.spotair.mobi?lat=48.8033&lng=-3.0073&zoom=14&layers=spotpg,wind"
+   },
+   "stations": [],
+   "tide": true,
+   "confidence": "moyenne",
+   "access": {
+    "mode": "train",
+    "station": "Paimpol",
+    "stationLat": 48.7768,
+    "stationLon": -3.049,
+    "train": "Rennes - Guingamp puis TER Guingamp - Paimpol (47 min)",
+    "trainMinutes": 120,
+    "rideKm": 5.5,
+    "ride": "Environ 6 km en skate depuis la gare (estimation)."
+   },
+   "limit": false,
+   "levelFfvl": null,
+   "elevation": null
+  },
+  {
+   "id": "lann-vraz",
+   "name": "Lann Vraz",
+   "city": "Paimpol (22)",
+   "region": "Goëlo",
+   "lat": 48.8175,
+   "lon": -3.0352,
+   "orientations": [
+    "N"
+   ],
+   "description": "Petit site de soaring nord près de Paimpol.",
+   "level": "Pilote autonome",
+   "landing": "Haut de site.",
+   "warnings": [
+    "Secteur de vent étroit : plein nord uniquement."
+   ],
+   "sources": [
+    "ParaglidingEarth"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "rules": [],
+   "links": {
+    "spotair": "https://www.spotair.mobi?lat=48.8175&lng=-3.0352&zoom=14&layers=spotpg,wind"
+   },
+   "stations": [],
+   "tide": true,
+   "confidence": "moyenne",
+   "access": {
+    "mode": "train",
+    "station": "Paimpol",
+    "stationLat": 48.7768,
+    "stationLon": -3.049,
+    "train": "Rennes - Guingamp puis TER Guingamp - Paimpol (47 min)",
+    "trainMinutes": 120,
+    "rideKm": 6.0,
+    "ride": "Environ 6 km en skate depuis la gare (estimation)."
+   },
+   "limit": false,
+   "levelFfvl": null,
+   "elevation": null
+  },
+  {
+   "id": "bonaparte",
+   "name": "Plage Bonaparte",
+   "city": "Plouha (22)",
+   "region": "Goëlo",
+   "lat": 48.705972,
+   "lon": -2.923024,
+   "orientations": [
+    "NNE",
+    "NE",
+    "ENE"
+   ],
+   "elevation": 70,
+   "description": "Falaises de 50 à 70 m au-dessus de la plage Bonaparte, site du club Plouez'ailes.",
+   "level": "Facile",
+   "landing": "Au sommet, ou sur la plage à marée basse sans gêner les touristes.",
+   "rules": [
+    "La stèle commémorative n'est pas une cible de précision."
+   ],
+   "warnings": [
+    "Surtout ne pas se laisser reculer dans le trou au-dessus du parking du bas.",
+    "Déco délicat par vent traversier de gauche, faible sustentation."
+   ],
+   "ffvlId": 1984,
+   "links": {
+    "club": "https://www.plouezailes.fr/site-de-vol-bonaparte/",
+    "ffvl": "https://federation.ffvl.fr/terrain/1984",
+    "spotair": "https://www.spotair.mobi/spotpg/ffvl/1984"
+   },
+   "confidence": "haute",
+   "sources": [
+    "Plouez'ailes",
+    "infos-parapente.com"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "stations": [],
+   "tide": true,
+   "access": {
+    "mode": "voiture",
+    "driveKm": 143,
+    "driveMinutes": 111,
+    "rideKm": 0,
+    "ride": "Pas de gare à moins de 10 km : voiture ou covoiturage club, environ 143 km depuis Rennes (estimation). Gare la plus proche : Paimpol, à environ 16 km.",
+    "nearStation": "Paimpol"
+   },
+   "limit": false,
+   "levelFfvl": null
+  },
+  {
+   "id": "brehec",
+   "name": "Bréhec",
+   "city": "Plouha / Plouézec (22)",
+   "region": "Goëlo",
+   "lat": 48.729,
+   "lon": -2.9452,
+   "orientations": [
+    "SE",
+    "S"
+   ],
+   "description": "Un des rares sites qui fonctionnent par vent de sud-est sur la côte nord.",
+   "level": "Pilote autonome",
+   "landing": "Haut de site ou anse de Bréhec.",
+   "sources": [
+    "ParaglidingEarth"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "rules": [],
+   "warnings": [],
+   "links": {
+    "spotair": "https://www.spotair.mobi?lat=48.729&lng=-2.9452&zoom=14&layers=spotpg,wind"
+   },
+   "stations": [],
+   "tide": true,
+   "confidence": "moyenne",
+   "access": {
+    "mode": "train",
+    "station": "Paimpol",
+    "stationLat": 48.7768,
+    "stationLon": -3.049,
+    "train": "Rennes - Guingamp puis TER Guingamp - Paimpol (47 min)",
+    "trainMinutes": 120,
+    "rideKm": 12.1,
+    "ride": "Environ 12 km en skate depuis la gare (estimation)."
+   },
+   "limit": true,
+   "levelFfvl": null,
+   "elevation": null
+  },
+  {
+   "id": "trebeurden",
+   "name": "Trébeurden",
+   "city": "Trébeurden (22)",
+   "region": "Côte de Granit Rose",
+   "lat": 48.7609,
+   "lon": -3.5771,
+   "orientations": [
+    "W",
+    "NW"
+   ],
+   "description": "Soaring côtier sur la Côte de Granit Rose par vent d'ouest.",
+   "level": "Pilote autonome",
+   "landing": "Haut de site ou plage.",
+   "sources": [
+    "ParaglidingEarth"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "rules": [],
+   "warnings": [],
+   "links": {
+    "spotair": "https://www.spotair.mobi?lat=48.7609&lng=-3.5771&zoom=14&layers=spotpg,wind"
+   },
+   "stations": [],
+   "tide": true,
+   "confidence": "moyenne",
+   "access": {
+    "mode": "train",
+    "station": "Lannion",
+    "stationLat": 48.731,
+    "stationLon": -3.456,
+    "train": "Rennes - Lannion (direct certains TGV, sinon via Plouaret)",
+    "trainMinutes": 115,
+    "rideKm": 12.3,
+    "ride": "Environ 12 km en skate depuis la gare (estimation)."
+   },
+   "limit": true,
+   "levelFfvl": null,
+   "elevation": null
+  },
+  {
+   "id": "beg-ar-fry",
+   "name": "Beg ar Fry",
+   "city": "Guimaëc (29)",
+   "region": "Trégor",
+   "lat": 48.7039,
+   "lon": -3.7208,
+   "orientations": [
+    "N",
+    "NNE",
+    "NE"
+   ],
+   "description": "Site peu fréquenté avec de belles transitions sur près de 5 km.",
+   "level": "Pilote confirmé",
+   "landing": "Très peu d'échappatoires : seulement le petit sentier côtier sous la falaise.",
+   "warnings": [
+    "Peu de solutions de repli, falaise."
+   ],
+   "sources": [
+    "spots.guru",
+    "ParaglidingEarth"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "rules": [],
+   "links": {
+    "spotair": "https://www.spotair.mobi?lat=48.7039&lng=-3.7208&zoom=14&layers=spotpg,wind"
+   },
+   "stations": [],
+   "tide": true,
+   "confidence": "moyenne",
+   "access": {
+    "mode": "voiture",
+    "driveKm": 207,
+    "driveMinutes": 156,
+    "rideKm": 0,
+    "ride": "Pas de gare à moins de 10 km : voiture ou covoiturage club, environ 207 km depuis Rennes (estimation)."
+   },
+   "limit": false,
+   "levelFfvl": null,
+   "elevation": null
+  },
+  {
+   "id": "cotes-des-halles",
+   "name": "Côtes des Halles",
+   "city": "Centre Bretagne (22)",
+   "region": "Intérieur",
+   "lat": 48.372,
+   "lon": -2.7374,
+   "orientations": [
+    "NNW",
+    "N"
+   ],
+   "profile": "plaine",
+   "tide": false,
+   "description": "Site thermo-dynamique très tonique, à la base du déclenchement thermique.",
+   "level": "Pilote autonome",
+   "landing": "À confirmer avec les pilotes locaux.",
+   "confidence": "faible",
+   "sources": [
+    "spots.guru"
+   ],
+   "kind": "vol",
+   "rules": [],
+   "warnings": [],
+   "links": {
+    "spotair": "https://www.spotair.mobi?lat=48.372&lng=-2.7374&zoom=14&layers=spotpg,wind"
+   },
+   "stations": [],
+   "access": {
+    "mode": "voiture",
+    "driveKm": 105,
+    "driveMinutes": 84,
+    "rideKm": 0,
+    "ride": "Pas de gare à moins de 10 km : voiture ou covoiturage club, environ 105 km depuis Rennes (estimation)."
+   },
+   "limit": false,
+   "levelFfvl": null,
+   "elevation": null
+  },
+  {
+   "id": "menez-hom",
+   "name": "Le Ménez-Hom",
+   "city": "Plomodiern (29)",
+   "region": "Presqu'île de Crozon",
+   "lat": 48.220567,
+   "lon": -4.236429,
+   "orientations": [
+    "NW",
+    "N",
+    "NE"
+   ],
+   "elevation": 76,
+   "profile": "soaring",
+   "tide": false,
+   "description": "Le site le plus connu de Bretagne, accessible à tous niveaux.",
+   "level": "Tous niveaux autonomes",
+   "landing": "Atterrissage officiel : 48.2224, -4.2416.",
+   "rules": [
+    "L'extrémité est de la colline est réservée aux aéromodélistes."
+   ],
+   "ffvlId": 155,
+   "stations": [
+    "ffvl/88"
+   ],
+   "links": {
+    "spotair": "https://www.spotair.mobi/spot/43964",
+    "ffvl": "https://federation.ffvl.fr/terrain/155"
+   },
+   "confidence": "haute",
+   "sources": [
+    "wikiparapente.fr",
+    "PBVL",
+    "spots.guru"
+   ],
+   "kind": "vol",
+   "warnings": [],
+   "access": {
+    "mode": "voiture",
+    "driveKm": 238,
+    "driveMinutes": 178,
+    "rideKm": 0,
+    "ride": "Pas de gare à moins de 10 km : voiture ou covoiturage club, environ 238 km depuis Rennes (estimation). Gare la plus proche : Châteaulin, à environ 15 km.",
+    "nearStation": "Châteaulin"
+   },
+   "limit": false,
+   "levelFfvl": null
+  },
+  {
+   "id": "trefeuntec",
+   "name": "Pointe de Tréfeuntec",
+   "city": "Plonévez-Porzay (29)",
+   "region": "Baie de Douarnenez",
+   "lat": 48.1236,
+   "lon": -4.2826,
+   "orientations": [
+    "W",
+    "NW"
+   ],
+   "description": "Très beau site de soaring avec vue sur la baie de Douarnenez. Panneaux FFVL sur place.",
+   "level": "Intermédiaire et plus",
+   "landing": "Plage selon la marée.",
+   "ffvlId": 13220,
+   "links": {
+    "club": "https://pbvl.fr/sites-parapente-finistere-29/",
+    "ffvl": "https://federation.ffvl.fr/terrain/13220",
+    "spotair": "https://www.spotair.mobi/spotpg/ffvl/13220"
+   },
+   "sources": [
+    "PBVL",
+    "FFVL"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "rules": [],
+   "warnings": [],
+   "stations": [],
+   "tide": true,
+   "confidence": "moyenne",
+   "access": {
+    "mode": "voiture",
+    "driveKm": 242,
+    "driveMinutes": 181,
+    "rideKm": 0,
+    "ride": "Pas de gare à moins de 10 km : voiture ou covoiturage club, environ 242 km depuis Rennes (estimation)."
+   },
+   "limit": false,
+   "levelFfvl": null,
+   "elevation": null
+  },
+  {
+   "id": "kervigen",
+   "name": "Kervigen",
+   "city": "Plomodiern (29)",
+   "region": "Baie de Douarnenez",
+   "lat": 48.1568,
+   "lon": -4.2779,
+   "orientations": [
+    "S",
+    "SW"
+   ],
+   "description": "Site de vent de sud au fond de la baie de Douarnenez.",
+   "level": "Intermédiaire",
+   "landing": "À confirmer sur place.",
+   "warnings": [
+    "Turbulent, voire dangereux, avec une composante est."
+   ],
+   "links": {
+    "club": "https://pbvl.fr/sites-parapente-finistere-29/",
+    "spotair": "https://www.spotair.mobi?lat=48.1568&lng=-4.2779&zoom=14&layers=spotpg,wind"
+   },
+   "sources": [
+    "PBVL",
+    "ParaglidingEarth"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "rules": [],
+   "stations": [],
+   "tide": true,
+   "confidence": "moyenne",
+   "access": {
+    "mode": "voiture",
+    "driveKm": 242,
+    "driveMinutes": 181,
+    "rideKm": 0,
+    "ride": "Pas de gare à moins de 10 km : voiture ou covoiturage club, environ 242 km depuis Rennes (estimation)."
+   },
+   "limit": false,
+   "levelFfvl": null,
+   "elevation": null
+  },
+  {
+   "id": "rosnoen",
+   "name": "Belvédère de Rosnoën",
+   "city": "Rosnoën (29)",
+   "region": "Rade de Brest",
+   "lat": 48.2627,
+   "lon": -4.2142,
+   "orientations": [
+    "SE",
+    "S",
+    "SW"
+   ],
+   "elevation": 100,
+   "profile": "plaine",
+   "tide": false,
+   "description": "Petit bijou du Finistère : décollage en falaise, 100 m de dénivelé.",
+   "level": "Pilote confirmé, bonne maîtrise du thermique",
+   "landing": "À confirmer avec le club.",
+   "ffvlId": 1945,
+   "links": {
+    "club": "https://pbvl.fr/sites-parapente-finistere-29/",
+    "ffvl": "https://federation.ffvl.fr/terrain/1945",
+    "spotair": "https://www.spotair.mobi/spotpg/ffvl/1945"
+   },
+   "sources": [
+    "PBVL",
+    "FFVL"
+   ],
+   "kind": "vol",
+   "rules": [],
+   "warnings": [],
+   "stations": [],
+   "confidence": "moyenne",
+   "access": {
+    "mode": "voiture",
+    "driveKm": 237,
+    "driveMinutes": 177,
+    "rideKm": 0,
+    "ride": "Pas de gare à moins de 10 km : voiture ou covoiturage club, environ 237 km depuis Rennes (estimation). Gare la plus proche : Châteaulin, à environ 16 km.",
+    "nearStation": "Châteaulin"
+   },
+   "limit": false,
+   "levelFfvl": null
+  },
+  {
+   "id": "rolzach",
+   "name": "Le Rolzac'h",
+   "city": "Châteaulin (29)",
+   "region": "Vallée de l'Aulne",
+   "lat": 48.2082,
+   "lon": -4.1171,
+   "orientations": [
+    "NE"
+   ],
+   "profile": "plaine",
+   "tide": false,
+   "description": "Thermique et soaring du soir dans la vallée de l'Aulne.",
+   "level": "Intermédiaire et plus",
+   "landing": "De l'autre côté de la rivière : technique.",
+   "rules": [
+    "Voler à plusieurs pour les navettes."
+   ],
+   "links": {
+    "club": "https://pbvl.fr/sites-parapente-finistere-29/",
+    "spotair": "https://www.spotair.mobi?lat=48.2082&lng=-4.1171&zoom=14&layers=spotpg,wind"
+   },
+   "sources": [
+    "PBVL"
+   ],
+   "kind": "vol",
+   "warnings": [],
+   "stations": [],
+   "confidence": "moyenne",
+   "access": {
+    "mode": "train",
+    "station": "Châteaulin",
+    "stationLat": 48.196,
+    "stationLon": -4.088,
+    "train": "Rennes - Quimper (TGV) puis TER Quimper - Brest (arrêt Châteaulin)",
+    "trainMinutes": 170,
+    "rideKm": 3.3,
+    "ride": "Environ 3 km en skate depuis la gare (estimation)."
+   },
+   "limit": false,
+   "levelFfvl": null,
+   "elevation": null
+  },
+  {
+   "id": "blancs-sablons",
+   "name": "Les Blancs Sablons",
+   "city": "Le Conquet (29)",
+   "region": "Pays d'Iroise",
+   "lat": 48.3658,
+   "lon": -4.76667,
+   "orientations": [
+    "SW",
+    "W",
+    "NW"
+   ],
+   "description": "Dune et falaise au nord du Conquet.",
+   "level": "Pilote autonome",
+   "landing": "Plage selon la marée.",
+   "confidence": "faible",
+   "sources": [
+    "ParaglidingEarth"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "rules": [],
+   "warnings": [],
+   "links": {
+    "spotair": "https://www.spotair.mobi?lat=48.3658&lng=-4.76667&zoom=14&layers=spotpg,wind"
+   },
+   "stations": [],
+   "tide": true,
+   "access": {
+    "mode": "voiture",
+    "driveKm": 289,
+    "driveMinutes": 214,
+    "rideKm": 0,
+    "ride": "Pas de gare à moins de 10 km : voiture ou covoiturage club, environ 289 km depuis Rennes (estimation)."
+   },
+   "limit": false,
+   "levelFfvl": null,
+   "elevation": null
+  },
+  {
+   "id": "penestin",
+   "name": "Pénestin - La Mine d'Or",
+   "city": "Pénestin (56)",
+   "region": "Estuaire de la Vilaine",
+   "lat": 47.4826,
+   "lon": -2.4956,
+   "orientations": [
+    "SW",
+    "WSW",
+    "W"
+   ],
+   "elevation": 15,
+   "description": "Falaise de 2 km, dénivelé de 8 à 16 m au-dessus de la plage de la Mine d'Or.",
+   "level": "Pilote autonome",
+   "landing": "Plage selon la marée.",
+   "warnings": [
+    "Très faible dénivelé : peu de marge."
+   ],
+   "sources": [
+    "spots.guru",
+    "ParaglidingEarth"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "rules": [],
+   "links": {
+    "spotair": "https://www.spotair.mobi?lat=47.4826&lng=-2.4956&zoom=14&layers=spotpg,wind"
+   },
+   "stations": [],
+   "tide": true,
+   "confidence": "moyenne",
+   "access": {
+    "mode": "voiture",
+    "driveKm": 116,
+    "driveMinutes": 92,
+    "rideKm": 0,
+    "ride": "Pas de gare à moins de 10 km : voiture ou covoiturage club, environ 116 km depuis Rennes (estimation)."
+   },
+   "limit": false,
+   "levelFfvl": null
+  },
+  {
+   "id": "saint-seglin",
+   "name": "Saint-Séglin - Treuil",
+   "city": "Saint-Séglin (35)",
+   "region": "Ille-et-Vilaine",
+   "lat": 47.8451,
+   "lon": -2.04323,
+   "orientations": [
+    "ESE",
+    "WSW"
+   ],
+   "profile": "treuil",
+   "tide": false,
+   "clubOnly": true,
+   "description": "Terrain de treuil (chemin du ruisseau du Faugouré) géré par le Breizh Fly Klub. Une seconde zone fonctionne par vent de sud-est.",
+   "level": "Pilote breveté treuil, avec le club",
+   "landing": "Sur le terrain.",
+   "rules": [
+    "Treuil uniquement pendant les sessions du club, licence FFVL obligatoire."
+   ],
+   "ffvlId": 13501,
+   "sources": [
+    "FFVL",
+    "spots.guru",
+    "ParaglidingEarth"
+   ],
+   "kind": "vol",
+   "warnings": [],
+   "links": {
+    "ffvl": "https://federation.ffvl.fr/terrain/13501",
+    "spotair": "https://www.spotair.mobi/spotpg/ffvl/13501"
+   },
+   "stations": [],
+   "confidence": "moyenne",
+   "access": {
+    "mode": "voiture",
+    "driveKm": 50,
+    "driveMinutes": 45,
+    "rideKm": 0,
+    "ride": "Pas de gare à moins de 10 km : voiture ou covoiturage club, environ 50 km depuis Rennes (estimation)."
+   },
+   "limit": false,
+   "levelFfvl": null,
+   "elevation": null
+  },
+  {
+   "id": "masserac",
+   "name": "Massérac - Treuil",
+   "city": "Massérac (44)",
+   "region": "Pays de Redon",
+   "lat": 47.688,
+   "lon": -1.90125,
+   "orientations": [
+    "N",
+    "NE",
+    "E",
+    "SE",
+    "S",
+    "SW",
+    "W",
+    "NW"
+   ],
+   "profile": "treuil",
+   "tide": false,
+   "clubOnly": true,
+   "description": "Terrain de treuil en plaine. Axe de piste à confirmer avec le club gestionnaire.",
+   "level": "Pilote breveté treuil, avec le club",
+   "landing": "Sur le terrain.",
+   "rules": [
+    "Treuil uniquement pendant les sessions d'un club."
+   ],
+   "ffvlId": 13290,
+   "confidence": "faible",
+   "sources": [
+    "FFVL",
+    "ParaglidingEarth"
+   ],
+   "kind": "vol",
+   "warnings": [],
+   "links": {
+    "ffvl": "https://federation.ffvl.fr/terrain/13290",
+    "spotair": "https://www.spotair.mobi/spotpg/ffvl/13290"
+   },
+   "stations": [],
+   "access": {
+    "mode": "voiture",
+    "driveKm": 62,
+    "driveMinutes": 53,
+    "rideKm": 0,
+    "ride": "Pas de gare à moins de 10 km : voiture ou covoiturage club, environ 62 km depuis Rennes (estimation)."
+   },
+   "limit": false,
+   "levelFfvl": null,
+   "elevation": null
+  },
+  {
+   "id": "sougeal",
+   "name": "Sougéal - Treuil des marais",
+   "city": "Sougéal (35)",
+   "region": "Baie du Mont-Saint-Michel",
+   "lat": 48.5139,
+   "lon": -1.5139,
+   "orientations": [
+    "N",
+    "NE",
+    "E",
+    "SE",
+    "S",
+    "SW",
+    "W",
+    "NW"
+   ],
+   "profile": "treuil",
+   "tide": false,
+   "clubOnly": true,
+   "description": "Terrain de treuil en plaine (marais de Sougéal). Ne se pratique qu'avec un club et un treuilleur qualifié.",
+   "level": "Pilote breveté treuil, avec le club",
+   "landing": "Sur le terrain.",
+   "rules": [
+    "Treuil : uniquement lors des sessions organisées par un club."
+   ],
+   "warnings": [
+    "Zone inondable en hiver."
+   ],
+   "sources": [
+    "ParaglidingEarth"
+   ],
+   "kind": "vol",
+   "links": {
+    "spotair": "https://www.spotair.mobi?lat=48.5139&lng=-1.5139&zoom=14&layers=spotpg,wind"
+   },
+   "stations": [],
+   "confidence": "moyenne",
+   "access": {
+    "mode": "train",
+    "station": "Pontorson",
+    "stationLat": 48.553,
+    "stationLon": -1.508,
+    "train": "TER Rennes - Pontorson",
+    "trainMinutes": 65,
+    "rideKm": 5.7,
+    "ride": "Environ 6 km, plat."
+   },
+   "limit": false,
+   "levelFfvl": null,
+   "elevation": null
+  },
+  {
+   "id": "abbaretz",
+   "name": "Terril d'Abbaretz",
+   "city": "Abbaretz (44)",
+   "region": "Loire-Atlantique",
+   "lat": 47.5622,
+   "lon": -1.54,
+   "orientations": [
+    "NE"
+   ],
+   "profile": "plaine",
+   "tide": false,
+   "description": "Ancien terril de mine d'étain, seul relief exploitable au nord de Nantes. Petits vols et gonflage sur pente.",
+   "level": "Pente école / pilote débutant autonome",
+   "landing": "Pied du terril.",
+   "rules": [
+    "Consulter la fiche FFVL pour les orientations exactes : un terril peut offrir plusieurs faces."
+   ],
+   "ffvlId": 720,
+   "sources": [
+    "FFVL",
+    "ParaglidingEarth"
+   ],
+   "kind": "vol",
+   "warnings": [],
+   "links": {
+    "ffvl": "https://federation.ffvl.fr/terrain/720",
+    "spotair": "https://www.spotair.mobi/spotpg/ffvl/720"
+   },
+   "stations": [],
+   "confidence": "moyenne",
+   "access": {
+    "mode": "train",
+    "station": "Abbaretz (tram-train)",
+    "stationLat": 47.553,
+    "stationLon": -1.529,
+    "train": "TER Rennes - Châteaubriant puis tram-train vers Nantes (arrêt Abbaretz)",
+    "trainMinutes": 100,
+    "rideKm": 1.7,
+    "ride": "2 km depuis la gare."
+   },
+   "limit": false,
+   "levelFfvl": null,
+   "elevation": null
+  },
+  {
+   "id": "predaire",
+   "name": "Le Prédaire",
+   "city": "Pornic (44)",
+   "region": "Côte de Jade",
+   "lat": 47.092,
+   "lon": -2.05145,
+   "orientations": [
+    "S",
+    "SW"
+   ],
+   "description": "Falaise orientée sud à sud-ouest. Pas d'atterrissage en bas : atterrissage obligatoire en haut.",
+   "level": "Pilote confirmé",
+   "landing": "En haut uniquement (risque rochers ou eau).",
+   "rules": [
+    "Envoyer un SMS au 06 08 12 22 90 avant chaque session.",
+    "Pâture à moutons : bien refermer les barrières ; si des moutons sont là, une personne reste au sol pour la barrière."
+   ],
+   "warnings": [
+    "Aucun atterrissage de secours en bas de falaise."
+   ],
+   "tide": false,
+   "links": {
+    "club": "https://www.ata-vollibre.fr/le-predaire/",
+    "spotair": "https://www.spotair.mobi?lat=47.092&lng=-2.05145&zoom=14&layers=spotpg,wind"
+   },
+   "confidence": "haute",
+   "sources": [
+    "ATA Vol Libre"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "stations": [],
+   "access": {
+    "mode": "train",
+    "station": "Pornic",
+    "stationLat": 47.115,
+    "stationLon": -2.102,
+    "train": "Rennes - Nantes puis TER Nantes - Pornic (vérifier l'état de la ligne)",
+    "trainMinutes": 150,
+    "rideKm": 6.0,
+    "ride": "Environ 6 km par la côte."
+   },
+   "limit": false,
+   "levelFfvl": null,
+   "elevation": null
+  },
+  {
+   "id": "carolles",
+   "name": "Carolles - Falaises",
+   "city": "Carolles (50)",
+   "region": "Baie du Mont-Saint-Michel",
+   "lat": 48.754284,
+   "lon": -1.573013,
+   "orientations": [
+    "W",
+    "NW"
+   ],
+   "elevation": 50,
+   "levelFfvl": "bleu",
+   "description": "Grand soaring au-dessus de la baie du Mont-Saint-Michel, un décollage pour chaque orientation (O et NO).",
+   "level": "Niveau bleu (brevet de pilote, autonome)",
+   "landing": "Plage de Carolles à marée basse.",
+   "rules": [
+    "Nidification du Grand Corbeau de janvier à mai : contourner la zone indiquée.",
+    "Parking de la Croix Paqueray, escalier entre les parkings (10 min)."
+   ],
+   "warnings": [
+    "Déco NO très court : ne pas dépasser la crête au niveau de la manche à air.",
+    "Par vent d'ouest avec du nord-ouest, éviter la combe sous le vent à droite.",
+    "Baie du Mont-Saint-Michel : la mer monte très vite."
+   ],
+   "ffvlId": 839,
+   "stations": [
+    "pioupiou/1464"
+   ],
+   "links": {
+    "club": "https://www.parapente-club-les-archanges.fr/sites/carolles",
+    "webcam": "https://www.skaping.com/granville-terre-mer/jullouville/video",
+    "maree": "https://camonte.fr/granville?hauteur=10.00",
+    "ffvl": "https://federation.ffvl.fr/terrain/839",
+    "spotair": "https://www.spotair.mobi/spotpg/ffvl/839"
+   },
+   "confidence": "haute",
+   "sources": [
+    "wikiparapente.fr",
+    "Les Archanges",
+    "ParaglidingEarth"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "tide": true,
+   "access": {
+    "mode": "train",
+    "station": "Granville",
+    "stationLat": 48.8377,
+    "stationLon": -1.5967,
+    "train": "TER Rennes - Granville (direct ou via Dol / Pontorson)",
+    "trainMinutes": 110,
+    "rideKm": 12.3,
+    "ride": "Environ 12 km par Saint-Pair et Jullouville : au-delà de la limite des 10 km."
+   },
+   "limit": true
+  },
+  {
+   "id": "donville",
+   "name": "Granville - Donville-les-Bains",
+   "city": "Donville-les-Bains (50)",
+   "region": "Granville",
+   "lat": 48.844897,
+   "lon": -1.591426,
+   "orientations": [
+    "NW",
+    "NNW",
+    "N"
+   ],
+   "elevation": 40,
+   "levelFfvl": "bleu",
+   "description": "Soaring sur les dunes et falaises au nord de Granville. Site sensible, charte d'engagement envers les riverains.",
+   "level": "Brevet de pilote obligatoire (niveau bleu)",
+   "landing": "Plage (réduite à marée haute).",
+   "rules": [
+    "Brevet de pilote obligatoire.",
+    "Survol des habitations et du pied de pente face au Plat Gousset interdit.",
+    "Mini-voiles de moins de 17 m², parakite et assimilés interdits.",
+    "Parking rue de la Douane."
+   ],
+   "warnings": [
+    "Ne pas décoller par vent faible et marée haute."
+   ],
+   "ffvlId": 1870,
+   "stations": [
+    "pioupiou/1502"
+   ],
+   "links": {
+    "club": "https://www.parapente-club-les-archanges.fr/sites/donvillelesbains-granville",
+    "webcam": "https://www.skaping.com/granville-terre-mer/donville-les-bains",
+    "maree": "https://camonte.fr/granville?hauteur=10.00",
+    "ffvl": "https://federation.ffvl.fr/terrain/1870",
+    "spotair": "https://www.spotair.mobi/spotpg/ffvl/1870"
+   },
+   "confidence": "haute",
+   "sources": [
+    "wikiparapente.fr",
+    "Les Archanges"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "tide": true,
+   "access": {
+    "mode": "train",
+    "station": "Granville",
+    "stationLat": 48.8377,
+    "stationLon": -1.5967,
+    "train": "TER Rennes - Granville (direct ou via Dol / Pontorson)",
+    "trainMinutes": 110,
+    "rideKm": 1.2,
+    "ride": "2 km depuis la gare, plat."
+   },
+   "limit": false
+  },
+  {
+   "id": "champeaux",
+   "name": "Champeaux",
+   "city": "Champeaux (50)",
+   "region": "Baie du Mont-Saint-Michel",
+   "lat": 48.706,
+   "lon": -1.4994,
+   "orientations": [
+    "S",
+    "SW"
+   ],
+   "elevation": 50,
+   "levelFfvl": "bleu",
+   "description": "Falaise orientée sud au-dessus de la baie, complément de Carolles par vent de sud.",
+   "level": "Niveau bleu",
+   "landing": "À confirmer avec le club (Les Archanges).",
+   "rules": [
+    "Ne pas emprunter les champs menant au décollage sud-ouest."
+   ],
+   "ffvlId": 841,
+   "stations": [
+    "pioupiou/1449"
+   ],
+   "links": {
+    "club": "https://www.parapente-club-les-archanges.fr/",
+    "ffvl": "https://federation.ffvl.fr/terrain/841",
+    "spotair": "https://www.spotair.mobi/spotpg/ffvl/841"
+   },
+   "sources": [
+    "wikiparapente.fr",
+    "ParaglidingEarth"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "warnings": [],
+   "tide": true,
+   "confidence": "moyenne",
+   "access": {
+    "mode": "voiture",
+    "driveKm": 85,
+    "driveMinutes": 70,
+    "rideKm": 0,
+    "ride": "Pas de gare à moins de 10 km : voiture ou covoiturage club, environ 85 km depuis Rennes (estimation)."
+   },
+   "limit": false
+  },
+  {
+   "id": "carteret-sud",
+   "name": "Barneville-Carteret - Sud",
+   "city": "Barneville-Carteret (50)",
+   "region": "Cotentin",
+   "lat": 49.373024,
+   "lon": -1.805221,
+   "orientations": [
+    "S"
+   ],
+   "description": "Déco sud au-dessus de la plage de Carteret.",
+   "level": "Pilote autonome",
+   "landing": "Au déco, ou en bas sur la plage jusqu'à 5 m d'eau environ.",
+   "links": {
+    "club": "https://www.cotentinvolibre.com/?page_id=235",
+    "spotair": "https://www.spotair.mobi?lat=49.373024&lng=-1.805221&zoom=14&layers=spotpg,wind"
+   },
+   "sources": [
+    "wikiparapente.fr",
+    "Cotentin Vol Libre"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "rules": [],
+   "warnings": [],
+   "stations": [],
+   "tide": true,
+   "confidence": "moyenne",
+   "access": {
+    "mode": "voiture",
+    "driveKm": 177,
+    "driveMinutes": 135,
+    "rideKm": 0,
+    "ride": "Pas de gare à moins de 10 km : voiture ou covoiturage club, environ 177 km depuis Rennes (estimation)."
+   },
+   "limit": false,
+   "levelFfvl": null,
+   "elevation": null
+  },
+  {
+   "id": "carteret-no",
+   "name": "Barneville-Carteret - Nord-Ouest",
+   "city": "Barneville-Carteret (50)",
+   "region": "Cotentin",
+   "lat": 49.374346,
+   "lon": -1.808007,
+   "orientations": [
+    "WNW",
+    "NW"
+   ],
+   "description": "Déco nord-ouest du cap de Carteret.",
+   "level": "Pilote autonome",
+   "landing": "Sur la plage devant le déco, remontée en 5 min.",
+   "links": {
+    "club": "https://www.cotentinvolibre.com/?page_id=235",
+    "spotair": "https://www.spotair.mobi?lat=49.374346&lng=-1.808007&zoom=14&layers=spotpg,wind"
+   },
+   "sources": [
+    "wikiparapente.fr",
+    "Cotentin Vol Libre"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "rules": [],
+   "warnings": [],
+   "stations": [],
+   "tide": true,
+   "confidence": "moyenne",
+   "access": {
+    "mode": "voiture",
+    "driveKm": 177,
+    "driveMinutes": 135,
+    "rideKm": 0,
+    "ride": "Pas de gare à moins de 10 km : voiture ou covoiturage club, environ 177 km depuis Rennes (estimation)."
+   },
+   "limit": false,
+   "levelFfvl": null,
+   "elevation": null
+  },
+  {
+   "id": "le-rozel",
+   "name": "Le Rozel",
+   "city": "Le Rozel (50)",
+   "region": "Cotentin",
+   "lat": 49.4745,
+   "lon": -1.8443,
+   "orientations": [
+    "NNW",
+    "S"
+   ],
+   "elevation": 60,
+   "description": "Deux décollages officiels au-dessus de la plage du Rozel. Impossible de se garer au sommet.",
+   "level": "Pilote autonome",
+   "landing": "Sur la plage.",
+   "rules": [
+    "Uniquement les zones officielles (convention avec le Conservatoire du littoral).",
+    "Limiter au maximum le survol des habitations.",
+    "Ne pas piétiner le cordon dunaire."
+   ],
+   "warnings": [
+    "Aérologie parfois turbulente sous le déco NNO.",
+    "Confluence vent météo / brise de mer."
+   ],
+   "ffvlId": 849,
+   "links": {
+    "club": "https://www.cotentinvolibre.com/?page_id=232",
+    "ffvl": "https://federation.ffvl.fr/terrain/849",
+    "spotair": "https://www.spotair.mobi/spotpg/ffvl/849"
+   },
+   "sources": [
+    "Cotentin Vol Libre",
+    "wikiparapente.fr"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "stations": [],
+   "tide": true,
+   "confidence": "moyenne",
+   "access": {
+    "mode": "voiture",
+    "driveKm": 191,
+    "driveMinutes": 145,
+    "rideKm": 0,
+    "ride": "Pas de gare à moins de 10 km : voiture ou covoiturage club, environ 191 km depuis Rennes (estimation)."
+   },
+   "limit": false,
+   "levelFfvl": null
+  },
+  {
+   "id": "dielette",
+   "name": "Diélette",
+   "city": "Flamanville (50)",
+   "region": "Cotentin",
+   "lat": 49.5577,
+   "lon": -1.8503,
+   "orientations": [
+    "WNW",
+    "NW"
+   ],
+   "elevation": 30,
+   "levelFfvl": "vert",
+   "description": "Petit soaring au-dessus de la plage de Diélette.",
+   "level": "Brevet initial (vert)",
+   "landing": "Plage praticable jusqu'à 7 m d'eau environ (marée de Diélette).",
+   "ffvlId": 741,
+   "links": {
+    "club": "https://www.cotentinvolibre.com/?page_id=230",
+    "maree": "https://camonte.fr/dielette?hauteur=7.00",
+    "ffvl": "https://federation.ffvl.fr/terrain/741",
+    "spotair": "https://www.spotair.mobi/spotpg/ffvl/741"
+   },
+   "sources": [
+    "wikiparapente.fr",
+    "Cotentin Vol Libre"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "rules": [],
+   "warnings": [],
+   "stations": [],
+   "tide": true,
+   "confidence": "moyenne",
+   "access": {
+    "mode": "voiture",
+    "driveKm": 203,
+    "driveMinutes": 153,
+    "rideKm": 0,
+    "ride": "Pas de gare à moins de 10 km : voiture ou covoiturage club, environ 203 km depuis Rennes (estimation)."
+   },
+   "limit": false
+  },
+  {
+   "id": "biville",
+   "name": "Dunes de Biville",
+   "city": "Biville (50)",
+   "region": "Cotentin",
+   "lat": 49.6091,
+   "lon": -1.84262,
+   "orientations": [
+    "W",
+    "WSW"
+   ],
+   "elevation": 35,
+   "description": "Cordon dunaire de 3 km entre Biville et Siouville, décollage et atterrissage sur la plage.",
+   "level": "Pilote autonome",
+   "landing": "Sur la plage.",
+   "rules": [
+    "Zone entre la mare de Vauville et les premiers blockhaus interdite du 15/06 au 15/09, de 9 h à 19 h.",
+    "Survol des baigneurs interdit, parking sud recommandé l'été.",
+    "Limiter le piétinement du cordon dunaire."
+   ],
+   "warnings": [
+    "Turbulences sous le vent de la dune et près des blockhaus.",
+    "Pieux, barbelés et éléments béton ou métal."
+   ],
+   "ffvlId": 5127,
+   "links": {
+    "club": "https://www.cotentinvolibre.com/?page_id=227",
+    "ffvl": "https://federation.ffvl.fr/terrain/5127",
+    "spotair": "https://www.spotair.mobi/spotpg/ffvl/5127"
+   },
+   "sources": [
+    "Cotentin Vol Libre",
+    "wikiparapente.fr"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "stations": [],
+   "tide": true,
+   "confidence": "moyenne",
+   "access": {
+    "mode": "voiture",
+    "driveKm": 210,
+    "driveMinutes": 158,
+    "rideKm": 0,
+    "ride": "Pas de gare à moins de 10 km : voiture ou covoiturage club, environ 210 km depuis Rennes (estimation)."
+   },
+   "limit": false,
+   "levelFfvl": null
+  },
+  {
+   "id": "vauville",
+   "name": "Vauville - Pierres Pouquelées",
+   "city": "Vauville (50)",
+   "region": "La Hague",
+   "lat": 49.6499,
+   "lon": -1.8556,
+   "orientations": [
+    "SW",
+    "SSW"
+   ],
+   "elevation": 130,
+   "levelFfvl": "vert",
+   "description": "Grand site de la Hague par vent de sud-ouest, cross possible vers le Nez de Jobourg.",
+   "level": "Brevet initial (vert)",
+   "landing": "Plage selon la marée (jusqu'à 7 m d'eau).",
+   "rules": [
+    "Accès uniquement à pied par les sentiers.",
+    "Zone ornithologique interdite du 15 février au 15 juillet."
+   ],
+   "ffvlId": 547,
+   "stations": [
+    "ffvl/81",
+    "holfuy/967"
+   ],
+   "links": {
+    "maree": "https://camonte.fr/vauville?hauteur=7.00",
+    "webcam": "https://www.viewsurf.com/univers/plage/vue/14502-france-basse-normandie-la-hague-vauville-panoramique-hd",
+    "ffvl": "https://federation.ffvl.fr/terrain/547",
+    "spotair": "https://www.spotair.mobi/spotpg/ffvl/547"
+   },
+   "confidence": "haute",
+   "sources": [
+    "wikiparapente.fr",
+    "ParaglidingEarth"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "warnings": [],
+   "tide": true,
+   "access": {
+    "mode": "voiture",
+    "driveKm": 216,
+    "driveMinutes": 162,
+    "rideKm": 0,
+    "ride": "Pas de gare à moins de 10 km : voiture ou covoiturage club, environ 216 km depuis Rennes (estimation)."
+   },
+   "limit": false
+  },
+  {
+   "id": "ecalgrain",
+   "name": "Baie d'Écalgrain",
+   "city": "La Hague (50)",
+   "region": "La Hague",
+   "lat": 49.694083,
+   "lon": -1.933083,
+   "orientations": [
+    "WSW",
+    "W",
+    "WNW"
+   ],
+   "elevation": 100,
+   "levelFfvl": "marron",
+   "description": "Site sauvage de la pointe de la Hague.",
+   "level": "Brevet de pilote confirmé (marron)",
+   "landing": "Champ derrière le déco, ou plage de la baie jusqu'à 7 m d'eau.",
+   "rules": [
+    "Zone ornithologique du Nez de Jobourg : respecter l'arrêté de protection de biotope."
+   ],
+   "ffvlId": 852,
+   "stations": [
+    "ffvl/1013",
+    "holfuy/966"
+   ],
+   "links": {
+    "club": "https://www.cotentinvolibre.com/?page_id=223",
+    "doc": "https://www.aladecouvertedelahague.fr/zone-APPB-Jobourg.pdf",
+    "maree": "https://camonte.fr/goury?hauteur=7.00",
+    "ffvl": "https://federation.ffvl.fr/terrain/852",
+    "spotair": "https://www.spotair.mobi/spotpg/ffvl/852"
+   },
+   "sources": [
+    "wikiparapente.fr",
+    "Cotentin Vol Libre"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "warnings": [],
+   "tide": true,
+   "confidence": "moyenne",
+   "access": {
+    "mode": "voiture",
+    "driveKm": 222,
+    "driveMinutes": 167,
+    "rideKm": 0,
+    "ride": "Pas de gare à moins de 10 km : voiture ou covoiturage club, environ 222 km depuis Rennes (estimation)."
+   },
+   "limit": false
+  },
+  {
+   "id": "landemer",
+   "name": "Landemer",
+   "city": "La Hague (50)",
+   "region": "La Hague",
+   "lat": 49.6786,
+   "lon": -1.7745,
+   "orientations": [
+    "N",
+    "NNE"
+   ],
+   "elevation": 60,
+   "levelFfvl": "marron",
+   "description": "Site exigeant au-dessus de la mer : thermique, dynamique et cross.",
+   "level": "Pilotes expérimentés uniquement",
+   "landing": "Pas d'atterrissage en bas de pente : chemin de randonnée ou fougères en secours.",
+   "rules": [
+    "Survol interdit du 1er novembre au 31 mai au-dessus de la zone de biotope de Castel-Vendon (nord du sentier littoral).",
+    "Décollage interdit en présence de chevaux.",
+    "Parakite déconseillé."
+   ],
+   "warnings": [
+    "Aérologie turbulente par vent fort, atterrissage étroit.",
+    "Surveiller l'état de la mer."
+   ],
+   "ffvlId": 845,
+   "links": {
+    "club": "https://www.cotentinvolibre.com/?page_id=65",
+    "ffvl": "https://federation.ffvl.fr/terrain/845",
+    "spotair": "https://www.spotair.mobi/spotpg/ffvl/845"
+   },
+   "sources": [
+    "Cotentin Vol Libre",
+    "wikiparapente.fr"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "stations": [],
+   "tide": true,
+   "confidence": "moyenne",
+   "access": {
+    "mode": "voiture",
+    "driveKm": 219,
+    "driveMinutes": 165,
+    "rideKm": 0,
+    "ride": "Pas de gare à moins de 10 km : voiture ou covoiturage club, environ 219 km depuis Rennes (estimation)."
+   },
+   "limit": false
+  },
+  {
+   "id": "omonville",
+   "name": "Omonville",
+   "city": "La Hague (50)",
+   "region": "La Hague",
+   "lat": 49.6951,
+   "lon": -1.833,
+   "orientations": [
+    "E",
+    "ENE"
+   ],
+   "elevation": 80,
+   "levelFfvl": "bleu",
+   "description": "Site de vent d'est de la Hague, convention avec le Conservatoire du littoral.",
+   "level": "Niveau bleu",
+   "landing": "Au décollage, ou dans le petit champ en contrebas (à reconnaître avant).",
+   "rules": [
+    "Uniquement les zones officielles de décollage et d'atterrissage.",
+    "Stationnement dans l'herbe à la sortie de la D45."
+   ],
+   "warnings": [
+    "Turbulent au-delà de 30 km/h, surtout en mini-voile.",
+    "Moutons sur les vagues = renforcement du vent."
+   ],
+   "ffvlId": 843,
+   "stations": [
+    "ffvl/1014"
+   ],
+   "links": {
+    "club": "https://www.cotentinvolibre.com/?page_id=67",
+    "ffvl": "https://federation.ffvl.fr/terrain/843",
+    "spotair": "https://www.spotair.mobi/spotpg/ffvl/843"
+   },
+   "sources": [
+    "Cotentin Vol Libre",
+    "wikiparapente.fr"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "tide": true,
+   "confidence": "moyenne",
+   "access": {
+    "mode": "voiture",
+    "driveKm": 222,
+    "driveMinutes": 166,
+    "rideKm": 0,
+    "ride": "Pas de gare à moins de 10 km : voiture ou covoiturage club, environ 222 km depuis Rennes (estimation)."
+   },
+   "limit": false
+  },
+  {
+   "id": "roches-de-ham",
+   "name": "Les Roches de Ham",
+   "city": "Condé-sur-Vire (50)",
+   "region": "Manche intérieure",
+   "lat": 49.026573,
+   "lon": -1.041482,
+   "orientations": [
+    "S",
+    "SW"
+   ],
+   "elevation": 70,
+   "levelFfvl": "marron",
+   "profile": "plaine",
+   "tide": false,
+   "description": "Falaise au-dessus de la Vire.",
+   "level": "Brevet de pilote confirmé (marron)",
+   "landing": "Atterrissage : 49.0240, -1.0408.",
+   "ffvlId": 1791,
+   "stations": [
+    "pioupiou/334"
+   ],
+   "sources": [
+    "wikiparapente.fr"
+   ],
+   "kind": "vol",
+   "rules": [],
+   "warnings": [],
+   "links": {
+    "ffvl": "https://federation.ffvl.fr/terrain/1791",
+    "spotair": "https://www.spotair.mobi/spotpg/ffvl/1791"
+   },
+   "confidence": "moyenne",
+   "access": {
+    "mode": "voiture",
+    "driveKm": 141,
+    "driveMinutes": 109,
+    "rideKm": 0,
+    "ride": "Pas de gare à moins de 10 km : voiture ou covoiturage club, environ 141 km depuis Rennes (estimation)."
+   },
+   "limit": false
+  },
+  {
+   "id": "vierville",
+   "name": "Vierville-sur-Mer (Omaha)",
+   "city": "Vierville-sur-Mer (14)",
+   "region": "Bessin",
+   "lat": 49.382122,
+   "lon": -0.908956,
+   "orientations": [
+    "NNE",
+    "NE",
+    "ENE"
+   ],
+   "elevation": 40,
+   "levelFfvl": "bleu",
+   "description": "Soaring au-dessus d'Omaha Beach. Parking haut à 200 m du déco, ou montée de 10 min par le sentier.",
+   "level": "Brevet de pilote (bleu)",
+   "landing": "Sur la plage à marée basse, jusqu'à 4 m d'eau maximum.",
+   "warnings": [
+    "Attention aux rouleaux, à la piste cyclable et au champ.",
+    "Survol des habitations avec une hauteur suffisante."
+   ],
+   "ffvlId": 97,
+   "stations": [
+    "ffvl/97"
+   ],
+   "links": {
+    "maree": "https://camonte.fr/vierville?hauteur=4.00",
+    "ffvl": "https://federation.ffvl.fr/terrain/97",
+    "spotair": "https://www.spotair.mobi/spotpg/ffvl/97"
+   },
+   "confidence": "haute",
+   "sources": [
+    "wikiparapente.fr",
+    "FFVL"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "rules": [],
+   "tide": true,
+   "access": {
+    "mode": "voiture",
+    "driveKm": 191,
+    "driveMinutes": 145,
+    "rideKm": 0,
+    "ride": "Pas de gare à moins de 10 km : voiture ou covoiturage club, environ 191 km depuis Rennes (estimation)."
+   },
+   "limit": false
+  },
+  {
+   "id": "commes",
+   "name": "Commes",
+   "city": "Commes / Port-en-Bessin (14)",
+   "region": "Bessin",
+   "lat": 49.346232,
+   "lon": -0.725803,
+   "orientations": [
+    "N",
+    "NNE"
+   ],
+   "elevation": 65,
+   "description": "Falaise du Bessin, à l'ouest de Port-en-Bessin.",
+   "level": "Pilote autonome",
+   "landing": "Zone au sommet à gauche du déco, ou plage jusqu'à 5 m d'eau.",
+   "rules": [
+    "Radio obligatoire sur la fréquence FFVL 143,9875 MHz.",
+    "Waggas interdits.",
+    "La ZRT de Port-en-Bessin peut être activée par NOTAM : vérifier avant de voler.",
+    "Parking limité aux véhicules de moins de 1,90 m ; stationnement interdit régulièrement verbalisé."
+   ],
+   "warnings": [
+    "Relief dangereux : passer impérativement au vent des reliefs isolés."
+   ],
+   "ffvlId": 99,
+   "stations": [
+    "ffvl/158"
+   ],
+   "links": {
+    "maree": "https://camonte.fr/port-en-bessin?hauteur=5.00",
+    "ffvl": "https://federation.ffvl.fr/terrain/99",
+    "spotair": "https://www.spotair.mobi/spotpg/ffvl/99"
+   },
+   "confidence": "haute",
+   "sources": [
+    "wikiparapente.fr",
+    "FFVL"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "tide": true,
+   "access": {
+    "mode": "train",
+    "station": "Bayeux",
+    "stationLat": 49.2716,
+    "stationLon": -0.6976,
+    "train": "Rennes - Caen puis Caen - Bayeux, environ 3 h avec correspondance (à vérifier)",
+    "trainMinutes": 180,
+    "rideKm": 11.1,
+    "ride": "Environ 11 km en skate depuis la gare (estimation)."
+   },
+   "limit": true,
+   "levelFfvl": null
+  },
+  {
+   "id": "tracy",
+   "name": "Tracy-sur-Mer",
+   "city": "Tracy-sur-Mer (14)",
+   "region": "Bessin",
+   "lat": 49.34299,
+   "lon": -0.63564,
+   "orientations": [
+    "NE"
+   ],
+   "elevation": 35,
+   "description": "Petit soaring face à la mer, montée au déco à pied en 10 min. Par vent de NNE, traversée possible vers Arromanches à partir de 95 m.",
+   "level": "Pilote autonome",
+   "landing": "Au déco, ou plage à marée basse (sable mouillé), remontée en 15 min.",
+   "ffvlId": 1406,
+   "links": {
+    "maree": "https://camonte.fr/arromanches-les-bains?hauteur=5.00",
+    "ffvl": "https://federation.ffvl.fr/terrain/1406",
+    "spotair": "https://www.spotair.mobi/spotpg/ffvl/1406"
+   },
+   "sources": [
+    "wikiparapente.fr",
+    "FFVL"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "rules": [],
+   "warnings": [],
+   "stations": [],
+   "tide": true,
+   "confidence": "moyenne",
+   "access": {
+    "mode": "train",
+    "station": "Bayeux",
+    "stationLat": 49.2716,
+    "stationLon": -0.6976,
+    "train": "Rennes - Caen puis Caen - Bayeux, environ 3 h avec correspondance (à vérifier)",
+    "trainMinutes": 180,
+    "rideKm": 11.9,
+    "ride": "Environ 12 km en skate depuis la gare (estimation)."
+   },
+   "limit": true,
+   "levelFfvl": null
+  },
+  {
+   "id": "luc-sur-mer",
+   "name": "Luc-sur-Mer",
+   "city": "Luc-sur-Mer (14)",
+   "region": "Côte de Nacre",
+   "lat": 49.313791,
+   "lon": -0.340996,
+   "orientations": [
+    "NE"
+   ],
+   "elevation": 5,
+   "levelFfvl": "marron",
+   "description": "Petite falaise de la Côte de Nacre. Vol toléré devant les falaises uniquement.",
+   "level": "Brevet de pilote confirmé (marron)",
+   "landing": "Sur la plage à marée basse.",
+   "rules": [
+    "Vol toléré devant les falaises uniquement."
+   ],
+   "warnings": [
+    "Falaise et très faible dénivelé : site particulièrement dangereux.",
+    "Décollage difficile."
+   ],
+   "ffvlId": 13428,
+   "stations": [
+    "holfuy/283"
+   ],
+   "sources": [
+    "wikiparapente.fr"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "links": {
+    "ffvl": "https://federation.ffvl.fr/terrain/13428",
+    "spotair": "https://www.spotair.mobi/spotpg/ffvl/13428"
+   },
+   "tide": true,
+   "confidence": "moyenne",
+   "access": {
+    "mode": "voiture",
+    "driveKm": 208,
+    "driveMinutes": 157,
+    "rideKm": 0,
+    "ride": "Pas de gare à moins de 10 km : voiture ou covoiturage club, environ 208 km depuis Rennes (estimation)."
+   },
+   "limit": false
+  },
+  {
+   "id": "aunay-sur-odon",
+   "name": "Aunay-sur-Odon",
+   "city": "Aunay-sur-Odon (14)",
+   "region": "Bocage",
+   "lat": 49.0019,
+   "lon": -0.65506,
+   "orientations": [
+    "N",
+    "NW"
+   ],
+   "profile": "plaine",
+   "tide": false,
+   "description": "Petit site thermique et dynamique du bocage virois.",
+   "level": "Tous niveaux autonomes",
+   "landing": "À confirmer avec les pilotes locaux.",
+   "confidence": "faible",
+   "sources": [
+    "ParaglidingEarth"
+   ],
+   "kind": "vol",
+   "rules": [],
+   "warnings": [],
+   "links": {
+    "spotair": "https://www.spotair.mobi?lat=49.0019&lng=-0.65506&zoom=14&layers=spotpg,wind"
+   },
+   "stations": [],
+   "access": {
+    "mode": "voiture",
+    "driveKm": 156,
+    "driveMinutes": 120,
+    "rideKm": 0,
+    "ride": "Pas de gare à moins de 10 km : voiture ou covoiturage club, environ 156 km depuis Rennes (estimation)."
+   },
+   "limit": false,
+   "levelFfvl": null,
+   "elevation": null
+  },
+  {
+   "id": "clecy-sud",
+   "name": "Clécy - Saint-Omer Sud",
+   "city": "Saint-Omer / Clécy (14)",
+   "region": "Suisse normande",
+   "lat": 48.929532,
+   "lon": -0.469904,
+   "orientations": [
+    "SSW",
+    "W"
+   ],
+   "elevation": 180,
+   "profile": "plaine",
+   "tide": false,
+   "description": "Le site emblématique de la Suisse normande, au-dessus de l'Orne : thermique et dynamique, 180 m de dénivelé.",
+   "level": "Pilote autonome",
+   "landing": "Atterrissage officiel : 48.9260, -0.4740.",
+   "rules": [
+    "Site en espace naturel sensible Natura 2000.",
+    "Météo diffusée sur 143,9875 MHz.",
+    "Parkings : bitume (48.9301, -0.4703) et herbe (48.9305, -0.4701)."
+   ],
+   "ffvlId": 103,
+   "stations": [
+    "ffvl/122"
+   ],
+   "links": {
+    "meteo": "https://www.meteociel.fr/previsions-arome-1h/4139/saint_omer.htm",
+    "webcam": "https://www.plaine-altitude.com/webcam/",
+    "ffvl": "https://federation.ffvl.fr/terrain/103",
+    "spotair": "https://www.spotair.mobi/spotpg/ffvl/103"
+   },
+   "confidence": "haute",
+   "sources": [
+    "wikiparapente.fr",
+    "FFVL",
+    "ParaglidingEarth"
+   ],
+   "kind": "vol",
+   "warnings": [],
+   "access": {
+    "mode": "voiture",
+    "driveKm": 159,
+    "driveMinutes": 123,
+    "rideKm": 0,
+    "ride": "Pas de gare à moins de 10 km : voiture ou covoiturage club, environ 159 km depuis Rennes (estimation)."
+   },
+   "limit": false,
+   "levelFfvl": null
+  },
+  {
+   "id": "clecy-ouest",
+   "name": "Clécy - Saint-Omer Ouest",
+   "city": "Saint-Omer / Clécy (14)",
+   "region": "Suisse normande",
+   "lat": 48.9261,
+   "lon": -0.4666,
+   "orientations": [
+    "SSW",
+    "W"
+   ],
+   "elevation": 170,
+   "profile": "plaine",
+   "tide": false,
+   "description": "Second décollage de Saint-Omer.",
+   "level": "Pilote autonome",
+   "landing": "Atterrissage officiel de Saint-Omer.",
+   "rules": [
+    "Site en espace naturel sensible Natura 2000.",
+    "Parking : 48.9254, -0.4652."
+   ],
+   "ffvlId": 104,
+   "stations": [
+    "ffvl/122"
+   ],
+   "sources": [
+    "wikiparapente.fr",
+    "FFVL"
+   ],
+   "kind": "vol",
+   "warnings": [],
+   "links": {
+    "ffvl": "https://federation.ffvl.fr/terrain/104",
+    "spotair": "https://www.spotair.mobi/spotpg/ffvl/104"
+   },
+   "confidence": "moyenne",
+   "access": {
+    "mode": "voiture",
+    "driveKm": 159,
+    "driveMinutes": 122,
+    "rideKm": 0,
+    "ride": "Pas de gare à moins de 10 km : voiture ou covoiturage club, environ 159 km depuis Rennes (estimation)."
+   },
+   "limit": false,
+   "levelFfvl": null
+  },
+  {
+   "id": "saint-marc-douilly",
+   "name": "Saint-Marc-d'Ouilly",
+   "city": "Saint-Marc-d'Ouilly (14)",
+   "region": "Suisse normande",
+   "lat": 48.8825,
+   "lon": -0.445,
+   "orientations": [
+    "NNE",
+    "NE",
+    "ENE"
+   ],
+   "elevation": 180,
+   "profile": "plaine",
+   "tide": false,
+   "description": "Site de départ de cross de la Suisse normande.",
+   "level": "Pilote autonome",
+   "landing": "Uniquement sur le terrain officiel : 48.8868, -0.4409.",
+   "rules": [
+    "Ne pas poser ailleurs que sur le terrain d'atterrissage officiel.",
+    "Remontée en voiture."
+   ],
+   "ffvlId": 101,
+   "sources": [
+    "wikiparapente.fr",
+    "FFVL"
+   ],
+   "kind": "vol",
+   "warnings": [],
+   "links": {
+    "ffvl": "https://federation.ffvl.fr/terrain/101",
+    "spotair": "https://www.spotair.mobi/spotpg/ffvl/101"
+   },
+   "stations": [],
+   "confidence": "moyenne",
+   "access": {
+    "mode": "voiture",
+    "driveKm": 157,
+    "driveMinutes": 120,
+    "rideKm": 0,
+    "ride": "Pas de gare à moins de 10 km : voiture ou covoiturage club, environ 157 km depuis Rennes (estimation)."
+   },
+   "limit": false,
+   "levelFfvl": null
+  },
+  {
+   "id": "roche-a-bunel",
+   "name": "La Roche à Bunel",
+   "city": "Suisse normande (14)",
+   "region": "Suisse normande",
+   "lat": 48.9932,
+   "lon": -0.4986,
+   "orientations": [
+    "E",
+    "ESE"
+   ],
+   "elevation": 80,
+   "profile": "plaine",
+   "tide": false,
+   "description": "Site thermique par vent d'est, environ 30 min de montée à pied.",
+   "level": "Pilote expérimenté",
+   "landing": "Choisir le champ le plus adapté et atterrir loin des vaches.",
+   "ffvlId": 92,
+   "sources": [
+    "wikiparapente.fr",
+    "ParaglidingEarth"
+   ],
+   "kind": "vol",
+   "rules": [],
+   "warnings": [],
+   "links": {
+    "ffvl": "https://federation.ffvl.fr/terrain/92",
+    "spotair": "https://www.spotair.mobi/spotpg/ffvl/92"
+   },
+   "stations": [],
+   "confidence": "moyenne",
+   "access": {
+    "mode": "voiture",
+    "driveKm": 164,
+    "driveMinutes": 126,
+    "rideKm": 0,
+    "ride": "Pas de gare à moins de 10 km : voiture ou covoiturage club, environ 164 km depuis Rennes (estimation)."
+   },
+   "limit": false,
+   "levelFfvl": null
+  },
+  {
+   "id": "crocy",
+   "name": "Crocy - Treuil",
+   "city": "Crocy (14)",
+   "region": "Pays d'Auge sud",
+   "lat": 48.87212,
+   "lon": -0.062236,
+   "orientations": [
+    "SSW",
+    "NNE"
+   ],
+   "profile": "treuil",
+   "tide": false,
+   "clubOnly": true,
+   "description": "Piste de treuil SSO/NNE (une seconde piste NO/SE plus au sud) exploitée par l'AS ICARE.",
+   "level": "Pilote breveté treuil, avec le club",
+   "landing": "Sur le terrain.",
+   "rules": [
+    "Uniquement pendant les sessions de l'AS ICARE."
+   ],
+   "sources": [
+    "wikiparapente.fr"
+   ],
+   "kind": "vol",
+   "warnings": [],
+   "links": {
+    "spotair": "https://www.spotair.mobi?lat=48.87212&lng=-0.062236&zoom=14&layers=spotpg,wind"
+   },
+   "stations": [],
+   "confidence": "moyenne",
+   "access": {
+    "mode": "voiture",
+    "driveKm": 183,
+    "driveMinutes": 139,
+    "rideKm": 0,
+    "ride": "Pas de gare à moins de 10 km : voiture ou covoiturage club, environ 183 km depuis Rennes (estimation)."
+   },
+   "limit": false,
+   "levelFfvl": null,
+   "elevation": null
+  },
+  {
+   "id": "martigny",
+   "name": "Martigny-sur-l'Ante - Treuil",
+   "city": "Martigny-sur-l'Ante (14)",
+   "region": "Suisse normande",
+   "lat": 48.895143,
+   "lon": -0.251809,
+   "orientations": [
+    "WNW",
+    "ESE"
+   ],
+   "profile": "treuil",
+   "tide": false,
+   "clubOnly": true,
+   "description": "Piste de treuil ONO/ESE du CDVL 14.",
+   "level": "Pilote breveté treuil, avec le club",
+   "landing": "Sur le terrain.",
+   "rules": [
+    "Uniquement pendant les sessions encadrées.",
+    "Fréquence CDVL 14 : 157,4875 MHz."
+   ],
+   "sources": [
+    "wikiparapente.fr"
+   ],
+   "kind": "vol",
+   "warnings": [],
+   "links": {
+    "spotair": "https://www.spotair.mobi?lat=48.895143&lng=-0.251809&zoom=14&layers=spotpg,wind"
+   },
+   "stations": [],
+   "confidence": "moyenne",
+   "access": {
+    "mode": "voiture",
+    "driveKm": 171,
+    "driveMinutes": 131,
+    "rideKm": 0,
+    "ride": "Pas de gare à moins de 10 km : voiture ou covoiturage club, environ 171 km depuis Rennes (estimation)."
+   },
+   "limit": false,
+   "levelFfvl": null,
+   "elevation": null
+  },
+  {
+   "id": "octeville",
+   "name": "Octeville-sur-Mer",
+   "city": "Octeville-sur-Mer (76)",
+   "region": "Pays de Caux",
+   "lat": 49.5475,
+   "lon": 0.0859,
+   "orientations": [
+    "NW",
+    "WNW"
+   ],
+   "elevation": 90,
+   "levelFfvl": "marron",
+   "description": "Falaises au nord du Havre, à proximité de l'aéroport.",
+   "level": "Brevet de pilote confirmé (marron)",
+   "landing": "À confirmer avec le club (Viking Vol Libre).",
+   "rules": [
+    "Autorisation de la tour de l'aéroport du Havre obligatoire : 02 35 54 64 90.",
+    "Radio obligatoire."
+   ],
+   "links": {
+    "doc": "https://www.vikingvollibre76.fr/_files/ugd/204ae7_f29a9f7c985a41ab9f366e46df8f020e.pdf",
+    "spotair": "https://www.spotair.mobi?lat=49.5475&lng=0.0859&zoom=14&layers=spotpg,wind"
+   },
+   "sources": [
+    "wikiparapente.fr",
+    "ParaglidingEarth"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "warnings": [],
+   "stations": [],
+   "tide": true,
+   "confidence": "moyenne",
+   "access": {
+    "mode": "train",
+    "station": "Le Havre",
+    "stationLat": 49.4925,
+    "stationLon": 0.1251,
+    "train": "Rennes - Le Havre avec correspondance (Caen ou Paris), environ 4 h 30 (à vérifier)",
+    "trainMinutes": 270,
+    "rideKm": 8.8,
+    "ride": "Environ 9 km en skate depuis la gare (estimation)."
+   },
+   "limit": false
+  },
+  {
+   "id": "saint-pierre-en-port",
+   "name": "Saint-Pierre-en-Port",
+   "city": "Saint-Pierre-en-Port (76)",
+   "region": "Pays de Caux",
+   "lat": 49.8106,
+   "lon": 0.4911,
+   "orientations": [
+    "NW"
+   ],
+   "elevation": 67,
+   "levelFfvl": "bleu",
+   "description": "Déco haut accessible par le GR21 et déco bas au-dessus de la plage.",
+   "level": "Niveau bleu",
+   "landing": "Plage possible.",
+   "ffvlId": 14085,
+   "sources": [
+    "wikiparapente.fr",
+    "ParaglidingEarth"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "rules": [],
+   "warnings": [],
+   "links": {
+    "ffvl": "https://federation.ffvl.fr/terrain/14085",
+    "spotair": "https://www.spotair.mobi/spotpg/ffvl/14085"
+   },
+   "stations": [],
+   "tide": true,
+   "confidence": "moyenne",
+   "access": {
+    "mode": "train",
+    "station": "Fécamp",
+    "stationLat": 49.7578,
+    "stationLon": 0.3777,
+    "train": "Rennes - Fécamp avec 2 correspondances, environ 5 h (à vérifier)",
+    "trainMinutes": 300,
+    "rideKm": 13.0,
+    "ride": "Environ 13 km en skate depuis la gare (estimation)."
+   },
+   "limit": true
+  },
+  {
+   "id": "saussemare",
+   "name": "Saussemare",
+   "city": "Côte d'Albâtre (76)",
+   "region": "Pays de Caux",
+   "lat": 49.8932,
+   "lon": 0.865033,
+   "orientations": [
+    "N",
+    "NE"
+   ],
+   "levelFfvl": "marron",
+   "description": "Site côtier de la Côte d'Albâtre.",
+   "level": "Brevet de pilote confirmé (marron)",
+   "landing": "À confirmer sur place.",
+   "confidence": "faible",
+   "sources": [
+    "wikiparapente.fr",
+    "ParaglidingEarth"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "rules": [],
+   "warnings": [],
+   "links": {
+    "spotair": "https://www.spotair.mobi?lat=49.8932&lng=0.865033&zoom=14&layers=spotpg,wind"
+   },
+   "stations": [],
+   "tide": true,
+   "access": {
+    "mode": "voiture",
+    "driveKm": 340,
+    "driveMinutes": 250,
+    "rideKm": 0,
+    "ride": "Pas de gare à moins de 10 km : voiture ou covoiturage club, environ 340 km depuis Rennes (estimation)."
+   },
+   "limit": false,
+   "elevation": null
+  },
+  {
+   "id": "criel",
+   "name": "Criel-sur-Mer - Les Mouettes",
+   "city": "Criel-sur-Mer (76)",
+   "region": "Pays de Caux",
+   "lat": 50.0285,
+   "lon": 1.30051,
+   "orientations": [
+    "NW"
+   ],
+   "elevation": 88,
+   "levelFfvl": "bleu",
+   "description": "Valleuse côtière, thermique et soaring.",
+   "level": "Niveau bleu",
+   "landing": "À confirmer avec le club.",
+   "ffvlId": 1385,
+   "sources": [
+    "wikiparapente.fr",
+    "ParaglidingEarth"
+   ],
+   "kind": "vol",
+   "profile": "soaring",
+   "rules": [],
+   "warnings": [],
+   "links": {
+    "ffvl": "https://federation.ffvl.fr/terrain/1385",
+    "spotair": "https://www.spotair.mobi/spotpg/ffvl/1385"
+   },
+   "stations": [],
+   "tide": true,
+   "confidence": "moyenne",
+   "access": {
+    "mode": "voiture",
+    "driveKm": 381,
+    "driveMinutes": 279,
+    "rideKm": 0,
+    "ride": "Pas de gare à moins de 10 km : voiture ou covoiturage club, environ 381 km depuis Rennes (estimation)."
+   },
+   "limit": false
+  }
+ ]
+}

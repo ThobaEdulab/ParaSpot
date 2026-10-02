@@ -1,0 +1,1955 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FenêtreVol</title>
+<meta name="description" content="Où et quand gonfler ou voler depuis Rennes, en train et en skate.">
+<meta name="theme-color" content="#eef3f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0a121d" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FenêtreVol">
+<!-- Intégration : <link rel="manifest" href="manifest.webmanifest"> + service worker (cache des prévisions) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" defer></script>
+<style>
+/* =========================================================
+   JETONS DE DESIGN
+   ========================================================= */
+:root{
+  color-scheme: light;
+  --font: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  /* Marque : bleu marine profond */
+  --brand: #14305a;          /* texte / icônes d'accent */
+  --brand-solid: #14305a;    /* fonds pleins (boutons, hero) */
+  --brand-on: #ffffff;       /* texte sur fond plein */
+  --brand-soft: #dbe6f2;
+  --hero-bg: #14305a;
+  --hero-ink: #ffffff;
+  --hero-ink-2: #c9d8ea;
+  --hero-line: rgba(255,255,255,.18);
+
+  /* Ciel, ardoise, granit rose */
+  --bg: #eaf1f7;
+  --surface: #ffffff;
+  --surface-2: #f3f6f9;
+  --surface-3: #e2e9f0;
+  --text: #0f1b2a;
+  --text-2: #435468;
+  --text-3: #5b6b7d;
+  --line: #d3dde6;
+  --line-strong: #aebccb;
+  --slate: #33414f;
+  --granite: #b9776d;
+  --granite-soft: #f6e5e1;
+  --granite-ink: #7a3a31;
+  --focus: #1f5fcf;
+  --wind: #14305a;
+  --overlay: rgba(6,14,26,.52);
+
+  /* Verdicts : couleur pleine (frise, carte), fond de badge, encre de badge */
+  --v-top: #1e8a4a;  --v-top-bg: #d5efdf;  --v-top-ink: #0b4f28;
+  --v-ok:  #93b21f;  --v-ok-bg:  #ebf3c4;  --v-ok-ink:  #3f4d05;
+  --v-lim: #e3801d;  --v-lim-bg: #fde3c9;  --v-lim-ink: #833800;
+  --v-non: #aab4be;  --v-non-bg: #e4e8ec;  --v-non-ink: #45505b;
+  --v-off: #c4cdd6;  /* hors de portée en train */
+  --sector: #1e8a4a; --sector-fill: rgba(30,138,74,.20);
+
+  /* Espacements */
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 20px; --s6: 24px; --s8: 32px; --s10: 40px;
+  --gutter: 16px;
+  /* Rayons */
+  --r-xs: 6px; --r-sm: 8px; --r-md: 12px; --r-lg: 18px; --r-xl: 24px; --r-pill: 999px;
+  /* Tailles */
+  --tap: 44px;
+  --tabbar-h: 64px;
+  --shadow-1: 0 1px 2px rgba(15,27,42,.06), 0 2px 8px rgba(15,27,42,.05);
+  --shadow-2: 0 8px 32px rgba(15,27,42,.18);
+}
+
+/* Mode sombre : préférence système (sauf forçage clair) */
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --brand: #a8c6f0; --brand-solid: #24497e; --brand-on: #ffffff; --brand-soft: #1b2e48;
+    --hero-bg: #182f52; --hero-ink: #ffffff; --hero-ink-2: #bcd0ea; --hero-line: rgba(255,255,255,.16);
+    --bg: #0a121d; --surface: #111c2a; --surface-2: #172435; --surface-3: #1f2f43;
+    --text: #e8eef5; --text-2: #aab8c7; --text-3: #94a3b4;
+    --line: #23364b; --line-strong: #3a5069; --slate: #c9d3dd;
+    --granite: #e2a59c; --granite-soft: #3a2421; --granite-ink: #f3c7c0;
+    --focus: #7fb0ff; --wind: #e8eef5; --overlay: rgba(0,0,0,.62);
+    --v-top: #3fbf72; --v-top-bg: #12391f; --v-top-ink: #a2e9bd;
+    --v-ok:  #b6d046; --v-ok-bg:  #2b3410; --v-ok-ink:  #d9ec92;
+    --v-lim: #f39c47; --v-lim-bg: #3e2510; --v-lim-ink: #ffcb99;
+    --v-non: #5d6b7a; --v-non-bg: #222e3b; --v-non-ink: #bac5d0;
+    --v-off: #2e3e50;
+    --sector: #4fd083; --sector-fill: rgba(63,191,114,.24);
+    --shadow-1: 0 1px 2px rgba(0,0,0,.4);
+    --shadow-2: 0 8px 32px rgba(0,0,0,.5);
+  }
+}
+/* Mode sombre forcé (réglage Apparence) */
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --brand: #a8c6f0; --brand-solid: #24497e; --brand-on: #ffffff; --brand-soft: #1b2e48;
+  --hero-bg: #182f52; --hero-ink: #ffffff; --hero-ink-2: #bcd0ea; --hero-line: rgba(255,255,255,.16);
+  --bg: #0a121d; --surface: #111c2a; --surface-2: #172435; --surface-3: #1f2f43;
+  --text: #e8eef5; --text-2: #aab8c7; --text-3: #94a3b4;
+  --line: #23364b; --line-strong: #3a5069; --slate: #c9d3dd;
+  --granite: #e2a59c; --granite-soft: #3a2421; --granite-ink: #f3c7c0;
+  --focus: #7fb0ff; --wind: #e8eef5; --overlay: rgba(0,0,0,.62);
+  --v-top: #3fbf72; --v-top-bg: #12391f; --v-top-ink: #a2e9bd;
+  --v-ok:  #b6d046; --v-ok-bg:  #2b3410; --v-ok-ink:  #d9ec92;
+  --v-lim: #f39c47; --v-lim-bg: #3e2510; --v-lim-ink: #ffcb99;
+  --v-non: #5d6b7a; --v-non-bg: #222e3b; --v-non-ink: #bac5d0;
+  --v-off: #2e3e50;
+  --sector: #4fd083; --sector-fill: rgba(63,191,114,.24);
+  --shadow-1: 0 1px 2px rgba(0,0,0,.4);
+  --shadow-2: 0 8px 32px rgba(0,0,0,.5);
+}
+
+/* =========================================================
+   BASE
+   ========================================================= */
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);font-size:16px;line-height:1.4;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4,p{margin:0}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:var(--brand)}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums lining-nums}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+[hidden]{display:none !important}
+svg.ic{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+svg.ic--s{width:16px;height:16px}
+svg.ic--l{width:24px;height:24px}
+svg.ic--fill{fill:currentColor;stroke:none}
+
+/* Barre de navigation de la maquette (masquée une fois installée) */
+.maquette-nav{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:var(--s2);padding:calc(env(safe-area-inset-top) + 8px) var(--gutter) 8px;background:var(--surface-3);border-bottom:1px solid var(--line);font-size:13px;color:var(--text-2)}
+.maquette-nav strong{color:var(--text);margin-right:var(--s2)}
+.maquette-nav button{min-height:36px;padding:0 12px;border-radius:var(--r-pill);border:1px solid var(--line-strong);background:var(--surface);font-weight:700;font-size:13px}
+.maquette-nav button[aria-pressed="true"]{background:var(--brand-solid);color:var(--brand-on);border-color:transparent}
+@media (display-mode: standalone){.maquette-nav{display:none}}
+
+/* =========================================================
+   STRUCTURE DE L'APP
+   ========================================================= */
+.app{max-width:760px;margin:0 auto;min-height:100dvh;position:relative;padding-bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom) + var(--s4))}
+.screen{padding:var(--s3) var(--gutter) var(--s6);display:grid;gap:var(--s4);padding-left:max(var(--gutter), env(safe-area-inset-left));padding-right:max(var(--gutter), env(safe-area-inset-right))}
+.screen-title{font-size:22px;font-weight:800;letter-spacing:-.01em}
+.section-head{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s3)}
+.section-head h2{font-size:17px;font-weight:800}
+.section-head p{font-size:13px;color:var(--text-2)}
+
+/* COMPOSANT: app-header */
+.app-header{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:var(--s3);padding:calc(env(safe-area-inset-top) + 10px) max(var(--gutter), env(safe-area-inset-right)) 10px max(var(--gutter), env(safe-area-inset-left));background:color-mix(in srgb, var(--bg) 90%, transparent);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+.brand-mark{width:38px;height:38px;border-radius:11px;background:var(--brand-solid);color:var(--brand-on);display:grid;place-items:center;flex:none}
+.brand-mark svg{width:24px;height:24px}
+.brand-name{font-weight:800;font-size:19px;letter-spacing:-.015em;line-height:1.1}
+.brand-meta{font-size:13px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.icon-btn{min-width:var(--tap);min-height:var(--tap);border-radius:var(--r-md);border:1px solid var(--line);background:var(--surface);display:inline-grid;place-items:center;color:var(--text)}
+.icon-btn:active{transform:scale(.97)}
+.is-loading .spin{animation:spin .9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* COMPOSANT: offline-banner */
+.banner{display:flex;gap:var(--s3);align-items:flex-start;padding:var(--s3) var(--s4);border-radius:var(--r-md);background:var(--granite-soft);color:var(--granite-ink);font-size:14px;font-weight:600}
+.banner p{font-weight:500}
+
+/* COMPOSANT: filters */
+.filters{display:grid;gap:var(--s3)}
+.seg{display:flex;background:var(--surface-3);border-radius:var(--r-md);padding:3px;gap:2px}
+.seg button{flex:1;min-height:var(--tap);border:0;background:transparent;border-radius:10px;font-weight:700;font-size:15px;color:var(--text-2);display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--text);box-shadow:var(--shadow-1)}
+.days{display:flex;gap:var(--s2);overflow-x:auto;scrollbar-width:none;margin:0 calc(var(--gutter) * -1);padding:2px var(--gutter)}
+.days::-webkit-scrollbar{display:none}
+.day-chip{flex:none;min-height:var(--tap);padding:0 12px 0 8px;border-radius:var(--r-pill);border:1px solid var(--line-strong);background:var(--surface);font-weight:700;font-size:15px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.day-chip[aria-pressed="true"]{background:var(--brand-solid);color:var(--brand-on);border-color:transparent}
+.day-chip .vdot{width:20px;height:20px;border-radius:50%;display:grid;place-items:center}
+.day-chip .vdot svg{width:12px;height:12px}
+
+/* COMPOSANT: verdict-badge */
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px 3px 8px;min-height:28px;border-radius:var(--r-pill);font-weight:800;font-size:13px;white-space:nowrap;line-height:1}
+.badge svg{width:14px;height:14px}
+.badge--top{background:var(--v-top-bg);color:var(--v-top-ink)}
+.badge--ok{background:var(--v-ok-bg);color:var(--v-ok-ink)}
+.badge--limite{background:var(--v-lim-bg);color:var(--v-lim-ink)}
+.badge--non{background:var(--v-non-bg);color:var(--v-non-ink)}
+.vfill--top{background:var(--v-top);color:#fff}
+.vfill--ok{background:var(--v-ok);color:#1d2600}
+.vfill--limite{background:var(--v-lim);color:#3a1600}
+.vfill--non{background:var(--v-non);color:#1b232b}
+
+/* COMPOSANT: hero */
+.hero{position:relative;overflow:hidden;background:var(--hero-bg);color:var(--hero-ink);border-radius:var(--r-xl);padding:var(--s5) var(--s5) var(--s4);display:grid;gap:var(--s3)}
+.hero-horizon{position:absolute;right:-10px;top:14px;width:180px;height:90px;opacity:.9;pointer-events:none}
+.hero-eyebrow{display:flex;align-items:center;justify-content:space-between;gap:var(--s2);font-size:13px;font-weight:700;color:var(--hero-ink-2);position:relative}
+.hero-eyebrow .badge{background:#fff}
+.hero-eyebrow .badge--top{color:#0b4f28}.hero-eyebrow .badge--ok{color:#3f4d05}.hero-eyebrow .badge--limite{color:#833800}.hero-eyebrow .badge--non{color:#45505b}
+.hero-name{font-size:27px;font-weight:800;letter-spacing:-.02em;line-height:1.1;position:relative}
+.hero-sub{font-size:14px;color:var(--hero-ink-2);display:flex;align-items:center;gap:6px;margin-top:4px}
+.hero-time{font-size:40px;font-weight:800;letter-spacing:-.03em;line-height:1}
+.hero-time small{font-size:15px;font-weight:600;color:var(--hero-ink-2);letter-spacing:0;margin-left:6px}
+.hero-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--hero-line);border-radius:var(--r-md);overflow:hidden}
+.hero-stat{background:var(--hero-bg);padding:10px 8px 8px 0;display:grid;gap:2px}
+.hero-stat + .hero-stat{padding-left:12px}
+.hero-stat dt{font-size:12px;color:var(--hero-ink-2);font-weight:600}
+.hero-stat dd{margin:0;font-size:18px;font-weight:800;display:flex;align-items:center;gap:4px;white-space:nowrap}
+.hero-stat dd small{font-size:12px;font-weight:600;color:var(--hero-ink-2)}
+.hero-stat .wind-arrow{color:#fff}
+.btn{min-height:48px;padding:0 var(--s5);border-radius:var(--r-md);border:1px solid transparent;font-weight:800;font-size:16px;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none}
+.btn--primary{background:var(--brand-solid);color:var(--brand-on)}
+.btn--light{background:#fff;color:#14305a}
+.btn--ghost{background:transparent;border-color:var(--line-strong);color:var(--text)}
+.btn--block{width:100%}
+.hero--empty{background:var(--surface);color:var(--text);border:1px solid var(--line)}
+.hero--empty .hero-eyebrow{color:var(--text-2)}
+.hero-empty-title{font-size:21px;font-weight:800;letter-spacing:-.01em}
+.hero-empty-list{margin:0;padding:0;list-style:none;display:grid;gap:var(--s2);font-size:15px;color:var(--text-2)}
+.hero-empty-list li{display:flex;gap:10px;align-items:flex-start}
+.hero-empty-list svg{margin-top:2px;color:var(--text-3)}
+.hero-actions{display:flex;flex-wrap:wrap;gap:var(--s2)}
+.hero-actions .btn{flex:1 1 160px}
+
+/* COMPOSANT: legend */
+.legend{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12px;color:var(--text-2);font-weight:600}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
+.legend i.off{background:repeating-linear-gradient(135deg,var(--v-off) 0 2px,transparent 2px 4px);border:1px solid var(--v-off)}
+
+/* COMPOSANT: spot-card */
+.spot-list{list-style:none;margin:0;padding:0;display:grid;gap:var(--s3)}
+.spot-card{width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:var(--s4);display:grid;gap:var(--s3);box-shadow:var(--shadow-1);color:var(--text)}
+.spot-card:active{transform:scale(.995)}
+.sc-head{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--s3)}
+.sc-name{font-size:18px;font-weight:800;letter-spacing:-.01em;line-height:1.2}
+.sc-sub{font-size:14px;color:var(--text-2);display:flex;align-items:center;gap:6px;margin-top:3px;flex-wrap:wrap}
+.sc-rank{font-size:12px;font-weight:800;color:var(--text-3);margin-right:2px}
+.sectors{display:flex;align-items:center;gap:4px;flex-wrap:wrap;font-size:12px;color:var(--text-2);font-weight:600}
+.sector-chip{min-width:30px;padding:2px 6px;border-radius:var(--r-xs);border:1.5px solid var(--sector);color:var(--text);font-weight:800;font-size:12px;text-align:center}
+.sc-wind{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);padding:var(--s3);background:var(--surface-2);border-radius:var(--r-md)}
+.wind-read{display:flex;align-items:center;gap:10px}
+.wind-read .wind-arrow{color:var(--wind)}
+.wind-val{font-size:26px;font-weight:800;letter-spacing:-.02em;line-height:1}
+.wind-val small{font-size:13px;font-weight:700;color:var(--text-2);letter-spacing:0;margin-left:2px}
+.wind-meta{font-size:13px;color:var(--text-2);font-weight:600;line-height:1.3}
+.wind-meta b{color:var(--text)}
+.best{text-align:right}
+.best dt{font-size:12px;color:var(--text-2);font-weight:600}
+.best dd{margin:0;font-size:20px;font-weight:800;letter-spacing:-.01em}
+.best dd.none{font-size:15px;color:var(--text-2);font-weight:700}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tag{display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:700;padding:4px 8px;min-height:28px;border-radius:var(--r-sm);background:var(--surface-2);color:var(--text-2);border:1px solid var(--line)}
+.tag svg{width:15px;height:15px}
+.tag--warn{background:var(--granite-soft);color:var(--granite-ink);border-color:transparent}
+.tag--club{background:var(--brand-soft);color:var(--brand);border-color:transparent}
+
+/* COMPOSANT: timeline */
+.tl{display:grid;gap:3px}
+.tl-slot,.tl-bars,.tl-axis{display:grid;grid-template-columns:repeat(15,1fr);gap:2px}
+.tl-slot{height:5px}
+.tl-slot span{background:var(--brand);border-radius:3px}
+.tl-bars{height:34px;align-items:end}
+.tl-bar{border-radius:3px 3px 1px 1px;min-height:4px}
+.tl-bar--top{background:var(--v-top)}
+.tl-bar--ok{background:var(--v-ok)}
+.tl-bar--limite{background:var(--v-lim)}
+.tl-bar--non{background:var(--v-non)}
+.tl-bar--off{background:repeating-linear-gradient(135deg,var(--v-off) 0 2px,transparent 2px 4px);border:1px solid var(--v-off);height:100% !important}
+.tl-axis{font-size:11px;color:var(--text-3);font-weight:700}
+.tl-axis span{white-space:nowrap}
+
+/* COMPOSANT: wind-arrow */
+.wind-arrow{display:inline-block;flex:none}
+.wind-arrow svg{display:block;width:100%;height:100%;fill:currentColor}
+
+/* COMPOSANT: tab-bar */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:color-mix(in srgb, var(--surface) 94%, transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:6px max(8px, env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left))}
+.tabbar ul{list-style:none;margin:0 auto;padding:0;max-width:760px;display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.tabbar button{width:100%;min-height:52px;border:0;background:transparent;border-radius:var(--r-md);display:grid;place-items:center;gap:2px;font-size:12px;font-weight:700;color:var(--text-2);padding:4px 0}
+.tabbar button[aria-current="page"]{color:var(--brand);background:var(--brand-soft)}
+
+/* COMPOSANT: detail-sheet */
+.sheet-backdrop{position:fixed;inset:0;z-index:60;background:var(--overlay);opacity:0;pointer-events:none;transition:opacity .25s}
+.sheet-backdrop.is-open{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:61;max-width:760px;margin:0 auto;max-height:calc(100dvh - env(safe-area-inset-top) - 16px);background:var(--surface);color:var(--text);border-radius:var(--r-xl) var(--r-xl) 0 0;box-shadow:var(--shadow-2);transform:translateY(105%);transition:transform .34s cubic-bezier(.2,.8,.2,1);overflow-y:auto;overscroll-behavior:contain;padding-bottom:calc(env(safe-area-inset-bottom) + var(--s6));visibility:hidden}
+.sheet.is-open{transform:none;visibility:visible}
+.sheet-top{position:sticky;top:0;z-index:2;background:var(--surface);padding:8px var(--gutter) var(--s3);border-bottom:1px solid var(--line)}
+.sheet-handle{width:40px;height:5px;border-radius:3px;background:var(--line-strong);margin:0 auto 10px}
+.sheet-titlebar{display:flex;align-items:flex-start;gap:var(--s3)}
+.sheet-titlebar > div{flex:1;min-width:0}
+.sheet-title{font-size:22px;font-weight:800;letter-spacing:-.02em;line-height:1.15}
+.sheet-sub{font-size:14px;color:var(--text-2);margin-top:3px;display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center}
+.sheet-sub span{display:inline-flex;align-items:center;gap:5px}
+.dsec{padding:var(--s5) var(--gutter) 0;display:grid;gap:var(--s3)}
+.dsec > h3{font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text-2)}
+.instrument{display:grid;gap:var(--s4);align-items:center}
+@media (min-width:600px){.instrument{grid-template-columns:300px 1fr}}
+
+/* COMPOSANT: compass */
+.compass{display:grid;justify-items:center;gap:var(--s2)}
+.compass svg{width:100%;max-width:300px;height:auto;display:block}
+.cp-ring{fill:var(--surface-2);stroke:var(--line-strong);stroke-width:1}
+.cp-band{fill:none;stroke:var(--line);stroke-width:1}
+.cp-sector{fill:var(--sector-fill);stroke:var(--sector);stroke-width:2}
+.cp-tick{stroke:var(--text-3);stroke-width:1.2}
+.cp-tick--major{stroke:var(--text);stroke-width:2}
+.cp-label{fill:var(--text-2);font:700 11px var(--font);text-anchor:middle;dominant-baseline:central}
+.cp-label--major{fill:var(--text);font-size:15px;font-weight:800}
+.cp-hourdot{fill:var(--text-3);opacity:.55}
+.cp-arrow{stroke:var(--wind);stroke-width:7;stroke-linecap:round;fill:none}
+.cp-arrow-head{fill:var(--wind)}
+.cp-arrow-tail{fill:var(--surface);stroke:var(--wind);stroke-width:3}
+.cp-center{fill:var(--surface);stroke:var(--line-strong);stroke-width:1}
+.cp-speed{fill:var(--text);font:800 26px var(--font);text-anchor:middle;font-variant-numeric:tabular-nums}
+.cp-unit{fill:var(--text-2);font:700 10px var(--font);text-anchor:middle}
+.cp-tag{fill:var(--wind)}
+.cp-tag-text{fill:var(--surface);font:800 12px var(--font);text-anchor:middle;dominant-baseline:central}
+.compass-legend{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 14px;font-size:12px;font-weight:600;color:var(--text-2)}
+.compass-legend span{display:inline-flex;align-items:center;gap:6px}
+.compass-legend i{width:14px;height:10px;border-radius:2px;background:var(--sector-fill);border:2px solid var(--sector)}
+.compass-legend b{display:inline-block;width:18px;height:4px;border-radius:2px;background:var(--wind)}
+
+/* COMPOSANT: wind-gauge */
+.gauge{display:grid;gap:var(--s2)}
+.gauge-head{display:flex;justify-content:space-between;align-items:baseline;gap:var(--s2)}
+.gauge-head strong{font-size:30px;font-weight:800;letter-spacing:-.02em}
+.gauge-head strong small{font-size:14px;color:var(--text-2);font-weight:700;margin-left:3px;letter-spacing:0}
+.gauge-head span{font-size:14px;color:var(--text-2);font-weight:600;text-align:right}
+.gauge-track{position:relative;height:62px;margin-top:22px}
+.gauge-rail{position:absolute;left:0;right:0;top:16px;height:12px;border-radius:6px;background:var(--surface-3)}
+.gauge-ideal{position:absolute;top:16px;height:12px;background:var(--v-top);border-radius:3px}
+.gauge-ideal-label{position:absolute;top:-20px;font-size:11px;font-weight:800;color:var(--v-top-ink);background:var(--v-top-bg);padding:1px 6px;border-radius:4px;transform:translateX(-50%);white-space:nowrap}
+.gauge-ceil{position:absolute;top:6px;height:32px;width:0;border-left:2px dashed var(--v-lim)}
+.gauge-ceil-label{position:absolute;top:42px;font-size:11px;font-weight:800;color:var(--v-lim-ink);background:var(--v-lim-bg);padding:1px 6px;border-radius:4px;transform:translateX(-50%);white-space:nowrap}
+.gauge-mark{position:absolute;top:8px;width:6px;height:28px;margin-left:-3px;border-radius:3px;background:var(--text);box-shadow:0 0 0 2px var(--surface)}
+.gauge-gust{position:absolute;top:10px;width:14px;height:24px;margin-left:-7px;border-radius:4px;border:2.5px solid var(--text);background:var(--surface)}
+.gauge-gust-span{position:absolute;top:21px;height:2px;background:var(--text);opacity:.5}
+.gauge-axis{position:relative;height:16px;font-size:11px;color:var(--text-3);font-weight:700}
+.gauge-axis span{position:absolute;transform:translateX(-50%)}
+.gauge-note{font-size:13px;color:var(--text-2)}
+.gauge-keys{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--text-2);font-weight:600}
+.gauge-keys span{display:inline-flex;align-items:center;gap:6px}
+.k-mark{width:5px;height:14px;background:var(--text);border-radius:2px}
+.k-gust{width:10px;height:14px;border:2px solid var(--text);border-radius:3px}
+.k-ceil{width:0;height:14px;border-left:2px dashed var(--v-lim)}
+
+/* COMPOSANT: hour-cell */
+.hours{display:flex;gap:var(--s2);overflow-x:auto;scroll-snap-type:x proximity;padding:4px var(--gutter) var(--s3);margin:0 calc(var(--gutter) * -1);scrollbar-width:thin}
+.hour-cell{flex:0 0 78px;scroll-snap-align:start;border:1px solid var(--line);background:var(--surface);border-radius:var(--r-md);padding:10px 4px 8px;display:grid;justify-items:center;gap:5px;text-align:center;color:var(--text)}
+.hour-cell[aria-pressed="true"]{border-color:var(--brand);box-shadow:inset 0 0 0 2px var(--brand)}
+.hour-cell.is-off{background:repeating-linear-gradient(135deg,var(--surface-2) 0 6px,var(--surface) 6px 12px)}
+.hc-h{font-size:14px;font-weight:800}
+.hc-w{font-size:20px;font-weight:800;line-height:1}
+.hc-w small{display:block;font-size:11px;color:var(--text-2);font-weight:700;margin-top:2px}
+.hc-g,.hc-d,.hc-r,.hc-t{font-size:12px;color:var(--text-2);font-weight:600;line-height:1.2}
+.hc-d{color:var(--text);font-weight:800}
+.hc-r{display:inline-flex;align-items:center;gap:2px}
+.hc-r svg{width:12px;height:12px}
+.hc-v{width:100%;padding-top:4px;border-top:1px solid var(--line);display:grid;justify-items:center;gap:2px}
+.hc-v .badge{font-size:11px;padding:2px 6px;min-height:22px}
+.hc-off{font-size:11px;font-weight:700;color:var(--text-3)}
+
+/* Recos, règles, accès, liens */
+.recos{margin:0;padding:0;list-style:none;display:grid;gap:var(--s2)}
+.recos li{display:flex;gap:10px;font-size:15px;line-height:1.45}
+.recos li::before{content:"";flex:none;width:7px;height:7px;border-radius:50%;background:var(--brand);margin-top:8px}
+.rules{margin:0;padding:0;list-style:none;display:grid;gap:var(--s2)}
+.rules li{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:var(--r-md);background:var(--surface-2);font-size:14px;font-weight:600}
+.rules li.warn{background:var(--granite-soft);color:var(--granite-ink)}
+.rules li svg{margin-top:1px}
+.access{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;margin:0}
+.access div{background:var(--surface);padding:10px 12px}
+.access dt{font-size:12px;color:var(--text-2);font-weight:600}
+.access dd{margin:2px 0 0;font-size:16px;font-weight:800}
+.access .wide{grid-column:1 / -1}
+.links{display:grid;grid-template-columns:1fr;gap:var(--s2)}
+@media (min-width:480px){.links{grid-template-columns:1fr 1fr}}
+.link-btn{min-height:var(--tap);display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);color:var(--text);text-decoration:none;font-weight:700;font-size:15px}
+.link-btn span{flex:1}
+.link-btn small{display:block;font-size:12px;font-weight:600;color:var(--text-2)}
+.link-btn .ic{color:var(--text-3)}
+.reliab{display:flex;gap:10px;padding:12px;border-radius:var(--r-md);border:1px dashed var(--line-strong);font-size:13px;color:var(--text-2)}
+.reliab strong{color:var(--text)}
+.meter{display:inline-flex;gap:2px;margin-left:6px;vertical-align:middle}
+.meter i{width:10px;height:6px;border-radius:2px;background:var(--surface-3)}
+.meter i.on{background:var(--brand)}
+
+/* COMPOSANT: map */
+.map-wrap{position:relative}
+#map,.map-fallback{height:min(62dvh,560px);border-radius:var(--r-lg);overflow:hidden;border:1px solid var(--line);background:var(--surface-2)}
+.map-fallback{display:grid;place-items:center;padding:var(--s6);text-align:center;color:var(--text-2);font-size:14px}
+.leaflet-container{font-family:var(--font)}
+:root[data-theme="dark"] .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.92) contrast(.9) saturate(.6)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.92) contrast(.9) saturate(.6)}}
+.pin{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35)}
+.pin svg{width:16px;height:16px}
+.pin--sel{outline:3px solid var(--focus);outline-offset:2px}
+.pin-station{width:28px;height:28px;border-radius:7px;background:#14305a;color:#fff;display:grid;place-items:center;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35)}
+.pin-station svg{width:16px;height:16px}
+.map-legend{position:absolute;top:10px;left:10px;z-index:500;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:8px 10px;box-shadow:var(--shadow-1)}
+.map-preview{position:absolute;left:10px;right:10px;bottom:10px;z-index:500}
+.map-preview .spot-card{box-shadow:var(--shadow-2);gap:10px}
+
+/* COMPOSANT: settings */
+.group{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden}
+.group-title{font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text-2);margin:var(--s2) 4px 0}
+.field{display:grid;gap:var(--s2);padding:var(--s4)}
+.field + .field{border-top:1px solid var(--line)}
+.field-row{display:flex;align-items:center;justify-content:space-between;gap:var(--s3)}
+.field label,.field .lbl{font-weight:700;font-size:16px}
+.field .hint{font-size:13px;color:var(--text-2)}
+.field input[type="time"]{min-height:var(--tap);min-width:120px;padding:0 10px;border-radius:var(--r-sm);border:1px solid var(--line-strong);background:var(--surface-2);font-weight:800;font-variant-numeric:tabular-nums}
+.field input[type="range"]{width:100%;height:var(--tap);accent-color:var(--brand-solid);margin:0}
+.range-val{font-size:22px;font-weight:800;min-width:48px;text-align:right}
+.check{display:flex;align-items:center;gap:12px;min-height:var(--tap);font-weight:600}
+.check input{width:24px;height:24px;accent-color:var(--brand-solid);margin:0}
+.status{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:800;padding:4px 10px;border-radius:var(--r-pill)}
+.status--off{background:var(--v-non-bg);color:var(--v-non-ink)}
+.status--on{background:var(--v-top-bg);color:var(--v-top-ink)}
+.btn-row{display:flex;flex-wrap:wrap;gap:var(--s2)}
+.btn-row .btn{flex:1 1 200px}
+
+/* COMPOSANT: onboarding-ios */
+.onb{display:grid;gap:var(--s4);padding:var(--s2) var(--gutter) 0}
+.onb-steps{display:flex;gap:6px;justify-content:center}
+.onb-steps i{width:28px;height:5px;border-radius:3px;background:var(--surface-3)}
+.onb-steps i.on{background:var(--brand)}
+.onb-step{display:grid;gap:var(--s3);justify-items:center;text-align:center}
+.onb-num{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--granite-ink);background:var(--granite-soft);padding:3px 10px;border-radius:var(--r-pill)}
+.onb-title{font-size:19px;font-weight:800;letter-spacing:-.01em}
+.onb-text{font-size:15px;color:var(--text-2);max-width:34ch}
+.onb-ill{width:170px;height:auto}
+.i-body{fill:var(--surface-3);stroke:var(--line-strong);stroke-width:1.5}
+.i-screen{fill:var(--surface)}
+.i-mute{fill:var(--surface-3)}
+.i-line{fill:none;stroke:var(--text-3);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.i-brand{fill:var(--brand-solid)}
+.i-ink{fill:var(--text)}
+.i-ink2{fill:var(--text-2)}
+.i-txt{fill:var(--text);font:700 9px var(--font)}
+.i-txt2{fill:var(--text-2);font:600 8px var(--font)}
+.i-hl{fill:none;stroke:var(--granite);stroke-width:3}
+.i-hlfill{fill:var(--granite-soft)}
+.i-white{fill:#fff}
+.i-blue{fill:#2f6fd6}
+.onb-platform{display:flex;justify-content:center}
+.onb-actions{display:flex;gap:var(--s2);padding:var(--s4) var(--gutter) 0}
+.onb-actions .btn{flex:1}
+.onb-android{font-size:13px;color:var(--text-2);text-align:center;padding:0 var(--gutter)}
+
+/* COMPOSANT: skeleton */
+.sk{background:linear-gradient(90deg,var(--surface-3) 0 40%,var(--surface-2) 50%,var(--surface-3) 60% 100%);background-size:300% 100%;animation:sk 1.4s ease-in-out infinite;border-radius:var(--r-sm)}
+@keyframes sk{from{background-position:100% 0}to{background-position:0 0}}
+.sk-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:var(--s4);display:grid;gap:var(--s3)}
+.sk-hero{height:236px;border-radius:var(--r-xl)}
+
+/* COMPOSANT: state-card (erreur, premier lancement) */
+.state{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-xl);padding:var(--s6) var(--s5);display:grid;gap:var(--s3);justify-items:start}
+.state-ic{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;background:var(--surface-2);color:var(--text-2)}
+.state h2{font-size:21px;font-weight:800;letter-spacing:-.01em}
+.state p{color:var(--text-2);font-size:15px}
+.welcome{background:var(--hero-bg);color:var(--hero-ink);border:0}
+.welcome p{color:var(--hero-ink-2)}
+.welcome ul{margin:0;padding:0;list-style:none;display:grid;gap:10px;font-size:15px}
+.welcome li{display:flex;gap:10px;align-items:flex-start}
+.welcome li svg{margin-top:1px;color:var(--hero-ink-2)}
+
+/* COMPOSANT: toast (notification de test dans l'app) */
+.toast{position:fixed;z-index:90;top:calc(env(safe-area-inset-top) + 8px);left:8px;right:8px;max-width:420px;margin:0 auto;transform:translateY(-160%);transition:transform .35s cubic-bezier(.2,.8,.2,1)}
+.toast.is-on{transform:none}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;transition-duration:.01ms !important}
+}
+
+/* =========================================================
+   PLANCHES (États, Notifications)
+   ========================================================= */
+.board{max-width:1320px;margin:0 auto;padding:var(--s6) var(--gutter) 80px;display:grid;gap:var(--s8)}
+.board-head h1{font-size:28px;font-weight:800;letter-spacing:-.02em}
+.board-head p{color:var(--text-2);max-width:70ch;margin-top:6px}
+.board h2{font-size:19px;font-weight:800;margin-bottom:var(--s3)}
+.frames{display:flex;flex-wrap:wrap;gap:var(--s6);align-items:flex-start}
+.frame{width:390px;max-width:100%}
+.frame-cap{font-size:14px;font-weight:800;margin-bottom:6px}
+.frame-cap small{display:block;font-weight:500;color:var(--text-2);font-size:13px}
+.frame-screen{border:1px solid var(--line-strong);border-radius:32px;overflow:hidden;background:var(--bg);position:relative}
+.frame-screen .app-header{position:relative}
+.frame-body{padding:var(--s3) var(--gutter) var(--s5);display:grid;gap:var(--s4)}
+
+/* COMPOSANT: notification-preview */
+.lock{width:360px;max-width:100%;min-height:700px;border-radius:40px;padding:14px 12px 28px;position:relative;overflow:hidden;font-family:-apple-system, "SF Pro Text", var(--font)}
+.lock--ios-light{background:linear-gradient(180deg,#b9cddd 0 52%,#97afc4 52% 66%,#d7c1ba 66% 100%);color:#0b0b0c}
+.lock--ios-dark{background:linear-gradient(180deg,#0c1828 0 52%,#13243b 52% 66%,#2b2529 66% 100%);color:#f5f5f7}
+.lock--and-light{background:#e6edf2;color:#1b1f23;font-family:"Roboto", var(--font)}
+.lock--and-dark{background:#0e1318;color:#e3e6e9;font-family:"Roboto", var(--font)}
+.lock-status{display:flex;justify-content:space-between;font-size:13px;font-weight:600;padding:2px 18px 0}
+.lock-clock{text-align:center;margin:26px 0 22px}
+.lock-clock .d{font-size:17px;font-weight:600;opacity:.85}
+.lock-clock .t{font-size:78px;font-weight:700;letter-spacing:-.02em;line-height:1;font-variant-numeric:tabular-nums}
+.lock--and-light .lock-clock,.lock--and-dark .lock-clock{text-align:left;padding:0 14px}
+.lock--and-light .lock-clock .t,.lock--and-dark .lock-clock .t{font-size:64px;font-weight:400}
+.lock-stack{display:grid;gap:8px}
+.lock-section{font-size:12px;font-weight:600;opacity:.7;padding:6px 8px 0}
+.np{border-radius:22px;padding:11px 14px 12px;display:grid;grid-template-columns:38px 1fr;gap:3px 10px;-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px)}
+.lock--ios-light .np{background:rgba(246,246,248,.78)}
+.lock--ios-dark .np{background:rgba(38,38,42,.78)}
+.np-icon{grid-row:1 / span 3;width:38px;height:38px;border-radius:9px;background:#14305a;color:#fff;display:grid;place-items:center;align-self:start;margin-top:2px}
+.np-icon svg{width:24px;height:24px}
+.np-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:13px}
+.np-app{font-weight:600;opacity:.75}
+.np-when{opacity:.6;font-size:12px;white-space:nowrap}
+.np-title{font-size:15px;font-weight:700;line-height:1.25}
+.np-body{font-size:14px;line-height:1.3;display:grid;gap:1px}
+.np-body span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.np-prio{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#c4462f}
+.lock--ios-dark .np-prio{color:#ff8a70}
+.np-actions{margin-top:6px;border-radius:14px;overflow:hidden}
+.lock--ios-light .np-actions{background:rgba(246,246,248,.86)}
+.lock--ios-dark .np-actions{background:rgba(38,38,42,.86)}
+.np-actions div{padding:12px 16px;font-size:16px;display:flex;justify-content:space-between;align-items:center}
+.np-actions div + div{border-top:1px solid rgba(127,127,127,.25)}
+/* Android */
+.na{border-radius:24px;padding:14px 16px 14px;display:grid;gap:4px}
+.lock--and-light .na{background:#ffffff}
+.lock--and-dark .na{background:#1f262e}
+.na-head{display:flex;align-items:center;gap:8px;font-size:12px}
+.na-badge{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:#14305a;color:#fff}
+.lock--and-dark .na-badge{background:#a8c6f0;color:#0e1318}
+.na-badge svg{width:14px;height:14px}
+.na-app{font-weight:500;opacity:.8}
+.na-title{font-size:15px;font-weight:600;margin-top:2px}
+.na-body{font-size:14px;opacity:.85;display:grid;gap:1px}
+.na-body span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.na-actions{display:flex;gap:8px;margin-top:8px}
+.na-actions span{font-size:14px;font-weight:600;padding:8px 14px;border-radius:999px}
+.lock--and-light .na-actions span{background:#dbe6f2;color:#14305a}
+.lock--and-dark .na-actions span{background:#24364d;color:#cfe0f7}
+.na-prio{font-size:11px;font-weight:600;padding:1px 6px;border-radius:4px;background:rgba(196,70,47,.14);color:#b03c26}
+.lock--and-dark .na-prio{color:#ff9b85;background:rgba(255,155,133,.14)}
+.lock-home{position:absolute;bottom:8px;left:50%;width:130px;height:5px;margin-left:-65px;border-radius:3px;background:currentColor;opacity:.6}
+.spec{width:100%;border-collapse:collapse;font-size:14px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden}
+.spec th,.spec td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+.spec th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-2);background:var(--surface-2)}
+.spec code{font-family:ui-monospace, "SF Mono", Menlo, monospace;font-size:13px}
+.spec .ok{color:var(--v-top-ink);font-weight:800}
+.spec .ko{color:var(--v-lim-ink);font-weight:800}
+.table-wrap{overflow-x:auto}
+.badges-show{display:flex;flex-wrap:wrap;gap:var(--s6);align-items:flex-end}
+.badges-show figure{margin:0;display:grid;justify-items:center;gap:6px;font-size:12px;color:var(--text-2);font-weight:600}
+.badge-tile{display:grid;place-items:center;border-radius:12px;border:1px solid var(--line)}
+.badge-tile--light{background:#fff;color:#000}
+.badge-tile--dark{background:#000;color:#fff}
+.note{font-size:14px;color:var(--text-2);max-width:75ch}
+</style>
+</head>
+<body>
+
+<!-- Barre de la maquette : bascule entre l'application et les planches. Masquée en mode installé. -->
+<nav class="maquette-nav" aria-label="Navigation de la maquette">
+  <strong>Maquette FenêtreVol</strong>
+  <button type="button" data-action="view" data-view="app" aria-pressed="true">Application</button>
+  <button type="button" data-action="view" data-view="etats" aria-pressed="false">États</button>
+  <button type="button" data-action="view" data-view="notifs" aria-pressed="false">Notifications</button>
+</nav>
+
+<!-- =====================================================
+     VUE : APPLICATION
+     ===================================================== -->
+<div id="view-app">
+  <div class="app" id="app">
+
+    <!-- COMPOSANT: app-header -->
+    <header class="app-header" id="app-header"></header>
+
+    <main>
+      <!-- ÉCRAN 1 : Créneaux -->
+      <section class="screen" id="screen-creneaux" aria-labelledby="t-creneaux">
+        <h1 class="sr-only" id="t-creneaux">Créneaux</h1>
+        <!-- COMPOSANT: offline-banner -->
+        <div id="offline-slot"></div>
+        <!-- COMPOSANT: filters -->
+        <div class="filters" id="filters"></div>
+        <!-- COMPOSANT: hero -->
+        <div id="hero-slot" aria-live="polite"></div>
+        <div class="section-head">
+          <h2 id="list-title">Spots</h2>
+          <p id="list-count" class="num"></p>
+        </div>
+        <!-- COMPOSANT: legend -->
+        <div id="legend-slot"></div>
+        <!-- COMPOSANT: spot-list (liste de spot-card) -->
+        <ol class="spot-list" id="spot-list"></ol>
+      </section>
+
+      <!-- ÉCRAN 3 : Carte -->
+      <section class="screen" id="screen-carte" aria-labelledby="t-carte" hidden>
+        <h1 class="screen-title" id="t-carte">Carte</h1>
+        <div class="days" id="map-days" role="group" aria-label="Jour"></div>
+        <!-- COMPOSANT: map -->
+        <div class="map-wrap">
+          <div id="map" role="region" aria-label="Carte des spots"></div>
+          <div class="map-legend" id="map-legend"></div>
+          <!-- COMPOSANT: map-preview -->
+          <div class="map-preview" id="map-preview" hidden></div>
+        </div>
+        <p class="note">Touchez un marqueur pour un aperçu. Les carrés marine sont les gares.</p>
+      </section>
+
+      <!-- ÉCRAN 4 : Réglages -->
+      <section class="screen" id="screen-reglages" aria-labelledby="t-reglages" hidden>
+        <h1 class="screen-title" id="t-reglages">Réglages</h1>
+        <!-- COMPOSANT: settings -->
+        <div id="settings-slot"></div>
+      </section>
+    </main>
+
+    <!-- COMPOSANT: tab-bar -->
+    <nav class="tabbar" aria-label="Navigation principale">
+      <ul>
+        <li><button type="button" data-action="tab" data-tab="creneaux" aria-current="page"><svg class="ic ic--l" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Créneaux</button></li>
+        <li><button type="button" data-action="tab" data-tab="carte"><svg class="ic ic--l" viewBox="0 0 24 24"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/></svg>Carte</button></li>
+        <li><button type="button" data-action="tab" data-tab="reglages"><svg class="ic ic--l" viewBox="0 0 24 24"><path d="M4 6h9M19 6h1M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="16" cy="6" r="2.2"/><circle cx="9" cy="12" r="2.2"/><circle cx="17" cy="18" r="2.2"/></svg>Réglages</button></li>
+      </ul>
+    </nav>
+  </div>
+
+  <!-- COMPOSANT: detail-sheet -->
+  <div class="sheet-backdrop" id="sheet-backdrop" data-action="close-sheet"></div>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" tabindex="-1"></div>
+
+  <!-- COMPOSANT: onboarding-ios (feuille modale) -->
+  <div class="sheet-backdrop" id="onb-backdrop" data-action="close-onb"></div>
+  <div class="sheet" id="onb-sheet" role="dialog" aria-modal="true" aria-labelledby="onb-title" tabindex="-1"></div>
+
+  <!-- COMPOSANT: toast (aperçu d'une notification de test) -->
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</div>
+
+<!-- =====================================================
+     PLANCHE : ÉTATS TRANSVERSES
+     ===================================================== -->
+<div id="view-etats" hidden>
+  <div class="board">
+    <header class="board-head">
+      <h1>États transverses</h1>
+      <p>Chargement, hors-ligne, erreur réseau, premier lancement, aucun créneau, et le parcours d'installation iPhone pour les notifications. Tous ces écrans sont produits par les mêmes fonctions de rendu que l'application.</p>
+    </header>
+    <section><h2>Écrans</h2><div class="frames" id="states-frames"></div></section>
+    <section><h2>Parcours notifications sur iPhone (3 étapes)</h2><div class="frames" id="onb-frames"></div></section>
+  </div>
+</div>
+
+<!-- =====================================================
+     PLANCHE : NOTIFICATIONS
+     ===================================================== -->
+<div id="view-notifs" hidden>
+  <div class="board">
+    <header class="board-head">
+      <h1>Notifications</h1>
+      <p>Envoyées à 7h et 18h30 quand un créneau dépasse le score minimum. Titre de 40 caractères maximum (quand + où), corps de 3 lignes maximum (une par créneau), action « Voir le créneau » qui ouvre directement le détail du spot.</p>
+    </header>
+    <section><h2>Règles de rédaction et variantes</h2><div class="table-wrap" id="notif-spec"></div></section>
+    <section><h2>Écran verrouillé</h2><div class="frames" id="notif-frames"></div></section>
+    <section><h2>Icône de notification (badge monochrome)</h2><div class="badges-show" id="badge-show"></div>
+      <p class="note" style="margin-top:12px">Silhouette de voile seule, aplat sans dégradé, lisible à 24 px. Sur Android, la plateforme teinte le badge : fournir un PNG blanc sur transparent (badge-96.png). Sur iOS, c'est l'icône de l'app qui s'affiche.</p>
+    </section>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* =========================================================
+   1. DONNÉES (contrat d'intégration)
+   SPOTS = contenu de data/spots.json. Données FICTIVES de démonstration :
+   règles, liens de club et fiabilité sont à remplacer par les vraies fiches.
+   Extension proposée au contrat : access.climbM (dénivelé du trajet en skate, en m).
+   ========================================================= */
+const SPOTS = [
+  {
+    id: "prairies-st-martin", name: "Prairies Saint-Martin", kind: "gonflage", profile: "gonflage",
+    city: "Rennes", lat: 48.1228, lon: -1.6779, orientations: ["SW","W","NW","N"],
+    description: "Grande prairie ouverte au nord du centre. Pelouse rase, quelques arbres en bordure est.",
+    level: "Tous niveaux", landing: "Sans objet (gonflage)",
+    access: { mode: "local", station: null, train: null, trainMinutes: 0, rideKm: 2.4, ride: "Skate depuis le centre par les quais", summary: "2,4 km en skate depuis République", climbM: 5 },
+    tide: false, limit: false, clubOnly: false,
+    rules: ["Pratique tolérée hors événements et fauches", "Rester à distance des promeneurs et des chiens"],
+    warnings: ["Turbulences derrière la rangée d'arbres par vent d'est"],
+    links: { ffvl: "https://federation.ffvl.fr/", club: "", pge: "", fiche: "" },
+    confidence: "moyenne"
+  },
+  {
+    id: "gayeulles", name: "Parc des Gayeulles", kind: "gonflage", profile: "gonflage",
+    city: "Rennes", lat: 48.1336, lon: -1.6318, orientations: ["W","NW","N","NE"],
+    description: "Plaine de jeux dégagée au sud de l'étang. Herbe souple, idéale pour les débuts.",
+    level: "Tous niveaux", landing: "Sans objet (gonflage)",
+    access: { mode: "local", station: null, train: null, trainMinutes: 0, rideKm: 4.6, ride: "Skate par la piste cyclable de la rue de Fougères", summary: "4,6 km en skate depuis République", climbM: 30 },
+    tide: false, limit: false, clubOnly: false,
+    rules: ["Éviter les week-ends d'affluence l'après-midi"],
+    warnings: ["Lignes électriques au nord du parking"],
+    links: { ffvl: "https://federation.ffvl.fr/", club: "", pge: "", fiche: "" },
+    confidence: "moyenne"
+  },
+  {
+    id: "guimorais", name: "La Guimorais", kind: "vol", profile: "soaring",
+    city: "Saint-Coulomb", lat: 48.6851, lon: -1.9305, orientations: ["NW","N","NE"],
+    description: "Dune et falaise basse face au large. Soaring côtier par vent de mer établi.",
+    level: "Pilote autonome", landing: "Plage, selon la marée",
+    access: { mode: "train", station: "Saint-Malo", train: "TER Rennes - Saint-Malo", trainMinutes: 50, rideKm: 8.5, ride: "Voie verte puis route côtière", summary: "Train 50 min puis 8,5 km en skate", climbM: 45 },
+    tide: true, limit: false, clubOnly: false,
+    rules: ["SMS d'information au club avant de décoller", "Atterrissage sur la plage interdit à marée haute"],
+    warnings: ["Marée : vérifier la largeur de l'estran", "Rotor derrière la crête par vent de travers"],
+    links: { ffvl: "https://federation.ffvl.fr/", club: "", pge: "https://www.paraglidingearth.com/", fiche: "" },
+    confidence: "haute"
+  },
+  {
+    id: "varde", name: "Pointe de la Varde", kind: "vol", profile: "soaring",
+    city: "Saint-Malo", lat: 48.6747, lon: -1.9831, orientations: ["NW","N"],
+    description: "Pointe rocheuse entre deux plages. Petit soaring précis, réservé aux conditions laminaires.",
+    level: "Pilote confirmé", landing: "Plage du Pont, marée basse ou mi-marée",
+    access: { mode: "train", station: "Saint-Malo", train: "TER Rennes - Saint-Malo", trainMinutes: 50, rideKm: 4.2, ride: "Digue puis rue de la Varde", summary: "Train 50 min puis 4,2 km en skate", climbM: 20 },
+    tide: true, limit: false, clubOnly: false,
+    rules: ["Site sensible : survol des habitations interdit", "Effectif limité, s'annoncer sur le groupe local"],
+    warnings: ["Atterrissage impossible à pleine mer", "Blockhaus et rochers sous la pente"],
+    links: { ffvl: "https://federation.ffvl.fr/", club: "", pge: "", fiche: "" },
+    confidence: "moyenne"
+  },
+  {
+    id: "grouin", name: "Pointe du Grouin", kind: "vol", profile: "soaring",
+    city: "Cancale", lat: 48.7128, lon: -1.8425, orientations: ["N","NE","E"],
+    description: "Falaise haute face à l'île des Landes. Très beau soaring par vent de nord-est.",
+    level: "Pilote confirmé", landing: "Prairie en arrière de la pointe",
+    access: { mode: "train", station: "Saint-Malo", train: "TER Rennes - Saint-Malo", trainMinutes: 50, rideKm: 14.5, ride: "Route côtière, deux côtes marquées", summary: "Train 50 min puis 14,5 km en skate", climbM: 120 },
+    tide: false, limit: true, clubOnly: false,
+    rules: ["Espace naturel protégé : décollage uniquement depuis la zone balisée", "Nidification : site fermé au printemps"],
+    warnings: ["Au-delà de 10 km en skate : prévoir l'autonomie de la batterie"],
+    links: { ffvl: "https://federation.ffvl.fr/", club: "", pge: "", fiche: "" },
+    confidence: "faible"
+  },
+  {
+    id: "noyal-treuil", name: "Treuil de Noyal", kind: "vol", profile: "treuil",
+    city: "Noyal-sur-Vilaine", lat: 48.1092, lon: -1.5302, orientations: ["W","NW","E","SE"],
+    description: "Terrain agricole avec piste de treuil axée est-ouest. Sessions encadrées par le club.",
+    level: "Débutant breveté et plus", landing: "Sur la piste",
+    access: { mode: "train", station: "Noyal-Acigné", train: "TER Rennes - Vitré", trainMinutes: 9, rideKm: 3.2, ride: "Petite route plate", summary: "Train 9 min puis 3,2 km en skate", climbM: 10 },
+    tide: false, limit: false, clubOnly: true,
+    rules: ["Uniquement lors des sessions du club, licence FFVL obligatoire", "Briefing treuilleur avant chaque remorquage"],
+    warnings: ["Ligne électrique à l'ouest de la piste", "Proximité de l'aéroport de Rennes : plafond imposé"],
+    links: { ffvl: "https://federation.ffvl.fr/", club: "", pge: "", fiche: "" },
+    confidence: "haute"
+  }
+];
+
+const STATIONS = [
+  { name: "Rennes", lat: 48.1035, lon: -1.6724 },
+  { name: "Saint-Malo", lat: 48.6466, lon: -2.0062 },
+  { name: "Noyal-Acigné", lat: 48.1199, lon: -1.5205 }
+];
+
+const DAYS = [
+  { date: "2026-10-01", short: "Aujourd'hui", word: "aujourd'hui", long: "jeudi 1 octobre", sunrise: "08:02", sunset: "19:44", highTide: 13.2 },
+  { date: "2026-10-02", short: "Demain", word: "demain", long: "vendredi 2 octobre", sunrise: "08:04", sunset: "19:42", highTide: 13.9 },
+  { date: "2026-10-03", short: "Sam. 3", word: "samedi", long: "samedi 3 octobre", sunrise: "08:05", sunset: "19:40", highTide: 14.6 }
+];
+const UPDATED_AT = "2026-10-01T18:30";
+const HOURS = [7,8,9,10,11,12,13,14,15,16,17,18,19,20,21];
+
+/* Profils de pratique : plage idéale et plafond (km/h) */
+const PROFILES = {
+  soaring:  { lo: 18, hi: 27, ceil: 32, label: "Soaring" },
+  gonflage: { lo: 12, hi: 22, ceil: 28, label: "Gonflage" },
+  treuil:   { lo: 10, hi: 20, ceil: 26, label: "Treuil" },
+  plaine:   { lo: 8,  hi: 20, ceil: 25, label: "Plaine" }
+};
+const LEVELS = {
+  debutant:      { label: "Débutant",      hi: -4, ceil: -5 },
+  intermediaire: { label: "Intermédiaire", hi: 0,  ceil: 0 },
+  confirme:      { label: "Confirmé",      hi: 3,  ceil: 4 }
+};
+const VERDICTS = {
+  top:    { key: "top",    label: "Top" },
+  ok:     { key: "ok",     label: "Jouable" },
+  limite: { key: "limite", label: "Limite" },
+  non:    { key: "non",    label: "Non" }
+};
+
+/* Réglages (en mémoire dans la maquette ; dans l'app : stockage local) */
+const settings = {
+  level: "intermediaire", scoreMin: 60, firstDeparture: "07:40", lastTrain: "20:30",
+  notifEnabled: false, notifMorning: true, notifEvening: true, theme: "system"
+};
+
+/* =========================================================
+   2. SIMULATION DES PRÉVISIONS (à remplacer par l'API réelle)
+   Produit des objets « heure » et « créneau » conformes au contrat.
+   ========================================================= */
+const EXPOSURE = { "prairies-st-martin": 0, "gayeulles": -1, "guimorais": 5, "varde": 4, "grouin": 6, "noyal-treuil": 0 };
+const WEATHER = [
+  { // aujourd'hui : ouest, averses le matin, vent qui forcit
+    dir: h => 270 + (h - 7) * 1.5,
+    wind: h => 9 + (h - 7) * 0.8,
+    gust: w => w * 1.4,
+    rain: h => h <= 10 ? 0.9 : h <= 12 ? 0.1 : 0,
+    rainProb: h => h <= 10 ? 70 : h <= 12 ? 30 : 10,
+    temp: h => 12 + 4 * Math.sin(Math.PI * (h - 7) / 14), cloud: h => h <= 11 ? 85 : 45
+  },
+  { // demain : nord-ouest établi, bel après-midi
+    dir: h => 312 + Math.sin(h / 3) * 4,
+    wind: h => 5 + 14 * Math.pow(Math.max(0, Math.sin(Math.PI * (h - 8) / 14)), 4),
+    gust: w => w + 6,
+    rain: h => h >= 20 ? 0.3 : 0,
+    rainProb: h => h >= 19 ? 40 : 5,
+    temp: h => 13 + 4 * Math.sin(Math.PI * (h - 7) / 14), cloud: h => 30
+  },
+  { // samedi : sud-sud-ouest fort, pluie
+    dir: h => 205,
+    wind: h => 22 + 6 * Math.sin(Math.PI * (h - 7) / 14),
+    gust: w => w * 1.5,
+    rain: h => 1.5 + (h % 3) * 0.5,
+    rainProb: h => 85,
+    temp: h => 15, cloud: h => 100
+  }
+];
+
+const toMin = s => { const [h, m] = s.split(":").map(Number); return h * 60 + m; };
+const toHour = s => toMin(s) / 60;
+const rideMinutes = km => Math.round(km / 16 * 60);
+const travelMinutes = spot => (spot.access.trainMinutes || 0) + rideMinutes(spot.access.rideKm) + (spot.access.mode === "train" ? 10 : 0);
+
+const ORIENT_DEG = { N:0, NNE:22.5, NE:45, ENE:67.5, E:90, ESE:112.5, SE:135, SSE:157.5, S:180, SSW:202.5, SW:225, WSW:247.5, W:270, WNW:292.5, NW:315, NNW:337.5 };
+const angDiff = (a, b) => { const d = Math.abs(((a - b) % 360 + 360) % 360); return d > 180 ? 360 - d : d; };
+
+function tideAt(day, h) {
+  const phase = 2 * Math.PI * (h + 0.5 - day.highTide) / 12.42;
+  const v = Math.cos(phase), trend = -Math.sin(phase);
+  return { label: v > 0.5 ? "Haute" : v < -0.5 ? "Basse" : "Mi-marée", trend: trend >= 0 ? "montante" : "descendante" };
+}
+
+function reachableWindow(spot) {
+  if (spot.access.mode !== "train") return { from: 0, to: 24 };
+  const ride = rideMinutes(spot.access.rideKm);
+  const arrive = toMin(settings.firstDeparture) + spot.access.trainMinutes + ride + 10;
+  const leave = toMin(settings.lastTrain) - ride - 15;
+  return { from: arrive / 60, to: leave / 60 };
+}
+
+/* Score d'une heure pour un spot. Renvoie { score, verdict, reasons }. */
+function scoreHour(spot, w) {
+  const p = PROFILES[spot.profile], lv = LEVELS[settings.level];
+  const hi = p.hi + lv.hi, ceil = p.ceil + lv.ceil;
+  const reasons = [];
+  let s = 100;
+  if (!w.isDay) return { score: 0, verdict: VERDICTS.non, reasons: ["Nuit"] };
+  const dd = Math.min(...spot.orientations.map(o => angDiff(w.dir, ORIENT_DEG[o])));
+  if (dd > 45) { s -= 70; reasons.push("Vent hors secteur"); }
+  else if (dd > 22.5) { s -= 30; reasons.push("Vent de travers"); }
+  if (w.wind < p.lo) { s -= (p.lo - w.wind) * 6; reasons.push("Vent faible"); }
+  if (w.wind > hi) { s -= (w.wind - hi) * 8; reasons.push("Vent fort"); }
+  if (w.gust >= ceil || w.wind >= ceil) { s -= 80; reasons.push("Vent trop fort"); }
+  const spread = w.gust - w.wind;
+  if (spread > 10) { s -= (spread - 10) * 5; reasons.push("Rafales irrégulières"); }
+  if (w.rain > 0.2) { s -= 45; reasons.push("Pluie"); }
+  s = Math.max(0, Math.min(100, Math.round(s)));
+  const v = s >= 80 ? VERDICTS.top : s >= 60 ? VERDICTS.ok : s >= 40 ? VERDICTS.limite : VERDICTS.non;
+  return { score: s, verdict: v, reasons };
+}
+
+function buildHours(spot, dayIndex) {
+  const day = DAYS[dayIndex], W = WEATHER[dayIndex], win = reachableWindow(spot);
+  const sr = toHour(day.sunrise), ss = toHour(day.sunset);
+  return HOURS.map(h => {
+    const wind = Math.max(0, Math.round(W.wind(h) + EXPOSURE[spot.id]));
+    const o = {
+      time: `${day.date}T${String(h).padStart(2, "0")}:00`, hour: h,
+      wind, gust: Math.round(W.gust(wind)), dir: Math.round(W.dir(h) / 5) * 5 % 360,
+      rain: Math.round(W.rain(h) * 10) / 10, rainProb: W.rainProb(h),
+      temp: Math.round(W.temp(h)), cloud: W.cloud(h),
+      isDay: h + 0.5 >= sr && h + 0.5 <= ss,
+      reachable: h >= Math.floor(win.from + 0.5) && h + 1 <= win.to,
+      tide: spot.tide ? tideAt(day, h) : null
+    };
+    return Object.assign(o, scoreHour(spot, o));
+  });
+}
+
+/* Créneaux : heures consécutives atteignables et au-dessus du score minimum (2 h mini). */
+function findSlots(spot, hours, dayIndex, minScore = settings.scoreMin) {
+  const slots = []; let run = [];
+  const flush = () => {
+    if (run.length >= 2) {
+      const avg = k => Math.round(run.reduce((a, x) => a + x[k], 0) / run.length);
+      const score = avg("score"), dir = avg("dir");
+      slots.push({
+        spotId: spot.id, spotName: spot.name, kind: spot.kind, date: DAYS[dayIndex].date,
+        start: run[0].hour, end: run[run.length - 1].hour + 1,
+        wind: avg("wind"), gust: Math.max(...run.map(x => x.gust)), sector: sectorCode(dir),
+        score, verdict: score >= 80 ? VERDICTS.top : score >= 60 ? VERDICTS.ok : VERDICTS.limite,
+        travelMinutes: travelMinutes(spot)
+      });
+    }
+    run = [];
+  };
+  hours.forEach(x => { if (x.reachable && x.score >= minScore && x.verdict.key !== "non") run.push(x); else flush(); });
+  flush();
+  return slots.sort((a, b) => b.score - a.score || (b.end - b.start) - (a.end - a.start));
+}
+
+let FORECAST = null;
+function buildForecast() {
+  FORECAST = DAYS.map((d, i) => {
+    const bySpot = {};
+    SPOTS.forEach(s => {
+      const hours = buildHours(s, i);
+      bySpot[s.id] = { hours, slots: findSlots(s, hours, i), lowSlots: findSlots(s, hours, i, 40) };
+    });
+    return { date: d.date, bySpot };
+  });
+}
+
+/* =========================================================
+   3. UTILITAIRES DE FORMAT
+   ========================================================= */
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+const SECT8 = ["N","NE","E","SE","S","SW","W","NW"];
+const FR = { N:"N", NNE:"NNE", NE:"NE", ENE:"ENE", E:"E", ESE:"ESE", SE:"SE", SSE:"SSE", S:"S", SSW:"SSO", SW:"SO", WSW:"OSO", W:"O", WNW:"ONO", NW:"NO", NNW:"NNO" };
+const FR_LONG = { N:"nord", NE:"nord-est", E:"est", SE:"sud-est", S:"sud", SW:"sud-ouest", W:"ouest", NW:"nord-ouest" };
+function sectorCode(deg) { return SECT8[Math.round(((deg % 360) + 360) % 360 / 45) % 8]; }
+const frDir = code => FR[code] || code;
+const fmtRange = (a, b) => `${a}h-${b}h`;
+const fmtKm = km => `${String(km.toFixed(1)).replace(".", ",")} km`;
+function fmtDur(m) { if (m < 60) return `${m} min`; const h = Math.floor(m / 60), r = m % 60; return r ? `${h}h${String(r).padStart(2, "0")}` : `${h}h`; }
+function fmtClock(min) { min = Math.round(min); const h = Math.floor(min / 60), m = min % 60; return `${h}h${String(m).padStart(2, "0")}`; }
+const fmtHHMM = s => s.replace(":", "h");
+const kindLabel = k => k === "vol" ? "Vol" : "Gonflage";
+const updatedLabel = iso => `Mis à jour à ${fmtHHMM(iso.slice(11, 16))}`;
+const capFirst = s => s.charAt(0).toUpperCase() + s.slice(1);
+const spotById = id => SPOTS.find(s => s.id === id);
+</script>
+
+<script>
+"use strict";
+/* =========================================================
+   4. ICÔNES
+   ========================================================= */
+const I = {
+  refresh: '<svg class="ic spin" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/></svg>',
+  train: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="3" width="12" height="13" rx="3"/><path d="M6 10h12M9 19.5 7 22M15 19.5l2 2.5"/><circle cx="9.5" cy="13" r=".6"/><circle cx="14.5" cy="13" r=".6"/></svg>',
+  skate: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 13h18"/><path d="M5 13l1.2-2.5h11.6L19 13"/><circle cx="8" cy="17" r="1.8"/><circle cx="16" cy="17" r="1.8"/></svg>',
+  wave: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9c2 0 2-2 4.5-2S10 9 12 9s2.5-2 4.5-2S19 9 21 9M3 15c2 0 2-2 4.5-2s2.5 2 4.5 2 2.5-2 4.5-2 2.5 2 4.5 2"/></svg>',
+  far: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h18M7 8l-4 4 4 4M17 8l4 4-4 4"/></svg>',
+  club: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.4"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M15.5 14.3c3 0 5.5 2 5.5 5"/></svg>',
+  close: '<svg class="ic ic--l" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+  sunrise: '<svg class="ic ic--s" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 19h18M7 19a5 5 0 0 1 10 0M12 4v6M9 7l3-3 3 3"/></svg>',
+  sunset: '<svg class="ic ic--s" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 19h18M7 19a5 5 0 0 1 10 0M12 4v6M9 7l3 3 3-3"/></svg>',
+  drop: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></svg>',
+  ext: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>',
+  alert: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 2.5 20h19L12 3.5z"/><path d="M12 10v4.5M12 17.2v.3"/></svg>',
+  info: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.3"/></svg>',
+  bell: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4l2-2zM10 20.5a2 2 0 0 0 4 0"/></svg>',
+  offline: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18M8.5 16.5a5 5 0 0 1 7 0M5 13a10 10 0 0 1 4.5-2.6M14.5 10.4A10 10 0 0 1 19 13M2 9.5a15 15 0 0 1 4-2.7M10 5.2A15 15 0 0 1 22 9.5M12 20h.01"/></svg>',
+  cloudx: '<svg class="ic ic--l" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18h10a4 4 0 0 0 .5-8A6 6 0 0 0 6 9.5 4.3 4.3 0 0 0 7 18z"/><path d="M10 11.5l4 4M14 11.5l-4 4"/></svg>',
+  wind: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h7"/></svg>',
+  clock: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  calendar: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
+  sliders: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h9M19 6h1M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="16" cy="6" r="2.2"/><circle cx="9" cy="12" r="2.2"/><circle cx="17" cy="18" r="2.2"/></svg>',
+  chevron: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>',
+  ground: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 12.5c3.5-5.5 13.5-5.5 17 0"/><path d="M5.5 12.2 12 18l6.5-5.8M3 21h18"/></svg>',
+  sail: '<svg class="ic ic--fill" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 9.2C5.5 4.6 18.5 4.6 21.5 9.2l-1.6 1.3C16.6 7.6 7.4 7.6 4.1 10.5z"/><path d="M4.6 10.6 11 18.4M19.4 10.6 13 18.4M9 8.1l2.3 10.1M15 8.1l-2.3 10.1" stroke="currentColor" stroke-width="1.1" fill="none"/><circle cx="12" cy="19.6" r="1.9"/></svg>'
+};
+/* Icône monochrome de la voile, réutilisée pour le badge de notification */
+function sailSvg(size = 24, extra = "") {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" ${extra}><path d="M2.5 9.2C5.5 4.6 18.5 4.6 21.5 9.2l-1.6 1.3C16.6 7.6 7.4 7.6 4.1 10.5z"/><path d="M4.6 10.6 11 18.4M19.4 10.6 13 18.4M9 8.1l2.3 10.1M15 8.1l-2.3 10.1" stroke="currentColor" stroke-width="1.1" fill="none"/><circle cx="12" cy="19.6" r="1.9"/></svg>`;
+}
+const practiceLabel = s => s.profile === s.kind ? kindLabel(s.kind) : `${kindLabel(s.kind)} · ${PROFILES[s.profile].label}`;
+const kindIcon = k => k === "vol" ? I.sail : I.ground;
+
+/* =========================================================
+   5. COMPOSANTS (une fonction de rendu par composant)
+   Chaque fonction reçoit des objets du contrat et renvoie du HTML.
+   ========================================================= */
+
+/* COMPOSANT: verdict-icon / verdict-badge */
+function renderVerdictIcon(key) {
+  switch (key) {
+    case "top": return '<svg class="ic ic--fill" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6.1 6.6.7-4.9 4.5 1.4 6.6L12 17l-6 3.4 1.4-6.6-4.9-4.5 6.6-.7z"/></svg>';
+    case "ok": return '<svg class="ic" viewBox="0 0 24 24" style="stroke-width:3.4" aria-hidden="true"><path d="M4.5 12.5l5 5L19.5 7"/></svg>';
+    case "limite": return '<svg class="ic ic--fill" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M12 2 .8 21.5h22.4L12 2zm-1.3 7h2.6v6.2h-2.6V9zm0 8.2h2.6v2.5h-2.6v-2.5z"/></svg>';
+    default: return '<svg class="ic" viewBox="0 0 24 24" style="stroke-width:3.2" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M7.5 12h9"/></svg>';
+  }
+}
+function renderVerdictBadge(verdict) {
+  return `<span class="badge badge--${verdict.key}">${renderVerdictIcon(verdict.key)}${esc(verdict.label)}</span>`;
+}
+
+/* COMPOSANT: wind-arrow (la flèche indique où VA le vent, comme sur les cartes météo) */
+function renderWindArrow(dir, size = 24) {
+  const code = sectorCode(dir);
+  return `<span class="wind-arrow" style="width:${size}px;height:${size}px" role="img" aria-label="Vent de ${FR_LONG[code]}"><svg viewBox="0 0 24 24" style="transform:rotate(${(dir + 180) % 360}deg)"><path d="M12 1.5 19.5 12.5H14.6V22.5H9.4V12.5H4.5Z"/></svg></span>`;
+}
+
+/* COMPOSANT: app-header */
+function renderAppHeader({ updatedAt, loading = false, offline = false }) {
+  const meta = offline ? `Hors connexion · prévisions de ${fmtHHMM(updatedAt.slice(11, 16))}` : updatedLabel(updatedAt);
+  return `
+    <div class="brand">
+      <span class="brand-mark">${sailSvg(24)}</span>
+      <div style="min-width:0">
+        <div class="brand-name">FenêtreVol</div>
+        <div class="brand-meta num">${loading ? "Mise à jour en cours…" : esc(meta)}</div>
+      </div>
+    </div>
+    <button type="button" class="icon-btn ${loading ? "is-loading" : ""}" data-action="refresh" aria-label="Actualiser les prévisions">${I.refresh}</button>`;
+}
+
+/* COMPOSANT: offline-banner */
+function renderOfflineBanner(updatedAt) {
+  return `<div class="banner" role="status">${I.offline}<div>Hors connexion<p>Vous consultez les dernières prévisions enregistrées, du ${esc(DAYS[0].long)} à ${fmtHHMM(updatedAt.slice(11, 16))}. Elles se mettront à jour au retour du réseau.</p></div></div>`;
+}
+
+/* COMPOSANT: filters (pratique + jour) */
+function renderKindFilter(kind) {
+  const opt = [["tout", "Tout", ""], ["gonflage", "Gonflage", I.ground], ["vol", "Vol", I.sail]];
+  return `<div class="seg" role="group" aria-label="Pratique">${opt.map(([k, l, ic]) =>
+    `<button type="button" data-action="kind" data-kind="${k}" aria-pressed="${k === kind}">${ic}${l}</button>`).join("")}</div>`;
+}
+function renderDayChips(dayIndex, kind) {
+  return DAYS.map((d, i) => {
+    const v = bestVerdictOfDay(i, kind);
+    return `<button type="button" class="day-chip" data-action="day" data-day="${i}" aria-pressed="${i === dayIndex}" aria-label="${esc(d.short)}, meilleur verdict : ${v.label}">
+      <span class="vdot vfill--${v.key}" aria-hidden="true">${renderVerdictIcon(v.key)}</span>${esc(d.short)}</button>`;
+  }).join("");
+}
+function renderFilters(kind, dayIndex) {
+  return `${renderKindFilter(kind)}<div class="days" role="group" aria-label="Jour">${renderDayChips(dayIndex, kind)}</div>`;
+}
+
+/* COMPOSANT: hero (meilleure option du jour) */
+function renderHero(slot, spot, day) {
+  const travel = slot.travelMinutes, ride = rideMinutes(spot.access.rideKm);
+  const depart = slot.start * 60 - travel - 10;
+  const how = spot.access.mode === "train"
+    ? `Départ conseillé de Rennes vers ${fmtClock(depart)} · train ${fmtDur(spot.access.trainMinutes)} jusqu'à ${esc(spot.access.station)}, puis ${fmtKm(spot.access.rideKm)} en skate`
+    : `${fmtKm(spot.access.rideKm)} en skate depuis le centre, environ ${fmtDur(ride)}`;
+  return `<article class="hero" aria-labelledby="hero-name">
+    <svg class="hero-horizon" viewBox="0 0 180 100" aria-hidden="true">
+      <path d="M126 60a24 24 0 0 1 48 0" fill="rgba(226,165,156,.30)"/>
+      <path d="M40 60H180" stroke="#e2a59c" stroke-width="2"/>
+      <path d="M80 70H180M118 79H180M150 88H180" stroke="rgba(255,255,255,.2)" stroke-width="2"/>
+    </svg>
+    <div class="hero-eyebrow"><span>Meilleure option · ${esc(day.short)}</span>${renderVerdictBadge(slot.verdict)}</div>
+    <div>
+      <h2 class="hero-name" id="hero-name">${esc(spot.name)}</h2>
+      <p class="hero-sub">${kindIcon(spot.kind)}${practiceLabel(spot)} · ${esc(spot.city)}</p>
+    </div>
+    <p class="hero-time num">${fmtRange(slot.start, slot.end)}<small>${slot.end - slot.start} h de créneau</small></p>
+    <dl class="hero-stats num">
+      <div class="hero-stat"><dt>Vent</dt><dd>${renderWindArrow(ORIENT_DEG[slot.sector], 20)}${frDir(slot.sector)} ${slot.wind}<small>km/h</small></dd></div>
+      <div class="hero-stat"><dt>Rafales</dt><dd>${slot.gust}<small>km/h</small></dd></div>
+      <div class="hero-stat"><dt>Trajet</dt><dd>${fmtDur(travel)}</dd></div>
+    </dl>
+    <p class="hero-sub" style="margin:0">${spot.access.mode === "train" ? I.train : I.skate}<span>${how}</span></p>
+    <button type="button" class="btn btn--light btn--block" data-action="open" data-spot="${spot.id}">Voir le créneau ${I.chevron}</button>
+  </article>`;
+}
+
+/* COMPOSANT: hero-empty (aucun créneau) : message utile et bienveillant
+   ctx = { day, kind, weather, reasons[], next:{slot, dayIndex}|null, lowCount, alt:{slot}|null } */
+function renderHeroEmpty(ctx) {
+  const what = ctx.kind === "vol" ? "de vol" : ctx.kind === "gonflage" ? "de gonflage" : "favorable";
+  const items = [];
+  if (ctx.weather) items.push(`${I.wind}<span>${esc(ctx.weather)}</span>`);
+  if (ctx.reasons.length) items.push(`${I.info}<span>Principales raisons : ${esc(ctx.reasons.join(", ").toLowerCase())}.</span>`);
+  if (ctx.alt) items.push(`${kindIcon(ctx.alt.slot.kind)}<span>En ${ctx.alt.slot.kind === "vol" ? "vol" : "gonflage"}, ${esc(ctx.alt.slot.spotName)} reste possible de ${fmtRange(ctx.alt.slot.start, ctx.alt.slot.end)}.</span>`);
+  if (ctx.next) items.push(`${I.calendar}<span>Prochaine fenêtre : ${esc(DAYS[ctx.next.dayIndex].short.toLowerCase())} ${fmtRange(ctx.next.slot.start, ctx.next.slot.end)} à ${esc(ctx.next.slot.spotName)}.</span>`);
+  else items.push(`${I.calendar}<span>Rien de favorable sur les 3 jours affichés. Prochaine mise à jour à 7h.</span>`);
+  if (ctx.lowCount) items.push(`${I.sliders}<span>${ctx.lowCount} créneau${ctx.lowCount > 1 ? "x" : ""} limite${ctx.lowCount > 1 ? "s" : ""} avec un score minimum à 40, à réserver aux pilotes à l'aise.</span>`);
+  const actions = [];
+  if (ctx.alt) actions.push(`<button type="button" class="btn btn--primary" data-action="kind" data-kind="${ctx.alt.slot.kind}">Voir le ${ctx.alt.slot.kind === "vol" ? "vol" : "gonflage"}</button>`);
+  if (ctx.next) actions.push(`<button type="button" class="btn ${ctx.alt ? "btn--ghost" : "btn--primary"}" data-action="day" data-day="${ctx.next.dayIndex}">Voir ${esc(DAYS[ctx.next.dayIndex].short.toLowerCase())}</button>`);
+  if (ctx.lowCount) actions.push(`<button type="button" class="btn btn--ghost" data-action="tab" data-tab="reglages">Ajuster le score</button>`);
+  return `<article class="hero hero--empty" aria-labelledby="hero-empty-title">
+    <div class="hero-eyebrow"><span>Meilleure option · ${esc(ctx.day.short)}</span>${renderVerdictBadge(VERDICTS.non)}</div>
+    <div>
+      <h2 class="hero-empty-title" id="hero-empty-title">Pas de créneau ${what} ${esc(ctx.day.word)}</h2>
+      <p class="hero-sub" style="color:var(--text-2)">Journée au sol : bon moment pour vérifier suspentes et sellette.</p>
+    </div>
+    <ul class="hero-empty-list">${items.map(x => `<li>${x}</li>`).join("")}</ul>
+    ${actions.length ? `<div class="hero-actions">${actions.join("")}</div>` : ""}
+  </article>`;
+}
+
+/* COMPOSANT: legend */
+function renderLegend() {
+  return `<div class="legend" aria-label="Légende de la frise">
+    <span><i class="vfill--top"></i>Top</span><span><i class="vfill--ok"></i>Jouable</span>
+    <span><i class="vfill--limite"></i>Limite</span><span><i class="vfill--non"></i>Non</span>
+    <span><i class="off"></i>Hors train</span><span>Hauteur = score</span></div>`;
+}
+
+/* COMPOSANT: timeline (frise 7h-21h) */
+function renderTimeline(hours, slot) {
+  const groups = [];
+  hours.forEach(h => {
+    const lab = h.reachable ? h.verdict.label.toLowerCase() : "hors de portée en train";
+    const g = groups[groups.length - 1];
+    if (g && g.lab === lab) g.end = h.hour + 1; else groups.push({ lab, start: h.hour, end: h.hour + 1 });
+  });
+  const aria = "Frise de 7h à 21h : " + groups.map(g => `${fmtRange(g.start, g.end)} ${g.lab}`).join(", ");
+  const slotRow = slot ? `<span style="grid-column:${slot.start - 6} / ${slot.end - 6}"></span>` : "";
+  const bars = hours.map(h => {
+    if (!h.reachable) return `<span class="tl-bar tl-bar--off" title="${h.hour}h : hors de portée en train"></span>`;
+    const ht = h.isDay ? Math.round(18 + h.score * 0.82) : 12;
+    return `<span class="tl-bar tl-bar--${h.verdict.key}" style="height:${ht}%" title="${h.hour}h : ${h.verdict.label}, ${h.wind} km/h"></span>`;
+  }).join("");
+  const axis = HOURS.map(h => `<span>${h % 3 === 1 ? h + "h" : ""}</span>`).join("");
+  return `<div class="tl" role="img" aria-label="${esc(aria)}">
+    <div class="tl-slot" aria-hidden="true">${slotRow}</div>
+    <div class="tl-bars" aria-hidden="true">${bars}</div>
+    <div class="tl-axis num" aria-hidden="true">${axis}</div></div>`;
+}
+
+/* COMPOSANT: spot-tags */
+function renderSpotTags(spot) {
+  const t = [];
+  if (spot.access.mode === "train") t.push(`<span class="tag">${I.train}<span class="num">${fmtDur(spot.access.trainMinutes)}</span> · ${esc(spot.access.station)}</span>`);
+  else t.push(`<span class="tag">${I.clock}Sans train</span>`);
+  t.push(`<span class="tag">${I.skate}<span class="num">${fmtKm(spot.access.rideKm)}</span></span>`);
+  if (spot.tide) t.push(`<span class="tag">${I.wave}Marée</span>`);
+  if (spot.limit) t.push(`<span class="tag tag--warn">${I.far}Au-delà de 10 km</span>`);
+  if (spot.clubOnly) t.push(`<span class="tag tag--club">${I.club}Avec un club</span>`);
+  return `<div class="tags">${t.join("")}</div>`;
+}
+
+/* COMPOSANT: spot-card */
+function spotSummary(hours, slot) {
+  if (slot) return { verdict: slot.verdict, wind: slot.wind, gust: slot.gust, dir: ORIENT_DEG[slot.sector], at: null };
+  const pool = hours.filter(h => h.reachable && h.isDay);
+  const best = (pool.length ? pool : hours).reduce((a, b) => (b.score > a.score ? b : a), (pool[0] || hours[7]));
+  const ref = best.score > 0 ? best : hours.find(h => h.hour === 14);
+  return { verdict: best.verdict, wind: ref.wind, gust: ref.gust, dir: ref.dir, at: ref.hour };
+}
+function renderSpotCard(spot, hours, slots, rank) {
+  const slot = slots[0], s = spotSummary(hours, slot);
+  return `<button type="button" class="spot-card" data-action="open" data-spot="${spot.id}" aria-label="${esc(spot.name)}, ${s.verdict.label}${slot ? ", meilleur créneau " + fmtRange(slot.start, slot.end) : ", aucun créneau"}">
+    <div class="sc-head">
+      <div>
+        <h3 class="sc-name">${rank ? `<span class="sc-rank num">${rank}.</span>` : ""}${esc(spot.name)}</h3>
+        <p class="sc-sub">${kindIcon(spot.kind)}${practiceLabel(spot)} · ${esc(spot.city)}</p>
+      </div>
+      ${renderVerdictBadge(s.verdict)}
+    </div>
+    <div class="sectors"><span>Secteurs</span>${spot.orientations.map(o => `<span class="sector-chip">${frDir(o)}</span>`).join("")}</div>
+    <div class="sc-wind">
+      <div class="wind-read">
+        ${renderWindArrow(s.dir, 30)}
+        <div>
+          <div class="wind-val num">${s.wind}<small>km/h</small></div>
+          <div class="wind-meta num">${frDir(sectorCode(s.dir))} · raf. <b>${s.gust}</b>${s.at ? ` · à ${s.at}h` : ""}</div>
+        </div>
+      </div>
+      <dl class="best"><dt>Meilleur créneau</dt>${slot ? `<dd class="num">${fmtRange(slot.start, slot.end)}</dd>` : `<dd class="none">Aucun</dd>`}</dl>
+    </div>
+    ${renderTimeline(hours, slot)}
+    ${renderSpotTags(spot)}
+  </button>`;
+}
+
+/* COMPOSANT: compass (rose des vents, élément signature) */
+function renderCompass(spot, hours, focus) {
+  const S = 300, c = 150, r1 = 54, r2 = 104;
+  const pt = (r, deg) => { const a = deg * Math.PI / 180; return [+(c + r * Math.sin(a)).toFixed(2), +(c - r * Math.cos(a)).toFixed(2)]; };
+  const wedge = o => {
+    const a = ORIENT_DEG[o], hw = o.length === 3 ? 11.25 : 22.5;
+    const [x1, y1] = pt(r2, a - hw), [x2, y2] = pt(r2, a + hw), [x3, y3] = pt(r1, a + hw), [x4, y4] = pt(r1, a - hw);
+    return `<path class="cp-sector" d="M${x1} ${y1}A${r2} ${r2} 0 0 1 ${x2} ${y2}L${x3} ${y3}A${r1} ${r1} 0 0 0 ${x4} ${y4}Z"/>`;
+  };
+  let ticks = "";
+  for (let d = 0; d < 360; d += 22.5) {
+    const major = d % 90 === 0, mid = d % 45 === 0;
+    const [x1, y1] = pt(major ? 106 : 109, d), [x2, y2] = pt(mid ? 119 : 115, d);
+    ticks += `<line class="cp-tick ${major ? "cp-tick--major" : ""}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
+  }
+  const windCode = sectorCode(focus.dir);
+  const labels = SECT8.map(k => {
+    if (k === windCode) return "";
+    const [x, y] = pt(134, ORIENT_DEG[k]);
+    return `<text class="cp-label ${k.length === 1 ? "cp-label--major" : ""}" x="${x}" y="${y}">${frDir(k)}</text>`;
+  }).join("");
+  const dots = hours.filter(h => h.isDay && h.reachable).map(h => { const [x, y] = pt(112, h.dir); return `<circle class="cp-hourdot" cx="${x}" cy="${y}" r="3"/>`; }).join("");
+  // Flèche : arrive du bord (d'où vient le vent) vers le centre
+  const a = focus.dir * Math.PI / 180, vx = Math.cos(a), vy = Math.sin(a);
+  const [sx, sy] = pt(122, focus.dir), [ex, ey] = pt(72, focus.dir), [tx, ty] = pt(48, focus.dir), [bx, by] = pt(74, focus.dir);
+  const head = `${tx},${ty} ${(bx + 13 * vx).toFixed(2)},${(by + 13 * vy).toFixed(2)} ${(bx - 13 * vx).toFixed(2)},${(by - 13 * vy).toFixed(2)}`;
+  const [gx, gy] = pt(134, focus.dir);
+  const aria = `Rose des vents. Secteurs favorables : ${spot.orientations.map(frDir).join(", ")}. Vent prévu à ${focus.hour}h : de ${FR_LONG[windCode]}, ${focus.wind} km/h, rafales ${focus.gust} km/h.`;
+  return `<figure class="compass" style="margin:0">
+    <svg viewBox="0 0 ${S} ${S}" role="img" aria-label="${esc(aria)}">
+      <circle class="cp-ring" cx="${c}" cy="${c}" r="121"/>
+      <circle class="cp-band" cx="${c}" cy="${c}" r="${r2}"/><circle class="cp-band" cx="${c}" cy="${c}" r="${r1}"/>
+      ${spot.orientations.map(wedge).join("")}
+      ${ticks}${dots}${labels}
+      <line class="cp-arrow" x1="${sx}" y1="${sy}" x2="${ex}" y2="${ey}"/>
+      <polygon class="cp-arrow-head" points="${head}"/>
+      <circle class="cp-center" cx="${c}" cy="${c}" r="44"/>
+      <text class="cp-unit" x="${c}" y="${c - 20}">${focus.hour}h</text>
+      <text class="cp-speed" x="${c}" y="${c + 9}">${focus.wind}</text>
+      <text class="cp-unit" x="${c}" y="${c + 26}">km/h</text>
+      <circle class="cp-tag" cx="${gx}" cy="${gy}" r="16"/>
+      <text class="cp-tag-text" x="${gx}" y="${gy}">${frDir(windCode)}</text>
+    </svg>
+    <figcaption class="compass-legend"><span><i></i>Secteurs favorables</span><span><b></b>Vent prévu, d'où il vient</span><span>· points : direction heure par heure</span></figcaption>
+  </figure>`;
+}
+
+/* COMPOSANT: wind-gauge */
+function renderWindGauge(spot, hour) {
+  const p = PROFILES[spot.profile], lv = LEVELS[settings.level];
+  const lo = p.lo, hi = p.hi + lv.hi, ceil = p.ceil + lv.ceil, MAX = 50;
+  const pc = v => Math.max(0, Math.min(100, v / MAX * 100)).toFixed(1);
+  const state = hour.wind >= ceil || hour.gust >= ceil ? "Au-delà du plafond" : hour.wind > hi ? "Au-dessus de la plage idéale" : hour.wind < lo ? "Sous la plage idéale" : "Dans la plage idéale";
+  return `<div class="gauge" role="group" aria-label="Jauge de vent">
+    <div class="gauge-head"><strong class="num">${hour.wind}<small>km/h</small></strong><span class="num">Rafales ${hour.gust} km/h · ${hour.hour}h<br>${state}</span></div>
+    <div class="gauge-track" aria-hidden="true">
+      <div class="gauge-rail"></div>
+      <div class="gauge-ideal" style="left:${pc(lo)}%;width:${(pc(hi) - pc(lo)).toFixed(1)}%"></div>
+      <span class="gauge-ideal-label num" style="left:${((+pc(lo) + +pc(hi)) / 2).toFixed(1)}%">Idéal ${lo}-${hi}</span>
+      <div class="gauge-ceil" style="left:${pc(ceil)}%"></div>
+      <span class="gauge-ceil-label num" style="left:${pc(ceil)}%">Plafond ${ceil}</span>
+      <div class="gauge-gust-span" style="left:${pc(hour.wind)}%;width:${(pc(hour.gust) - pc(hour.wind)).toFixed(1)}%"></div>
+      <div class="gauge-gust" style="left:${pc(hour.gust)}%"></div>
+      <div class="gauge-mark" style="left:${pc(hour.wind)}%"></div>
+    </div>
+    <div class="gauge-axis num" aria-hidden="true">${[0, 10, 20, 30, 40, 50].map(v => `<span style="left:${pc(v)}%">${v}</span>`).join("")}</div>
+    <div class="gauge-keys"><span><i class="k-mark"></i>Vent moyen</span><span><i class="k-gust"></i>Rafales</span><span><i class="k-ceil"></i>Plafond</span></div>
+    <p class="gauge-note">${p.label} : plage idéale ${lo}-${hi} km/h, plafond ${ceil} km/h pour un niveau ${lv.label.toLowerCase()}.</p>
+  </div>`;
+}
+
+/* COMPOSANT: hour-cell */
+function renderHourCell(h, pressed) {
+  const code = sectorCode(h.dir);
+  const tide = h.tide ? `<span class="hc-t">${h.tide.label}<br>${h.tide.trend === "montante" ? "↑ mont." : "↓ desc."}</span>` : "";
+  const aria = `${h.hour}h, vent de ${FR_LONG[code]} ${h.wind} km/h, rafales ${h.gust}, pluie ${h.rain} mm${h.tide ? ", marée " + h.tide.label.toLowerCase() + " " + h.tide.trend : ""}, ${h.verdict.label}${h.reachable ? "" : ", hors de portée en train"}`;
+  return `<button type="button" class="hour-cell num ${h.reachable ? "" : "is-off"}" data-action="focus-hour" data-hour="${h.hour}" aria-pressed="${!!pressed}" aria-label="${esc(aria)}">
+    <span class="hc-h">${h.hour}h</span>
+    ${renderWindArrow(h.dir, 26)}
+    <span class="hc-w">${h.wind}<small>km/h</small></span>
+    <span class="hc-g">raf. ${h.gust}</span>
+    <span class="hc-d">${frDir(code)}</span>
+    <span class="hc-r">${I.drop}${String(h.rain).replace(".", ",")} mm</span>
+    ${tide}
+    <span class="hc-v">${renderVerdictBadge(h.verdict)}${h.reachable ? "" : '<span class="hc-off">hors train</span>'}</span>
+  </button>`;
+}
+
+/* Recommandations générées (3 à 6 phrases courtes) */
+function generateRecommendations(spot, hours, slot, dayIndex) {
+  const r = [], day = DAYS[dayIndex];
+  if (slot) {
+    r.push(`Créneau conseillé ${fmtRange(slot.start, slot.end)}, vent de ${FR_LONG[slot.sector]} autour de ${slot.wind} km/h.`);
+    const run = hours.filter(h => h.hour >= slot.start && h.hour < slot.end);
+    const spread = slot.gust - slot.wind;
+    r.push(spread <= 6 ? "Vent régulier, écart rafales faible." : spread <= 10 ? `Rafales jusqu'à ${slot.gust} km/h : reste vigilant aux bouffées.` : "Écart rafales important : sessions courtes et prudence.");
+    const turn = angDiff(run[0].dir, run[run.length - 1].dir);
+    if (turn >= 20) r.push(`Le vent tourne au ${FR_LONG[sectorCode(run[run.length - 1].dir)]} en fin de créneau : surveille l'orientation.`);
+    else r.push("Direction stable sur tout le créneau.");
+  } else {
+    const best = hours.filter(h => h.reachable && h.isDay).sort((a, b) => b.score - a.score)[0];
+    r.push(`Aucun créneau au-dessus de ton score minimum (${settings.scoreMin}) ${day.word}.`);
+    if (best && best.reasons.length) r.push(`Meilleure heure : ${best.hour}h, mais ${best.reasons.join(", ").toLowerCase()}.`);
+  }
+  if (spot.tide) {
+    const hw = Math.round(day.highTide);
+    r.push(`Pleine mer vers ${hw}h : vérifie que l'atterrissage reste dégagé.`);
+  }
+  if (slot && spot.access.mode === "train") r.push(`Pars de Rennes vers ${fmtClock(slot.start * 60 - slot.travelMinutes - 10)} pour être prêt à ${slot.start}h (${fmtDur(slot.travelMinutes)} de trajet).`);
+  if (slot && spot.access.mode === "local") r.push(`À ${fmtKm(spot.access.rideKm)} en skate : faisable sur une pause ou après le travail.`);
+  if (spot.clubOnly) r.push("Treuil uniquement pendant les sessions du club : vérifie le planning avant de partir.");
+  if (settings.level === "debutant" && spot.profile === "soaring") r.push("Niveau débutant : soaring côtier à faire accompagné.");
+  return r.slice(0, 6);
+}
+
+/* COMPOSANT: detail-sheet */
+function renderDetailSheet(spot, dayIndex, focusHour) {
+  const day = DAYS[dayIndex], data = FORECAST[dayIndex].bySpot[spot.id];
+  const hours = data.hours, slot = data.slots[0];
+  const focus = hours.find(h => h.hour === focusHour) || hours[7];
+  const s = spotSummary(hours, slot);
+  const ride = rideMinutes(spot.access.rideKm);
+  const recos = generateRecommendations(spot, hours, slot, dayIndex);
+  const from = spot.access.mode === "train" ? STATIONS.find(x => x.name === spot.access.station) : STATIONS[0];
+  const lastLeave = toMin(settings.lastTrain) - ride - 15;
+  const link = (href, label, sub, ic = I.ext) => href
+    ? `<a class="link-btn" href="${esc(href)}" target="_blank" rel="noopener">${ic.replace('class="ic"', 'class="ic"')}<span>${label}${sub ? `<small>${sub}</small>` : ""}</span>${I.ext}</a>`
+    : `<div class="link-btn" aria-disabled="true" style="opacity:.7">${ic}<span>${label}<small>Lien à renseigner</small></span></div>`;
+  const confText = { haute: ["Haute", 3, "Orientations et règles vérifiées sur la fiche officielle."], moyenne: ["Moyenne", 2, "Orientations issues de la fiche du site, accès estimé."], faible: ["Faible", 1, "Fiche incomplète : à confirmer auprès des pilotes locaux."] }[spot.confidence] || ["Inconnue", 0, ""];
+  const access = spot.access.mode === "train" ? `
+      <div><dt>Train depuis Rennes</dt><dd class="num">${fmtDur(spot.access.trainMinutes)}</dd></div>
+      <div><dt>Gare</dt><dd>${esc(spot.access.station)}</dd></div>
+      <div><dt>Skate</dt><dd class="num">${fmtKm(spot.access.rideKm)} · ${fmtDur(ride)}</dd></div>
+      <div><dt>Dénivelé</dt><dd class="num">+${spot.access.climbM ?? "?"} m</dd></div>
+      <div class="wide"><dt>Ligne</dt><dd style="font-size:15px">${esc(spot.access.train)} · ${esc(spot.access.ride)}</dd></div>
+      <div class="wide"><dt>Dernier train conseillé</dt><dd class="num">${fmtHHMM(settings.lastTrain)} depuis ${esc(spot.access.station)} · quitter le site à ${fmtClock(lastLeave)}</dd></div>`
+    : `
+      <div><dt>Accès</dt><dd>Skate, sans train</dd></div>
+      <div><dt>Distance</dt><dd class="num">${fmtKm(spot.access.rideKm)} · ${fmtDur(ride)}</dd></div>
+      <div><dt>Dénivelé</dt><dd class="num">+${spot.access.climbM ?? "?"} m</dd></div>
+      <div><dt>Coucher du soleil</dt><dd class="num">${fmtHHMM(day.sunset)}</dd></div>
+      <div class="wide"><dt>Itinéraire</dt><dd style="font-size:15px">${esc(spot.access.ride)}</dd></div>`;
+  return `
+    <div class="sheet-top">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <div class="sheet-titlebar">
+        <div>
+          <h2 class="sheet-title" id="sheet-title">${esc(spot.name)}</h2>
+          <p class="sheet-sub"><span>${kindIcon(spot.kind)}${esc(spot.city)} · ${kindLabel(spot.kind)} ${PROFILES[spot.profile].label.toLowerCase()}</span></p>
+          <p class="sheet-sub num"><span>${I.calendar}${esc(capFirst(day.long))}</span><span>${I.sunrise}${fmtHHMM(day.sunrise)}</span><span>${I.sunset}${fmtHHMM(day.sunset)}</span></p>
+        </div>
+        <button type="button" class="icon-btn" data-action="close-sheet" aria-label="Fermer">${I.close}</button>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">${renderVerdictBadge(s.verdict)}<span class="num" style="font-weight:800">${slot ? "Créneau " + fmtRange(slot.start, slot.end) : "Aucun créneau ce jour"}</span></div>
+    </div>
+
+    <section class="dsec" aria-labelledby="d-vent"><h3 id="d-vent">Vent à ${focus.hour}h</h3>
+      <div class="instrument" id="instrument">${renderCompass(spot, hours, focus)}${renderWindGauge(spot, focus)}</div>
+    </section>
+
+    <section class="dsec" aria-labelledby="d-heures"><h3 id="d-heures">Heure par heure</h3>
+      <div class="hours" id="hours-scroll">${hours.map(h => renderHourCell(h, h.hour === focus.hour)).join("")}</div>
+    </section>
+
+    <section class="dsec" aria-labelledby="d-recos"><h3 id="d-recos">Recommandations</h3>
+      <ul class="recos">${recos.map(x => `<li>${esc(x)}</li>`).join("")}</ul>
+    </section>
+
+    <section class="dsec" aria-labelledby="d-regles"><h3 id="d-regles">Règles et vigilance</h3>
+      <ul class="rules">
+        ${spot.rules.map(x => `<li>${I.info}<span>${esc(x)}</span></li>`).join("")}
+        ${spot.warnings.map(x => `<li class="warn">${I.alert}<span>${esc(x)}</span></li>`).join("")}
+      </ul>
+    </section>
+
+    <section class="dsec" aria-labelledby="d-acces"><h3 id="d-acces">Y aller</h3>
+      <dl class="access">${access}</dl>
+    </section>
+
+    <section class="dsec" aria-labelledby="d-liens"><h3 id="d-liens">Liens</h3>
+      <div class="links">
+        ${link(spot.links.ffvl, "Fiche FFVL", "Site de pratique", I.info)}
+        ${link(spot.links.club, "Club", spot.clubOnly ? "Planning des sessions" : "", I.club)}
+        ${link("https://www.balisemeteo.com/", "Balises de vent", "En temps réel", I.wind)}
+        ${link(`https://www.windy.com/?${spot.lat},${spot.lon},11`, "Windy", "Modèles et rafales", I.wind)}
+        ${link(`https://www.openstreetmap.org/directions?engine=fossgis_osrm_bike&route=${from.lat}%2C${from.lon}%3B${spot.lat}%2C${spot.lon}`, spot.access.mode === "train" ? "Itinéraire gare - site" : "Itinéraire depuis la gare de Rennes", "OpenStreetMap", I.skate)}
+        ${spot.access.mode === "train" ? link("https://www.sncf-connect.com/", "Horaires SNCF", esc(spot.access.train), I.train) : ""}
+        ${spot.tide ? link("https://maree.shom.fr/", "Marées SHOM", "Horaires et coefficients", I.wave) : ""}
+      </div>
+    </section>
+
+    <section class="dsec">
+      <div class="reliab">${I.info}<div><strong>Fiabilité des données du site : ${confText[0]}</strong><span class="meter" aria-hidden="true">${[1, 2, 3].map(n => `<i class="${n <= confText[1] ? "on" : ""}"></i>`).join("")}</span><br>${esc(confText[2])} Prévisions indicatives : vérifie les balises sur place avant de décoller.</div></div>
+    </section>`;
+}
+
+/* COMPOSANT: map-preview */
+function renderMapPreview(spot, dayIndex) {
+  const d = FORECAST[dayIndex].bySpot[spot.id];
+  return renderSpotCard(spot, d.hours, d.slots, 0);
+}
+function renderMapLegend() {
+  return `<div class="legend" style="display:grid;gap:4px">${["top", "ok", "limite", "non"].map(k => `<span><i class="vfill--${k}"></i>${VERDICTS[k].label}</span>`).join("")}<span><i style="background:#14305a"></i>Gare</span></div>`;
+}
+
+/* COMPOSANT: settings */
+function renderSettings(s, notifState) {
+  const seg = (name, opts, val) => `<div class="seg" role="group" aria-label="${name}">${opts.map(([k, l]) => `<button type="button" data-setting="${name}" data-value="${k}" aria-pressed="${k === val}">${l}</button>`).join("")}</div>`;
+  return `
+  <h2 class="group-title">Pilote</h2>
+  <div class="group">
+    <div class="field"><span class="lbl" id="lbl-level">Niveau</span>
+      ${seg("level", Object.entries(LEVELS).map(([k, v]) => [k, v.label]), s.level)}
+      <p class="hint">Ajuste la plage de vent idéale et le plafond de chaque site.</p></div>
+  </div>
+
+  <h2 class="group-title">Créneaux</h2>
+  <div class="group">
+    <div class="field">
+      <div class="field-row"><label for="set-score">Score minimum d'un créneau</label><output class="range-val num" for="set-score" id="out-score">${s.scoreMin}</output></div>
+      <input type="range" id="set-score" min="30" max="90" step="5" value="${s.scoreMin}" data-setting="scoreMin">
+      <p class="hint">En dessous, l'heure n'entre dans aucun créneau ni notification.</p>
+    </div>
+    <div class="field"><div class="field-row"><label for="set-dep">Premier départ de Rennes</label><input type="time" id="set-dep" value="${s.firstDeparture}" data-setting="firstDeparture"></div></div>
+    <div class="field"><div class="field-row"><label for="set-last">Dernier train retour</label><input type="time" id="set-last" value="${s.lastTrain}" data-setting="lastTrain"></div>
+      <p class="hint">Les heures hors de cette fenêtre sont grisées dans les frises.</p></div>
+  </div>
+
+  <h2 class="group-title">Notifications</h2>
+  <div class="group">
+    <div class="field">
+      <div class="field-row"><span class="lbl">Alertes créneaux</span>
+        <span class="status ${s.notifEnabled ? "status--on" : "status--off"}">${s.notifEnabled ? renderVerdictIcon("ok") + "Actives" : I.bell + "Inactives"}</span></div>
+      <p class="hint">Deux envois par jour au maximum, uniquement si un créneau dépasse ton score minimum.</p>
+      <label class="check"><input type="checkbox" data-setting="notifMorning" ${s.notifMorning ? "checked" : ""}>Matin, 7h : la journée</label>
+      <label class="check"><input type="checkbox" data-setting="notifEvening" ${s.notifEvening ? "checked" : ""}>Soir, 18h30 : le lendemain</label>
+    </div>
+    <div class="field">
+      <div class="btn-row">
+        ${s.notifEnabled ? "" : `<button type="button" class="btn btn--primary" data-action="open-onb">${I.bell}Activer les notifications</button>`}
+        <button type="button" class="btn btn--ghost" data-action="test-notif">Tester une notification</button>
+      </div>
+      ${notifState ? `<p class="hint">${esc(notifState)}</p>` : ""}
+      <p class="hint">Sur iPhone, l'app doit d'abord être ajoutée à l'écran d'accueil : le parcours guidé s'ouvre au premier appui.</p>
+    </div>
+  </div>
+
+  <h2 class="group-title">Apparence</h2>
+  <div class="group"><div class="field">${seg("theme", [["system", "Système"], ["light", "Clair"], ["dark", "Sombre"]], s.theme)}</div></div>
+
+  <h2 class="group-title">Données</h2>
+  <div class="group"><div class="field"><p class="hint">Prévisions recalculées à 7h et 18h30. Les données affichées dans cette maquette sont fictives.</p></div></div>`;
+}
+
+/* COMPOSANT: onboarding-ios (une étape illustrée) */
+const ONB_STEPS = [
+  { title: "Ouvrir dans Safari", text: "Ouvre FenêtreVol dans Safari, puis touche le bouton Partager en bas de l'écran." },
+  { title: "Sur l'écran d'accueil", text: "Fais défiler et choisis « Sur l'écran d'accueil », puis touche Ajouter en haut à droite." },
+  { title: "Autoriser les notifications", text: "Ouvre l'app depuis sa nouvelle icône, active les alertes et touche Autoriser." }
+];
+function illPhone(inner) {
+  return `<svg class="onb-ill" viewBox="0 0 160 290" aria-hidden="true">
+    <rect class="i-body" x="2" y="2" width="156" height="286" rx="26"/>
+    <rect class="i-screen" x="9" y="9" width="142" height="272" rx="20"/>${inner}</svg>`;
+}
+function illSail(x, y, s) {
+  return `<g transform="translate(${x} ${y}) scale(${s})"><path class="i-white" d="M2.5 9.2C5.5 4.6 18.5 4.6 21.5 9.2l-1.6 1.3C16.6 7.6 7.4 7.6 4.1 10.5z"/><path d="M4.6 10.6 11 18.4M19.4 10.6 13 18.4M9 8.1l2.3 10.1M15 8.1l-2.3 10.1" style="stroke:#fff;stroke-width:1.1;fill:none"/><circle class="i-white" cx="12" cy="19.6" r="1.9"/></g>`;
+}
+function renderOnboardingIllustration(step) {
+  if (step === 0) return illPhone(`
+    <rect class="i-brand" x="20" y="30" width="120" height="62" rx="10"/>
+    <rect class="i-white" x="29" y="41" width="58" height="7" rx="3" opacity=".85"/><rect class="i-white" x="29" y="55" width="44" height="14" rx="3"/>
+    <rect class="i-mute" x="20" y="102" width="120" height="40" rx="8"/><rect class="i-mute" x="20" y="150" width="120" height="40" rx="8"/>
+    <path class="i-mute" d="M9 232H151V261a20 20 0 0 1-20 20H29a20 20 0 0 1-20-20Z"/>
+    <rect class="i-screen" x="20" y="238" width="120" height="15" rx="7.5"/><text class="i-txt2" x="80" y="248.5" text-anchor="middle">FenêtreVol</text>
+    <path class="i-line" d="M33 262l-5 5 5 5M51 262l5 5-5 5"/>
+    <path d="M75 265v7h10v-7M80 269v-12M76.5 260.5 80 257l3.5 3.5" style="fill:none;stroke:#2f6fd6;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"/>
+    <circle class="i-hl" cx="80" cy="265" r="13"/>
+    <path class="i-line" d="M103 261h5a3 3 0 0 1 3 3v8M119 261h-5a3 3 0 0 0-3 3"/><rect class="i-line" x="126" y="261" width="10" height="10" rx="2"/>
+    <rect class="i-hlfill" x="50" y="206" width="60" height="20" rx="10"/><text class="i-txt" x="80" y="219.5" text-anchor="middle" style="fill:var(--granite-ink)">Partager</text>
+    <path class="i-hl" d="M80 228v8" style="stroke-width:2"/>`);
+  if (step === 1) return illPhone(`
+    <rect class="i-brand" x="20" y="30" width="120" height="50" rx="10" opacity=".35"/>
+    <path class="i-mute" d="M9 112a14 14 0 0 1 14-14H137a14 14 0 0 1 14 14V261a20 20 0 0 1-20 20H29a20 20 0 0 1-20-20Z"/>
+    <rect class="i-brand" x="20" y="110" width="24" height="24" rx="6"/>${illSail(23, 113, 0.75)}
+    <text class="i-txt" x="50" y="120">FenêtreVol</text><text class="i-txt2" x="50" y="131">Page web</text>
+    <rect class="i-screen" x="18" y="146" width="124" height="96" rx="10"/>
+    <text class="i-txt" x="26" y="166">Copier</text><rect class="i-line" x="126" y="158" width="9" height="11" rx="2"/>
+    <path class="i-line" d="M18 178h124" style="stroke:var(--line);stroke-width:1"/>
+    <text class="i-txt" x="26" y="198">Ajouter aux favoris</text><path class="i-line" d="M126 190l4.5 3.5L135 190v12h-9z"/>
+    <path class="i-line" d="M18 210h124" style="stroke:var(--line);stroke-width:1"/>
+    <rect class="i-hlfill" x="19" y="211" width="122" height="30" rx="8"/>
+    <rect class="i-hl" x="17" y="209" width="126" height="34" rx="10"/>
+    <text class="i-txt" x="24" y="230" style="fill:var(--granite-ink);font-size:8px">Sur l'écran d'accueil</text>
+    <rect class="i-line" x="124" y="219" width="13" height="13" rx="3" style="stroke:var(--granite-ink)"/><path class="i-line" d="M130.5 222v7M127 225.5h7" style="stroke:var(--granite-ink)"/>`);
+  return illPhone(`
+    ${[[22, 36], [56, 36], [90, 36], [124, 36], [56, 86], [90, 86], [124, 86]].map(([x, y]) => `<rect class="i-mute" x="${x - 2}" y="${y}" width="26" height="26" rx="7"/>`).join("")}
+    <rect class="i-brand" x="20" y="86" width="26" height="26" rx="7"/>${illSail(23, 89, 0.85)}
+    <rect class="i-hl" x="16" y="82" width="34" height="34" rx="10"/>
+    <text class="i-txt2" x="33" y="124" text-anchor="middle">FenêtreVol</text>
+    <rect class="i-screen" x="20" y="142" width="120" height="104" rx="14" style="stroke:var(--line-strong);stroke-width:1"/>
+    <text class="i-txt" x="80" y="164" text-anchor="middle">« FenêtreVol » souhaite</text>
+    <text class="i-txt" x="80" y="176" text-anchor="middle">vous envoyer des</text>
+    <text class="i-txt" x="80" y="188" text-anchor="middle">notifications</text>
+    <text class="i-txt2" x="80" y="203" text-anchor="middle">Alertes, sons et pastilles</text>
+    <path d="M20 214h120M80 214v32" style="stroke:var(--line);stroke-width:1"/>
+    <text class="i-txt2" x="50" y="234" text-anchor="middle">Refuser</text>
+    <text x="110" y="234" text-anchor="middle" style="fill:#2f6fd6;font:800 10px var(--font)">Autoriser</text>
+    <rect class="i-hl" x="84" y="218" width="52" height="24" rx="8"/>`);
+}
+function renderOnboardingIos(step) {
+  const s = ONB_STEPS[step];
+  return `<div class="onb-step">
+    <span class="onb-num">Étape ${step + 1} sur 3</span>
+    ${renderOnboardingIllustration(step)}
+    <h3 class="onb-title">${esc(s.title)}</h3>
+    <p class="onb-text">${esc(s.text)}</p>
+  </div>`;
+}
+function renderOnboardingSheet(step) {
+  return `<div class="sheet-top"><div class="sheet-handle" aria-hidden="true"></div>
+      <div class="sheet-titlebar"><div><h2 class="sheet-title" id="onb-title">Activer les notifications</h2>
+        <p class="sheet-sub">Sur iPhone, les notifications ne fonctionnent qu'une fois l'app ajoutée à l'écran d'accueil.</p></div>
+        <button type="button" class="icon-btn" data-action="close-onb" aria-label="Fermer">${I.close}</button></div></div>
+    <div class="onb">
+      <div class="onb-steps" aria-hidden="true">${[0, 1, 2].map(i => `<i class="${i <= step ? "on" : ""}"></i>`).join("")}</div>
+      ${renderOnboardingIos(step)}
+    </div>
+    <div class="onb-actions">
+      ${step > 0 ? `<button type="button" class="btn btn--ghost" data-action="onb-prev">Précédent</button>` : ""}
+      ${step < 2 ? `<button type="button" class="btn btn--primary" data-action="onb-next">Suivant</button>` : `<button type="button" class="btn btn--primary" data-action="onb-done">C'est fait, activer</button>`}
+    </div>
+    <p class="onb-android" style="margin-top:12px">Sur Android, aucune installation n'est nécessaire : l'autorisation est demandée directement.</p>`;
+}
+
+/* COMPOSANT: skeleton (chargement) */
+function renderSkeletonCard() {
+  return `<div class="sk-card" aria-hidden="true">
+    <div style="display:flex;justify-content:space-between;gap:12px"><div style="display:grid;gap:8px;flex:1"><div class="sk" style="height:18px;width:60%"></div><div class="sk" style="height:12px;width:45%"></div></div><div class="sk" style="height:28px;width:72px;border-radius:999px"></div></div>
+    <div class="sk" style="height:62px;border-radius:12px"></div>
+    <div class="sk" style="height:34px"></div>
+    <div style="display:flex;gap:6px"><div class="sk" style="height:26px;width:90px"></div><div class="sk" style="height:26px;width:70px"></div></div></div>`;
+}
+function renderSkeletonScreen() {
+  return `<div class="sk sk-hero" aria-hidden="true"></div>${renderSkeletonCard()}${renderSkeletonCard()}<p class="sr-only" role="status">Chargement des prévisions</p>`;
+}
+
+/* COMPOSANT: error-state */
+function renderErrorState(updatedAt) {
+  return `<div class="state" role="alert">
+    <span class="state-ic">${I.cloudx}</span>
+    <h2>Prévisions indisponibles</h2>
+    <p>Le serveur météo ne répond pas. Ce n'est pas ta connexion : réessaie dans quelques minutes.</p>
+    <div class="btn-row" style="width:100%">
+      <button type="button" class="btn btn--primary" data-action="refresh">Réessayer</button>
+      <button type="button" class="btn btn--ghost">Voir les prévisions de ${fmtHHMM(updatedAt.slice(11, 16))}</button>
+    </div></div>`;
+}
+
+/* COMPOSANT: first-launch */
+function renderFirstLaunch() {
+  return `<div class="state welcome">
+    <span class="brand-mark" style="width:52px;height:52px;border-radius:15px;background:#fff;color:#14305a">${sailSvg(32)}</span>
+    <h2>Bienvenue sur FenêtreVol</h2>
+    <p>Chaque jour, où et quand gonfler à Rennes ou voler sur la côte en train et en skate.</p>
+    <ul>
+      <li>${I.clock}<span>Les meilleurs créneaux sur 3 jours, du meilleur au moins bon.</span></li>
+      <li>${I.train}<span>Seulement les heures atteignables en train depuis Rennes.</span></li>
+      <li>${I.bell}<span>Une alerte à 7h et à 18h30 quand ça vaut le coup.</span></li>
+    </ul>
+    <div style="width:100%;display:grid;gap:8px"><span style="font-weight:700">Ton niveau</span>
+      <div class="seg" style="background:rgba(255,255,255,.14)">${Object.entries(LEVELS).map(([k, v]) => `<button type="button" aria-pressed="${k === "intermediaire"}" style="${k === "intermediaire" ? "" : "color:#fff"}">${v.label}</button>`).join("")}</div></div>
+    <button type="button" class="btn btn--light btn--block">Commencer</button>
+    <button type="button" class="btn btn--block" style="color:#fff;background:transparent">Activer les alertes plus tard</button>
+  </div>`;
+}
+
+/* =========================================================
+   6. NOTIFICATIONS
+   ========================================================= */
+/* Construit le contenu d'une notification à partir d'une liste de créneaux (contrat). */
+function whenWord(date, refDate) {
+  const i = DAYS.findIndex(d => d.date === date), r = DAYS.findIndex(d => d.date === refDate);
+  if (i === r) return "aujourd'hui";
+  if (i === r + 1) return "demain";
+  return DAYS[i] ? DAYS[i].word : date;
+}
+function notifLine(sl, refDate) {
+  const spot = spotById(sl.spotId);
+  return `${kindLabel(sl.kind)} · ${sl.spotName} · ${whenWord(sl.date, refDate)} ${fmtRange(sl.start, sl.end)} · ${frDir(sl.sector)} ${sl.wind} km/h (raf. ${sl.gust})${spot && spot.clubOnly ? " · si session club" : ""}`;
+}
+function buildNotification(slots, refDate) {
+  const MAX = 40;
+  const sorted = [...slots].sort((a, b) => b.score - a.score);
+  const first = sorted[0], w = capFirst(whenWord(first.date, refDate));
+  let title;
+  if (sorted.length === 1) {
+    title = `${w} ${fmtRange(first.start, first.end)} : ${first.spotName}`;
+    if (title.length > MAX) title = `${fmtRange(first.start, first.end)} : ${first.spotName}`;
+    if (title.length > MAX) title = title.slice(0, MAX - 1) + "…";
+  } else {
+    const kinds = new Set(sorted.map(s => s.kind));
+    title = `${w} : ${sorted.length} créneaux${kinds.size > 1 ? ", vol et gonflage" : kinds.has("vol") ? " de vol" : " de gonflage"}`;
+  }
+  let lines = sorted.slice(0, 3).map(s => notifLine(s, refDate));
+  if (sorted.length > 3) lines = [...lines.slice(0, 2), `+ ${sorted.length - 2} autres créneaux`];
+  return {
+    title, lines,
+    priority: sorted.length === 1 && first.verdict.key === "top" && first.kind === "vol" ? "haute" : "normale",
+    action: { label: "Voir le créneau", spotId: first.spotId, date: first.date }
+  };
+}
+
+/* COMPOSANT: notification-preview (iOS ou Android, clair ou sombre) */
+function renderNotificationPreview(n, { os = "ios", when = "maintenant", expanded = false } = {}) {
+  if (os === "ios") {
+    return `<div><div class="np" role="group" aria-label="Notification FenêtreVol : ${esc(n.title)}">
+      <span class="np-icon">${sailSvg(24)}</span>
+      <div class="np-head"><span class="np-app">FenêtreVol${n.priority === "haute" ? ' · <span class="np-prio">Priorité haute</span>' : ""}</span><span class="np-when">${esc(when)}</span></div>
+      <div class="np-title">${esc(n.title)}</div>
+      <div class="np-body">${n.lines.map(l => `<span>${esc(l)}</span>`).join("")}</div>
+    </div>${expanded ? `<div class="np-actions"><div><span>${esc(n.action.label)}</span>${I.chevron}</div><div><span>Ne plus m'alerter aujourd'hui</span></div></div>` : ""}</div>`;
+  }
+  return `<div class="na" role="group" aria-label="Notification FenêtreVol : ${esc(n.title)}">
+    <div class="na-head"><span class="na-badge">${sailSvg(14)}</span><span class="na-app">FenêtreVol · ${esc(when)}</span>${n.priority === "haute" ? '<span class="na-prio">Priorité haute</span>' : ""}</div>
+    <div class="na-title">${esc(n.title)}</div>
+    <div class="na-body">${n.lines.map(l => `<span>${esc(l)}</span>`).join("")}</div>
+    ${expanded ? `<div class="na-actions"><span>${esc(n.action.label)}</span><span>Plus tard</span></div>` : ""}
+  </div>`;
+}
+function renderLockScreen(os, theme, items) {
+  const cls = `lock lock--${os === "ios" ? "ios" : "and"}-${theme}`;
+  const stack = items.map(it => renderNotificationPreview(it.n, { os, when: it.when, expanded: it.expanded })).join("");
+  return `<div class="${cls}">
+    <div class="lock-status num"><span>${os === "ios" ? "" : "18:31"}</span><span>${os === "ios" ? "" : "4G · 82 %"}</span></div>
+    <div class="lock-clock"><div class="d">${os === "ios" ? "jeudi 1 octobre" : "jeu. 1 oct."}</div><div class="t">18:31</div></div>
+    <div class="lock-stack">${os === "ios" ? '<div class="lock-section">Centre de notifications</div>' : ""}${stack}</div>
+    ${os === "ios" ? '<div class="lock-home"></div>' : ""}
+  </div>`;
+}
+</script>
+
+<script>
+"use strict";
+/* =========================================================
+   7. ÉTAT DE L'APPLICATION ET ASSEMBLAGE DES ÉCRANS
+   ========================================================= */
+const state = { view: "app", tab: "creneaux", kind: "tout", day: 0, loading: false, offline: !navigator.onLine, sheet: null, onbStep: 0, mapSel: null, notifState: "" };
+const $ = sel => document.querySelector(sel);
+const RANK = { top: 3, ok: 2, limite: 1, non: 0 };
+
+function spotsForDay(dayIndex, kind) {
+  return SPOTS.filter(s => kind === "tout" || s.kind === kind).map(spot => {
+    const d = FORECAST[dayIndex].bySpot[spot.id];
+    const maxScore = Math.max(0, ...d.hours.filter(h => h.reachable).map(h => h.score));
+    return { spot, hours: d.hours, slots: d.slots, lowSlots: d.lowSlots, maxScore };
+  }).sort((a, b) => rankScore(b) - rankScore(a) || b.maxScore - a.maxScore);
+}
+/* Classement : score du meilleur créneau, les sites « avec un club » passent après à score égal */
+function rankScore(x) {
+  return x.slots[0] ? x.slots[0].score - (x.spot.clubOnly ? 5 : 0) : -1;
+}
+function bestVerdictOfDay(dayIndex, kind) {
+  const items = spotsForDay(dayIndex, kind);
+  const withSlot = items.filter(x => x.slots.length);
+  if (withSlot.length) return withSlot.map(x => x.slots[0].verdict).sort((a, b) => RANK[b.key] - RANK[a.key])[0];
+  return items.some(x => x.maxScore >= 40) ? VERDICTS.limite : VERDICTS.non;
+}
+function emptyContext(dayIndex, kind) {
+  const items = spotsForDay(dayIndex, kind);
+  const ref = items[0] && items[0].hours.find(h => h.hour === 14);
+  const weather = ref ? `Vent de ${FR_LONG[sectorCode(ref.dir)]} ${ref.wind} km/h, rafales ${ref.gust} km/h${ref.rain > 0.2 ? ", pluie" : ""} en début d'après-midi.` : "";
+  const count = {};
+  items.forEach(x => x.hours.filter(h => h.reachable && h.isDay).forEach(h => h.reasons.forEach(r => { count[r] = (count[r] || 0) + 1; })));
+  const reasons = Object.entries(count).sort((a, b) => b[1] - a[1]).slice(0, 2).map(e => e[0]);
+  let next = null;
+  for (let j = dayIndex + 1; j < DAYS.length && !next; j++) {
+    const it = spotsForDay(j, kind).find(x => x.slots.length);
+    if (it) next = { slot: it.slots[0], dayIndex: j };
+  }
+  const lowCount = items.reduce((a, x) => a + x.lowSlots.length, 0);
+  let alt = null;
+  if (kind !== "tout") {
+    const other = spotsForDay(dayIndex, kind === "vol" ? "gonflage" : "vol").find(x => x.slots.length);
+    if (other) alt = { slot: other.slots[0] };
+  }
+  return { day: DAYS[dayIndex], kind, weather, reasons, next, lowCount, alt };
+}
+
+function renderHeader() {
+  $("#app-header").innerHTML = renderAppHeader({ updatedAt: UPDATED_AT, loading: state.loading, offline: state.offline });
+}
+function renderCreneaux() {
+  $("#offline-slot").innerHTML = state.offline ? renderOfflineBanner(UPDATED_AT) : "";
+  $("#filters").innerHTML = renderFilters(state.kind, state.day);
+  const day = DAYS[state.day];
+  if (state.loading) {
+    $("#hero-slot").innerHTML = renderSkeletonScreen();
+    $("#spot-list").innerHTML = ""; $("#list-count").textContent = ""; $("#legend-slot").innerHTML = "";
+    return;
+  }
+  const items = spotsForDay(state.day, state.kind);
+  const top = items.find(x => x.slots.length);
+  $("#hero-slot").innerHTML = top ? renderHero(top.slots[0], top.spot, day) : renderHeroEmpty(emptyContext(state.day, state.kind));
+  const nSlots = items.reduce((a, x) => a + x.slots.length, 0);
+  $("#list-title").textContent = `Spots · ${day.short.toLowerCase()}`;
+  $("#list-count").textContent = `${items.length} spots · ${nSlots} créneau${nSlots > 1 ? "x" : ""}`;
+  $("#legend-slot").innerHTML = renderLegend();
+  $("#spot-list").innerHTML = items.map((x, i) => `<li>${renderSpotCard(x.spot, x.hours, x.slots, i + 1)}</li>`).join("");
+}
+function renderSettingsScreen() {
+  $("#settings-slot").innerHTML = renderSettings(settings, state.notifState);
+}
+function renderApp() {
+  renderHeader();
+  renderCreneaux();
+  if (state.tab === "reglages") renderSettingsScreen();
+  if (state.tab === "carte") { $("#map-days").innerHTML = renderDayChips(state.day, state.kind); updateMap(); }
+}
+
+function showTab(tab) {
+  state.tab = tab;
+  ["creneaux", "carte", "reglages"].forEach(t => { $("#screen-" + t).hidden = t !== tab; });
+  document.querySelectorAll(".tabbar [data-tab]").forEach(b => { if (b.dataset.tab === tab) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
+  renderApp();
+  if (tab === "carte") { initMap(); setTimeout(() => map && map.invalidateSize(), 60); }
+  window.scrollTo({ top: 0 });
+}
+
+/* ---------- Carte (Leaflet + OpenStreetMap) ---------- */
+let map = null, spotMarkers = {};
+function pinHtml(key, sel) { return `<div class="pin vfill--${key} ${sel ? "pin--sel" : ""}">${renderVerdictIcon(key)}</div>`; }
+function verdictOfSpot(spotId, dayIndex) {
+  const d = FORECAST[dayIndex].bySpot[spotId];
+  return spotSummary(d.hours, d.slots[0]).verdict;
+}
+function initMap() {
+  if (map) return;
+  $("#map-legend").innerHTML = renderMapLegend();
+  if (typeof L === "undefined") {
+    $("#map").outerHTML = `<div id="map" class="map-fallback" role="status">La carte n'a pas pu se charger (hors connexion ?). Les spots restent consultables dans l'onglet Créneaux.</div>`;
+    return;
+  }
+  map = L.map("map", { zoomControl: true, attributionControl: true }).setView([48.4, -1.75], 9);
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 18, attribution: "© contributeurs OpenStreetMap" }).addTo(map);
+  STATIONS.forEach(st => L.marker([st.lat, st.lon], {
+    icon: L.divIcon({ className: "", html: `<div class="pin-station" aria-label="Gare ${esc(st.name)}">${I.train}</div>`, iconSize: [28, 28], iconAnchor: [14, 14] }),
+    title: "Gare de " + st.name, keyboard: true
+  }).addTo(map));
+  SPOTS.forEach(s => {
+    const m = L.marker([s.lat, s.lon], { title: s.name, keyboard: true, riseOnHover: true }).addTo(map);
+    m.on("click", () => { state.mapSel = s.id; updateMap(); });
+    spotMarkers[s.id] = m;
+  });
+  map.on("click", () => { state.mapSel = null; updateMap(); });
+  map.fitBounds(L.latLngBounds([...SPOTS, ...STATIONS].map(p => [p.lat, p.lon])).pad(0.12));
+  updateMap();
+}
+function updateMap() {
+  if (!map) return;
+  SPOTS.forEach(s => {
+    const v = verdictOfSpot(s.id, state.day);
+    spotMarkers[s.id].setIcon(L.divIcon({ className: "", html: pinHtml(v.key, state.mapSel === s.id), iconSize: [40, 40], iconAnchor: [20, 20] }));
+    spotMarkers[s.id].setOpacity(state.kind === "tout" || s.kind === state.kind ? 1 : 0.35);
+  });
+  const pv = $("#map-preview");
+  if (state.mapSel) { pv.hidden = false; pv.innerHTML = renderMapPreview(spotById(state.mapSel), state.day); }
+  else { pv.hidden = true; pv.innerHTML = ""; }
+}
+
+/* ---------- Feuille de détail ---------- */
+let lastFocus = null;
+function openSheet(spotId) {
+  const d = FORECAST[state.day].bySpot[spotId];
+  const firstOk = d.hours.find(h => h.reachable && h.isDay) || d.hours[7];
+  state.sheet = { spotId, focusHour: d.slots[0] ? d.slots[0].start : firstOk.hour };
+  lastFocus = document.activeElement;
+  const el = $("#sheet");
+  el.innerHTML = renderDetailSheet(spotById(spotId), state.day, state.sheet.focusHour);
+  el.scrollTop = 0;
+  el.classList.add("is-open"); $("#sheet-backdrop").classList.add("is-open");
+  document.body.style.overflow = "hidden";
+  requestAnimationFrame(() => el.focus());
+  const pressed = el.querySelector('.hour-cell[aria-pressed="true"]');
+  if (pressed) { const sc = $("#hours-scroll"); sc.scrollLeft = pressed.offsetLeft - sc.offsetLeft - 16; }
+}
+function closeSheet() {
+  state.sheet = null;
+  $("#sheet").classList.remove("is-open"); $("#sheet-backdrop").classList.remove("is-open");
+  document.body.style.overflow = "";
+  if (lastFocus && lastFocus.focus) lastFocus.focus();
+}
+function focusHour(h) {
+  if (!state.sheet) return;
+  state.sheet.focusHour = h;
+  const spot = spotById(state.sheet.spotId), d = FORECAST[state.day].bySpot[spot.id];
+  const hour = d.hours.find(x => x.hour === h);
+  $("#instrument").innerHTML = renderCompass(spot, d.hours, hour) + renderWindGauge(spot, hour);
+  $("#d-vent").textContent = `Vent à ${h}h`;
+  document.querySelectorAll("#hours-scroll .hour-cell").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.hour === h)));
+}
+
+/* ---------- Parcours notifications ---------- */
+function openOnb() {
+  lastFocus = document.activeElement;
+  renderOnb();
+  $("#onb-sheet").classList.add("is-open"); $("#onb-backdrop").classList.add("is-open");
+  document.body.style.overflow = "hidden";
+  requestAnimationFrame(() => $("#onb-sheet").focus());
+}
+function renderOnb() { $("#onb-sheet").innerHTML = renderOnboardingSheet(state.onbStep); }
+function closeOnb() {
+  $("#onb-sheet").classList.remove("is-open"); $("#onb-backdrop").classList.remove("is-open");
+  document.body.style.overflow = "";
+  if (lastFocus && lastFocus.focus) lastFocus.focus();
+}
+
+/* ---------- Notification de test ---------- */
+function isDark() {
+  if (settings.theme !== "system") return settings.theme === "dark";
+  return window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches;
+}
+let toastTimer = null;
+function testNotification() {
+  const pool = [1, 0, 2].map(i => spotsForDay(i, "tout").filter(x => x.slots.length).map(x => x.slots[0])).find(a => a.length) || [];
+  if (!pool.length) { state.notifState = "Aucun créneau à annoncer sur 3 jours : aucune notification ne serait envoyée."; renderSettingsScreen(); return; }
+  const n = buildNotification(pool.slice(0, 3), DAYS[0].date);
+  const t = $("#toast");
+  t.innerHTML = `<button type="button" data-action="open" data-spot="${n.action.spotId}" data-day="${DAYS.findIndex(d => d.date === n.action.date)}" class="lock--ios-${isDark() ? "dark" : "light"}" style="all:unset;display:block;width:100%;cursor:pointer;background:none" aria-label="Notification de test : ${esc(n.title)}. Ouvrir le créneau.">${renderNotificationPreview(n, { os: "ios", when: "maintenant" })}</button>`;
+  t.querySelector("button").style.background = "none";
+  t.classList.add("is-on");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("is-on"), 6000);
+  try { if ("Notification" in window && Notification.permission === "granted") new Notification(n.title, { body: n.lines.join("\n"), tag: "fenetrevol-test" }); } catch (e) { /* aperçu seulement */ }
+  state.notifState = "Aperçu affiché en haut de l'écran. Une fois l'app installée, elle arrive aussi sur l'écran verrouillé.";
+  renderSettingsScreen();
+}
+
+function applyTheme() {
+  if (settings.theme === "system") document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.setAttribute("data-theme", settings.theme);
+}
+
+/* ---------- Vues de la maquette ---------- */
+function showView(v) {
+  state.view = v;
+  ["app", "etats", "notifs"].forEach(x => { $("#view-" + x).hidden = x !== v; });
+  document.querySelectorAll(".maquette-nav [data-view]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.view === v)));
+  if (v === "etats") renderStatesBoard();
+  if (v === "notifs") renderNotifBoard();
+  window.scrollTo({ top: 0 });
+}
+
+/* =========================================================
+   8. PLANCHES
+   ========================================================= */
+function frame(cap, sub, body, { header = true, loading = false, offline = false } = {}) {
+  return `<div class="frame"><p class="frame-cap">${esc(cap)}<small>${esc(sub)}</small></p>
+    <div class="frame-screen" inert>
+      ${header ? `<header class="app-header">${renderAppHeader({ updatedAt: UPDATED_AT, loading, offline })}</header>` : ""}
+      <div class="frame-body">${body}</div></div></div>`;
+}
+function renderStatesBoard() {
+  const today = spotsForDay(0, "tout"), t0 = today.find(x => x.slots.length);
+  const sat = spotsForDay(2, "tout");
+  $("#states-frames").innerHTML = [
+    frame("Chargement", "Squelettes à la place du hero et des cartes ; l'icône d'actualisation tourne.",
+      renderFilters("tout", 0) + renderSkeletonScreen(), { loading: true }),
+    frame("Hors-ligne", "Dernières prévisions en cache, avec leur heure.",
+      renderOfflineBanner(UPDATED_AT) + renderFilters("tout", 0) + (t0 ? renderHero(t0.slots[0], t0.spot, DAYS[0]) : ""), { offline: true }),
+    frame("Erreur réseau", "Le serveur ne répond pas : on propose de réessayer ou de rester sur le cache.",
+      renderFilters("tout", 0) + renderErrorState(UPDATED_AT)),
+    frame("Premier lancement", "Promesse en une phrase, choix du niveau, notifications proposées plus tard.",
+      renderFirstLaunch(), { header: false }),
+    frame("Aucun créneau", "Samedi : vent de sud-ouest trop fort et pluie. Message utile et bienveillant.",
+      renderFilters("tout", 2) + renderHeroEmpty(emptyContext(2, "tout")) + `<ol class="spot-list"><li>${renderSpotCard(sat[0].spot, sat[0].hours, sat[0].slots, 1)}</li></ol>`)
+  ].join("");
+  $("#onb-frames").innerHTML = [0, 1, 2].map(i =>
+    `<div class="frame"><div class="frame-screen" inert style="background:var(--surface)"><div class="frame-body" style="padding:24px 16px">${renderOnboardingIos(i)}</div></div></div>`).join("");
+}
+
+const SAMPLE_REF = "2026-10-01";
+const SAMPLE_SLOTS = {
+  guimorais: { spotId: "guimorais", spotName: "La Guimorais", kind: "vol", date: "2026-10-02", start: 14, end: 18, wind: 22, gust: 28, sector: "NW", score: 91, verdict: VERDICTS.top, travelMinutes: 92 },
+  varde: { spotId: "varde", spotName: "Pointe de la Varde", kind: "vol", date: "2026-10-02", start: 15, end: 18, wind: 24, gust: 30, sector: "NW", score: 84, verdict: VERDICTS.top, travelMinutes: 76 },
+  prairiesDemain: { spotId: "prairies-st-martin", spotName: "Prairies Saint-Martin", kind: "gonflage", date: "2026-10-02", start: 10, end: 13, wind: 16, gust: 22, sector: "NW", score: 78, verdict: VERDICTS.ok, travelMinutes: 9 },
+  prairiesAuj: { spotId: "prairies-st-martin", spotName: "Prairies Saint-Martin", kind: "gonflage", date: "2026-10-01", start: 15, end: 19, wind: 15, gust: 21, sector: "W", score: 86, verdict: VERDICTS.top, travelMinutes: 9 },
+  noyal: { spotId: "noyal-treuil", spotName: "Treuil de Noyal", kind: "vol", date: "2026-10-02", start: 10, end: 16, wind: 14, gust: 19, sector: "NW", score: 76, verdict: VERDICTS.ok, travelMinutes: 31 }
+};
+function sampleNotifications() {
+  const S = SAMPLE_SLOTS;
+  const n1 = buildNotification([S.guimorais], SAMPLE_REF);
+  const n2 = buildNotification([S.guimorais, S.varde, S.prairiesDemain], SAMPLE_REF);
+  const n3 = buildNotification([S.prairiesAuj], SAMPLE_REF);
+  const n4 = buildNotification([S.noyal], SAMPLE_REF);
+  return [
+    { name: "1. Un seul créneau excellent", sent: "18h30, la veille", n: n1 },
+    { name: "2. Plusieurs créneaux, vol et gonflage", sent: "18h30, la veille", n: n2 },
+    { name: "3. Gonflage seul à Rennes", sent: "7h, le jour même", n: n3 },
+    { name: "4. Site treuil", sent: "18h30, la veille", n: n4 }
+  ];
+}
+function renderNotifBoard() {
+  const list = sampleNotifications();
+  $("#notif-spec").innerHTML = `<table class="spec"><thead><tr><th>Variante</th><th>Envoi</th><th>Titre</th><th>Corps (1 ligne par créneau)</th><th>Priorité</th><th>Action</th></tr></thead><tbody>
+    ${list.map(v => `<tr><td><strong>${esc(v.name)}</strong></td><td>${esc(v.sent)}</td>
+      <td><code>${esc(v.n.title)}</code><br><span class="${v.n.title.length <= 40 ? "ok" : "ko"} num">${v.n.title.length}/40 caractères</span></td>
+      <td>${v.n.lines.map(l => `<code>${esc(l)}</code>`).join("<br>")}</td>
+      <td>${v.n.priority === "haute" ? "Haute" : "Normale"}</td><td>« ${esc(v.n.action.label)} » ouvre le détail du spot</td></tr>`).join("")}
+  </tbody></table>
+  <p class="note" style="margin-top:10px">Si le titre « quand + où » dépasse 40 caractères, le jour est retiré (il reste dans le corps). Au-delà de 3 créneaux, la 3e ligne devient « + n autres créneaux ». Pas d'emoji, pas de point d'exclamation.</p>`;
+  const items = (os) => [
+    { n: list[0].n, when: "18:30", expanded: true },
+    { n: list[1].n, when: "18:30" },
+    { n: list[3].n, when: "18:30" },
+    { n: list[2].n, when: "7:00" }
+  ];
+  $("#notif-frames").innerHTML = [["ios", "light", "iOS · clair"], ["ios", "dark", "iOS · sombre"], ["android", "light", "Android · clair"], ["android", "dark", "Android · sombre"]]
+    .map(([os, th, cap]) => `<div class="frame" style="width:360px"><p class="frame-cap">${cap}<small>${os === "ios" ? "Variante 1 montrée après appui long (actions)." : "Variante 1 dépliée avec son bouton d'action."}</small></p>${renderLockScreen(os, th, items(os))}</div>`).join("");
+  $("#badge-show").innerHTML = [24, 48, 96].map(s => `<figure><div class="badge-tile badge-tile--light" style="width:${s + 24}px;height:${s + 24}px">${sailSvg(s)}</div><figcaption>${s} px · clair</figcaption></figure>`).join("")
+    + [24, 48, 96].map(s => `<figure><div class="badge-tile badge-tile--dark" style="width:${s + 24}px;height:${s + 24}px">${sailSvg(s)}</div><figcaption>${s} px · sombre</figcaption></figure>`).join("")
+    + `<figure><div class="badge-tile" style="width:96px;height:96px;border-radius:22px;background:#14305a;color:#fff;border:0">${sailSvg(60)}</div><figcaption>Icône de l'app</figcaption></figure>`;
+}
+
+/* =========================================================
+   9. ÉVÉNEMENTS
+   ========================================================= */
+document.addEventListener("click", e => {
+  const seg = e.target.closest("[data-setting][data-value]");
+  if (seg) {
+    settings[seg.dataset.setting] = seg.dataset.value;
+    if (seg.dataset.setting === "theme") applyTheme();
+    if (seg.dataset.setting === "level") buildForecast();
+    renderApp(); return;
+  }
+  const el = e.target.closest("[data-action]");
+  if (!el) return;
+  const a = el.dataset.action;
+  if (a === "view") showView(el.dataset.view);
+  else if (a === "tab") { if (state.sheet) closeSheet(); showTab(el.dataset.tab); }
+  else if (a === "kind") { state.kind = el.dataset.kind; renderApp(); }
+  else if (a === "day") { state.day = +el.dataset.day; renderApp(); }
+  else if (a === "open") {
+    if (el.dataset.day !== undefined && el.closest("#toast")) { state.day = +el.dataset.day; $("#toast").classList.remove("is-on"); if (state.tab !== "creneaux") showTab("creneaux"); else renderApp(); }
+    openSheet(el.dataset.spot);
+  }
+  else if (a === "close-sheet") closeSheet();
+  else if (a === "focus-hour") focusHour(+el.dataset.hour);
+  else if (a === "refresh") {
+    state.loading = true; renderApp();
+    setTimeout(() => { state.loading = false; buildForecast(); renderApp(); }, 1100);
+  }
+  else if (a === "open-onb") { state.onbStep = 0; openOnb(); }
+  else if (a === "close-onb") closeOnb();
+  else if (a === "onb-next") { state.onbStep = Math.min(2, state.onbStep + 1); renderOnb(); }
+  else if (a === "onb-prev") { state.onbStep = Math.max(0, state.onbStep - 1); renderOnb(); }
+  else if (a === "onb-done") {
+    try { if ("Notification" in window && Notification.permission === "default") Notification.requestPermission(); } catch (err) { /* maquette */ }
+    settings.notifEnabled = true; state.notifState = ""; closeOnb(); renderSettingsScreen();
+  }
+  else if (a === "test-notif") testNotification();
+});
+document.addEventListener("input", e => {
+  if (e.target.id === "set-score") $("#out-score").textContent = e.target.value;
+});
+document.addEventListener("change", e => {
+  const k = e.target.dataset.setting;
+  if (!k) return;
+  if (e.target.type === "checkbox") settings[k] = e.target.checked;
+  else if (k === "scoreMin") settings[k] = +e.target.value;
+  else if (e.target.value) settings[k] = e.target.value;
+  if (["scoreMin", "firstDeparture", "lastTrain"].includes(k)) buildForecast();
+  renderApp();
+});
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  if ($("#onb-sheet").classList.contains("is-open")) closeOnb();
+  else if (state.sheet) closeSheet();
+});
+window.addEventListener("offline", () => { state.offline = true; renderApp(); });
+window.addEventListener("online", () => { state.offline = false; renderApp(); });
+
+/* Démarrage */
+buildForecast();
+renderApp();
+window.addEventListener("load", () => { if (state.tab === "carte") initMap(); });
+</script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+{
+  "level": "intermediaire",
+  "minScore": 60,
+  "notify": {
+    "gonflage": true,
+    "vol": true,
+    "maxItems": 3,
+    "morningRun": "aujourd'hui et demain",
+    "eveningRun": "demain"
+  },
+  "firstDeparture": 7,
+  "lastTrainBack": 20,
+  "skateKmh": 18,
+  "excludeSpots": [],
+  "profiles": {},
+  "model": "arome",
+  "includeCar": true
+}

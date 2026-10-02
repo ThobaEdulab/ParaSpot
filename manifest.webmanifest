@@ -1,0 +1,41 @@
+{
+  "name": "ParaSpot - gonflage et vol depuis Rennes",
+  "short_name": "ParaSpot",
+  "description": "Créneaux de gonflage et de vol de parapente depuis Rennes : modèles AROME HD, ECMWF, GFS, fiches de sites et balises Spot Air.",
+  "lang": "fr",
+  "start_url": "./",
+  "scope": "./",
+  "id": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#cfe3f2",
+  "theme_color": "#14305a",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Gonflage à Rennes",
+      "url": "./?kind=gonflage"
+    },
+    {
+      "name": "Sites de vol",
+      "url": "./?kind=vol"
+    }
+  ]
+}

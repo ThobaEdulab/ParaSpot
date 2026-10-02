@@ -1,0 +1,16 @@
+{
+  "name": "paraspot",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Alertes gonflage et vol de parapente depuis Rennes (PWA + notifications)",
+  "scripts": {
+    "check": "node scripts/check.mjs",
+    "check:dry": "DRY_RUN=1 node scripts/check.mjs",
+    "vapid": "npx web-push generate-vapid-keys",
+    "serve": "npx serve ."
+  },
+  "dependencies": {
+    "web-push": "^3.6.7"
+  }
+}
