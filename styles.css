@@ -611,3 +611,19 @@ path.m-route-car{vector-effect:none}
 .mk.is-fav .mk-dot{box-shadow:0 0 0 3px #f5a300,0 4px 12px rgba(0,0,0,.25)}
 .kinds .k-fav .ic{width:18px;height:18px;flex:none;color:#f5a300}.kinds .k-fav[aria-pressed="true"] .ic{color:#f5a300}
 @media (max-width:440px){.kinds .k-fav svg{display:block}}
+/* v5 : croix de fermeture, info modèle */
+.s3-acts{display:flex;gap:8px;flex:none}
+.s3-acts .s3-fav svg{width:20px;height:20px}
+.info{position:fixed;z-index:65;left:12px;right:12px;top:calc(env(safe-area-inset-top) + 76px);max-width:440px;margin:0 auto;opacity:0;transform:translateY(-12px);pointer-events:none;transition:opacity .3s ease,transform .3s var(--ease-out)}
+.info.is-on{opacity:1;transform:none;pointer-events:auto}
+.info-in{display:flex;gap:10px;align-items:flex-start;padding:12px 8px 12px 14px;border-radius:var(--r-lg);box-shadow:0 10px 30px rgba(11,27,51,.22)}
+.info-in b{font-size:15px;font-weight:800;color:var(--ink)}
+.info-in p{margin:4px 0 0;font-size:13.5px;line-height:1.4;color:var(--ink-2)}
+.info-x{flex:none;width:36px;height:36px;border-radius:50%;border:0;background:transparent;display:grid;place-items:center;color:var(--ink-2)}
+.info-x svg{width:18px;height:18px}
+.legend{position:relative;padding-right:44px}
+.legend-x{position:absolute;top:4px;right:4px}
+.no-legend .legend-row,.map-focus.no-legend .legend-row{display:none}
+.toast .toast-x{position:absolute;top:6px;right:6px;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--glass-strong);color:var(--ink-2);cursor:pointer}
+.toast .toast-x svg{width:16px;height:16px}
+.legend .mk,.legend-in .mk{position:relative;margin:0;transform:none;flex:none}

@@ -461,7 +461,7 @@ function renderSpotDays(spot, fav) {
   return `<div class="statement spot3 anim">${off}
     <div class="s3-head">
       <button type="button" class="s3-name" data-action="open" data-spot="${spot.id}" aria-label="${esc(spot.name)} : ouvrir le plan de vol"><span class="s3-title">${esc(spot.name)}</span><span class="s3-sub">${practiceLabel(spot)} · ${esc(spot.city)}</span><span class="st-cta">Plan de vol ${I.chevron}</span></button>
-      <button type="button" class="s3-fav glass ${fav ? "is-on" : ""}" data-action="fav" data-spot="${spot.id}" aria-pressed="${fav}" aria-label="${fav ? "Retirer des favoris" : "Ajouter aux favoris"}">${STAR}</button>
+      <span class="s3-acts"><button type="button" class="s3-fav glass ${fav ? "is-on" : ""}" data-action="fav" data-spot="${spot.id}" aria-pressed="${fav}" aria-label="${fav ? "Retirer des favoris" : "Ajouter aux favoris"}">${STAR}</button><button type="button" class="s3-fav glass" data-action="close-spot" aria-label="Fermer les prévisions et revenir à la carte">${I.close}</button></span>
     </div>
     <div class="s3-days">${tiles}</div>
   </div>`;
@@ -665,7 +665,7 @@ function renderPanel(s, notifState, onbStep, subJson) {
       <div class="field"><div class="btn-row">${s.notifEnabled ? "" : `<button type="button" class="btn btn--wing" data-action="onb-start">${I.bell}Activer</button>`}<button type="button" class="btn btn--ghost" data-action="test-notif">Tester une notification</button></div>${notifState ? `<p class="hint" role="status">${esc(notifState)}</p>` : ""}${subJson ? `<label class="lbl" for="sub-box" style="font-size:14px">Abonnement de cet appareil (secret GitHub WEB_PUSH_SUBSCRIPTION)</label><textarea id="sub-box" class="sub-box" readonly>${esc(subJson)}</textarea><button type="button" class="btn btn--ghost" data-action="copy-sub">Copier l'abonnement</button>` : ""}</div>
     </div>
     <div class="group"><div class="field"><span class="lbl">Apparence</span>${seg("theme", [["system", "Système"], ["light", "Clair"], ["dark", "Sombre"]], s.theme)}</div></div>
-    <div class="group"><div class="field"><span class="lbl">Légende de la carte</span><div class="legend-in">${renderLegend()}</div></div></div>
+    <div class="group"><div class="field"><span class="lbl">Légende de la carte</span><div class="legend-in">${renderLegend()}</div><label class="check"><input type="checkbox" data-legend-toggle="1" ${s.legendHidden ? "" : "checked"}>Afficher la légende quand je déplace la carte</label></div></div>
     <div class="group"><div class="field"><span class="lbl">Installer sur le téléphone</span><p class="hint">Android (Chrome) : menu ⋮ puis « Installer l'application ». iPhone (Safari) : bouton Partager puis « Sur l'écran d'accueil ».</p>${installPrompt ? `<button type="button" class="btn btn--wing" data-action="install">Installer ParaSpot</button>` : ""}</div></div>
     <p class="hint">Prévisions Open-Meteo (AROME HD et AROME/ARPEGE Météo-France, ECMWF IFS, NOAA GFS ; CC BY 4.0), marées Open-Meteo Marine indicatives. Fiches : wikiparapente.fr, FFVL, ParaglidingEarth, spots.guru, clubs. Balises et carte : Spot Air. Fond de carte embarqué : Natural Earth. ${ALL_SPOTS.length} spots.</p>
   </div>`;
@@ -918,7 +918,7 @@ function renderTop() {
   if (state.pinned && state.sel) {
     const spot = spotById(state.sel), fav = settings.favs.includes(spot.id);
     $("#eyebrow").innerHTML = `<p class="st-eyebrow"><span class="live"></span>Spot suivi · 3 jours</p>
-      <button type="button" class="upd glass" data-action="unpin" aria-label="Revenir à la vue d'ensemble de tous les spots">${I.close}Tous les spots</button>`;
+      <button type="button" class="upd glass" data-action="unpin" aria-label="Revenir à la vue d'ensemble de tous les spots">Tous les spots</button>`;
     $("#statement").innerHTML = renderSpotDays(spot, fav);
     return;
   }
@@ -1028,7 +1028,7 @@ async function testNotification() {
   const m = notificationText(pool, new Date());
   if (!m) { state.notifState = "Aucun créneau sur 3 jours : aucune notification ne serait envoyée."; renderPanelOnly(); return; }
   const n = { title: m.title, lines: m.lines, priority: m.priority === "high" ? "haute" : "normale", action: { label: "Voir le créneau", spotId: m.spotId, date: m.date } };
-  $("#toast").innerHTML = `<button type="button" data-action="toast-open" data-spot="${n.action.spotId}" data-day="${DAYS.findIndex(d => d.date === n.action.date)}" aria-label="Notification de test : ${esc(n.title)}. Voir le créneau.">${renderNotificationPreview(n, { os: "ios", when: "maintenant" })}</button>`;
+  $("#toast").innerHTML = `<button type="button" data-action="toast-open" data-spot="${n.action.spotId}" data-day="${DAYS.findIndex(d => d.date === n.action.date)}" aria-label="Notification de test : ${esc(n.title)}. Voir le créneau.">${renderNotificationPreview(n, { os: "ios", when: "maintenant" })}</button><button type="button" class="toast-x" data-action="toast-close" aria-label="Fermer la notification">${I.close}</button>`;
   $("#toast").classList.add("is-on"); clearTimeout(toastTimer); toastTimer = setTimeout(() => $("#toast").classList.remove("is-on"), 6000);
   try {
     if ("Notification" in window && Notification.permission === "granted") {
@@ -1055,6 +1055,10 @@ document.addEventListener("click", e => {
   else if (a === "kind") { setMapFocus(false); state.kind = el.dataset.kind; settings.kind = state.kind; saveSettings(); if (!items().some(x => x.spot.id === state.sel)) { state.pinned = false; pickDefault(); } renderAll(false); }
   else if (a === "card") { if (el.dataset.spot === state.sel && state.pinned) openDetail(el.dataset.spot); else { pinSpot(el.dataset.spot); syncSelection(true); el.scrollIntoView({ inline: "center", block: "nearest", behavior: reduce ? "instant" : "smooth" }); } }
   else if (a === "unpin") unpin();
+  else if (a === "close-spot") { unpin(); setMapFocus(true); }
+  else if (a === "info-close") hideInfo();
+  else if (a === "legend-close") { settings.legendHidden = true; saveSettings(); document.body.classList.add("no-legend"); }
+  else if (a === "toast-close") { $("#toast").classList.remove("is-on"); }
   else if (a === "fav-open") openFavPicker();
   else if (a === "fav-done") finishFavs(false);
   else if (a === "fav-skip") finishFavs(true);
@@ -1066,7 +1070,7 @@ document.addEventListener("click", e => {
     if (state.detail) { const b = $("#detail [data-action='fav']"); if (b) { const on = settings.favs.includes(id); b.classList.toggle("is-on", on); b.setAttribute("aria-pressed", String(on)); } }
   }
   else if (a === "layer") { state.layer = LAYERS[(LAYERS.indexOf(state.layer) + 1) % LAYERS.length]; setTiles(); }
-  else if (a === "model") { settings.model = MODEL_KEYS[(MODEL_KEYS.indexOf(settings.model) + 1) % MODEL_KEYS.length]; saveSettings(); buildForecast(); if (!state.detail && !state.pinned) pickDefault(); renderAll(false); updateModelButton(); if (state.detail) openDetail(state.sel); }
+  else if (a === "model") { settings.model = MODEL_KEYS[(MODEL_KEYS.indexOf(settings.model) + 1) % MODEL_KEYS.length]; saveSettings(); buildForecast(); if (!state.detail && !state.pinned) pickDefault(); renderAll(false); updateModelButton(); showInfo(`Modèle : ${MODELS[settings.model].label}`, MODEL_INFO[settings.model]); if (state.detail) openDetail(state.sel); }
   else if (a === "copy-sub") { navigator.clipboard?.writeText(state.subJson).then(() => { state.notifState = "Abonnement copié."; renderPanelOnly(); }).catch(() => {}); }
   else if (a === "install") { installPrompt?.prompt(); installPrompt = null; renderPanelOnly(); }
   else if (a === "overview") { frameAll(); }
@@ -1093,6 +1097,7 @@ document.addEventListener("input", e => {
   if (e.target.id === "set-score") $("#out-score").textContent = e.target.value;
 });
 document.addEventListener("change", e => {
+  if (e.target.dataset.legendToggle) { settings.legendHidden = !e.target.checked; saveSettings(); document.body.classList.toggle("no-legend", settings.legendHidden); return; }
   if (e.target.dataset.favToggle) {
     const id = e.target.dataset.favToggle;
     settings.favs = e.target.checked ? [...new Set([...settings.favs, id])] : settings.favs.filter(x => x !== id);
@@ -1106,7 +1111,7 @@ document.addEventListener("change", e => {
     saveSettings(); applySpotFilter(); if (!items().some(x => x.spot.id === state.sel)) pickDefault(); renderAll(false); return;
   }
   if (e.target.dataset.regionToggle) {
-    const ids = ALL_SPOTS.filter(s => (s.region || "Autre") === e.target.dataset.regionToggle).map(s => s.id);
+    const ids = e.target.dataset.regionToggle.split(",");
     settings.hidden = e.target.checked ? settings.hidden.filter(x => !ids.includes(x)) : [...new Set([...settings.hidden, ...ids])];
     saveSettings(); applySpotFilter(); if (!items().some(x => x.spot.id === state.sel)) pickDefault(); renderAll(false); renderPanelOnly(); return;
   }
@@ -1211,27 +1216,35 @@ function renderSpotAir(spot) {
   </div>`;
 }
 function renderSpotPicker(s) {
-  const regions = {};
-  ALL_SPOTS.filter(x => (s.includeCar || x.access.mode !== "voiture") && (s.includeTreuil || x.profile !== "treuil")).forEach(x => { (regions[x.region || "Autre"] ||= []).push(x); });
-  return `<div class="picker">${Object.entries(regions).map(([r, list]) => {
+  const groups = byDept(ALL_SPOTS.filter(x => (s.includeCar || x.access.mode !== "voiture") && (s.includeTreuil || x.profile !== "treuil")));
+  return `<div class="picker">${groups.map(([r, list]) => {
     const on = list.filter(x => !s.hidden.includes(x.id)).length;
-    return `<details class="pk-reg"><summary><label class="check" onclick="event.stopPropagation()"><input type="checkbox" data-region-toggle="${esc(r)}" ${on ? "checked" : ""}>${esc(r)}</label><span class="pk-n">${on}/${list.length}</span></summary>
+    return `<details class="pk-reg"><summary><label class="check" onclick="event.stopPropagation()"><input type="checkbox" data-region-toggle="${esc(list.map(x => x.id).join(","))}" ${on ? "checked" : ""}>${esc(r)}</label><span class="pk-n">${on}/${list.length}</span></summary>
       ${list.map(x => `<label class="check pk-spot"><input type="checkbox" data-spot-toggle="${x.id}" ${s.hidden.includes(x.id) ? "" : "checked"}>${kindIcon(x.kind)}${esc(x.name)}</label>`).join("")}</details>`;
   }).join("")}</div>`;
 }
+/* Départements : Bretagne d'abord, puis Pays de la Loire et Normandie */
+const DEPTS = [["35", "Ille-et-Vilaine"], ["22", "Côtes-d'Armor"], ["29", "Finistère"], ["56", "Morbihan"], ["44", "Loire-Atlantique"], ["53", "Mayenne"], ["49", "Maine-et-Loire"], ["85", "Vendée"], ["50", "Manche"], ["14", "Calvados"], ["61", "Orne"], ["27", "Eure"], ["76", "Seine-Maritime"]];
+function deptOf(spot) { const m = /\((\d{2})\)/.exec(spot.city || ""); return m ? m[1] : /Rennes/.test(spot.city || spot.region || "") ? "35" : "??"; }
+function byDept(list) {
+  const g = {};
+  list.forEach(x => (g[deptOf(x)] ||= []).push(x));
+  const order = DEPTS.map(d => d[0]);
+  return Object.keys(g).sort((x, y) => (order.indexOf(x) + 1 || 99) - (order.indexOf(y) + 1 || 99) || x.localeCompare(y))
+    .map(k => { const d = DEPTS.find(e => e[0] === k); return [d ? `${d[1]} (${k})` : "Autres", g[k].sort((p, q) => p.name.localeCompare(q.name, "fr"))]; });
+}
 /* COMPOSANT: choix des spots favoris (premier lancement et réglages) */
 function renderFavPicker(s) {
-  const regions = {};
-  ALL_SPOTS.filter(x => !s.hidden.includes(x.id) && (s.includeTreuil || x.profile !== "treuil" || s.favs.includes(x.id))).forEach(x => { (regions[x.region || "Autre"] ||= []).push(x); });
+  const groups = byDept(ALL_SPOTS.filter(x => !s.hidden.includes(x.id) && (s.includeTreuil || x.profile !== "treuil" || s.favs.includes(x.id))));
   const first = !s.favsAsked;
   return `<div class="panel-in">
     <div class="d-head"><div><h2 class="p-title" id="p-title">${first ? "Bienvenue sur ParaSpot" : "Mes spots favoris"}</h2></div>${first ? "" : `<button type="button" class="close" data-action="fav-done" aria-label="Valider et revenir aux réglages">${I.close}</button>`}</div>
     <p class="hint" style="font-size:15px">${first ? "Quels sont tes spots préférés ? " : ""}Coche-les : ils seront mis en avant dans l'app, et le bouton ${STAR} en bas de l'écran permet de passer de tes favoris à tous les spots. Tu pourras les changer dans les Réglages.</p>
     <p class="fav-count" id="fav-count">${s.favs.length} favori${s.favs.length > 1 ? "s" : ""}</p>
-    <div class="picker">${Object.entries(regions).map(([r, list]) => {
+    <div class="picker">${groups.map(([r, list]) => {
       const n = list.filter(x => s.favs.includes(x.id)).length;
-      return `<details class="pk-reg" ${n || r === "Rennes" ? "open" : ""}><summary><span class="pk-r">${esc(r)}</span><span class="pk-n">${n ? `${n} ★` : list.length}</span></summary>
-        ${list.map(x => `<label class="check pk-spot pk-fav"><input type="checkbox" data-fav-toggle="${x.id}" ${s.favs.includes(x.id) ? "checked" : ""}>${kindIcon(x.kind)}<span>${esc(x.name)}<small>${esc(x.city)}</small></span></label>`).join("")}</details>`;
+      return `<details class="pk-reg" ${n || r.includes("(35)") ? "open" : ""}><summary><span class="pk-r">${esc(r)}</span><span class="pk-n">${n ? `${n} ★` : list.length}</span></summary>
+        ${list.map(x => `<label class="check pk-spot pk-fav"><input type="checkbox" data-fav-toggle="${x.id}" ${s.favs.includes(x.id) ? "checked" : ""}>${kindIcon(x.kind)}<span>${esc(x.name)}<small>${esc(x.city.replace(/\s*\(\d{2}\)/, ""))}${x.region && x.region !== "Rennes" ? " · " + esc(x.region) : ""}</small></span></label>`).join("")}</details>`;
     }).join("")}</div>
     <div class="btn-row fav-actions"><button type="button" class="btn btn--wing" data-action="fav-done">${first ? "C'est parti" : "Valider"}</button>${first ? `<button type="button" class="btn btn--ghost" data-action="fav-skip">Plus tard</button>` : ""}</div>
   </div>`;
@@ -1253,6 +1266,18 @@ function renderLegend() {
     <span class="lg"><span class="mk-cluster c--top" style="width:30px;height:30px;border-width:3px;animation:none"><b style="font-size:12px">3</b></span>Plusieurs spots : touche pour zoomer</span>
     <span class="lg"><span class="stn">${I.train}</span>Gare</span>`;
 }
+const MODEL_INFO = {
+  arome: "Météo-France, maille de 1,5 km : le plus précis ici, surtout pour les brises côtières et le relief. Couvre environ 2 jours ; au-delà, AROME/ARPEGE prend le relais (cases « secours »).",
+  ecmwf: "Centre européen, maille de 9 km, jusqu'à 15 jours. Très fiable sur la situation générale, moins fin pour les effets locaux (côte, brise).",
+  gfs: "NOAA (États-Unis), maille de 13 à 25 km, jusqu'à 16 jours. Le plus grossier des trois : à prendre comme troisième avis."
+};
+let infoTimer = null;
+function showInfo(title, text) {
+  const el = $("#info");
+  el.innerHTML = `<div class="info-in glass"><div><b>${esc(title)}</b><p>${esc(text)}</p></div><button type="button" class="info-x" data-action="info-close" aria-label="Fermer">${I.close}</button></div>`;
+  el.classList.add("is-on"); clearTimeout(infoTimer); infoTimer = setTimeout(hideInfo, 9000);
+}
+function hideInfo() { clearTimeout(infoTimer); $("#info").classList.remove("is-on"); }
 function updateModelButton() {
   document.querySelectorAll('[data-action="model"]').forEach(b => { b.querySelector("span").textContent = { arome: "AROME", ecmwf: "ECMWF", gfs: "GFS" }[settings.model]; b.setAttribute("aria-label", `Modèle de prévision : ${MODELS[settings.model].label}. Changer.`); });
 }
@@ -1384,7 +1409,8 @@ async function init() {
   if ("Notification" in window && Notification.permission === "granted") settings.notifEnabled = true;
   windColors(); windResize();
   initMap(); map.setView(RENNES, 7); homeView(true); buildLabels(); zoomClasses();
-  $("#legend").innerHTML = renderLegend();
+  $("#legend").innerHTML = renderLegend() + `<button type="button" class="info-x legend-x" data-action="legend-close" aria-label="Masquer la légende (elle reste dans les Réglages)">${I.close}</button>`;
+  if (settings.legendHidden) document.body.classList.add("no-legend");
   applyTheme(); updateModelButton();
   windStart();
   try { prepareSpots(await (await fetch("data/spots.json")).json()); } catch { state.error = true; renderWaiting(); return; }
