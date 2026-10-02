@@ -571,3 +571,43 @@ path.m-route-car{vector-effect:none}
 .pk-n{font-size:12px;font-weight:800;color:var(--ink-3)}
 .pk-spot{min-height:38px;font-weight:600;font-size:14px;padding-left:8px}
 .pk-spot svg{width:16px;height:16px;color:var(--ink-3)}
+
+/* v4 : spot suivi sur 3 jours, favoris */
+.spot3{gap:10px}
+.s3-head{display:flex;align-items:flex-start;gap:10px;min-width:0}
+.s3-name{flex:1;min-width:0;display:grid;gap:2px;text-align:left;border:0;background:none;padding:0;color:inherit}
+.s3-title{font-size:24px;font-weight:800;letter-spacing:-.02em;line-height:1.1;color:var(--ink)}
+.s3-sub{font-size:13px;font-weight:700;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.s3-name .st-cta{margin-top:2px}
+.s3-fav{flex:none;width:var(--tap);height:var(--tap);border-radius:50%;display:grid;place-items:center;border:0;color:var(--ink-2)}
+.s3-fav .ic{width:22px;height:22px}
+.s3-fav.is-on{color:#f5a300}
+.s3-fav.is-on .ic path{fill:currentColor}
+.s3-days{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.s3-day{display:grid;gap:5px;padding:9px 9px 10px;border-radius:16px;border:2px solid transparent;text-align:left;color:inherit;min-width:0}
+.s3-day[aria-pressed="true"]{border-color:var(--wing)}
+.s3-d{font-size:12px;font-weight:800;color:var(--ink-2);text-transform:capitalize}
+.s3-v{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;white-space:nowrap;overflow:hidden}
+.s3-v .ic,.s3-v svg{width:13px;height:13px;flex:none}
+.s3-v--top{color:var(--top-ink)}.s3-v--ok{color:var(--ok-ink)}.s3-v--limite{color:var(--lim-ink)}.s3-v--non{color:var(--non-ink)}
+.s3-slot{font-size:17px;font-weight:800;color:var(--ink);white-space:nowrap}
+.s3-w{display:flex;align-items:center;gap:3px;font-size:12px;font-weight:700;color:var(--ink-2);white-space:nowrap}
+.s3-w small{font-size:10px}
+.s3-day .ribbon{height:5px;gap:1px}
+.s3-day:not([aria-pressed="true"]) .ribbon .now{display:none}
+.d-acts{display:flex;gap:8px;align-items:center;flex:none}
+.kinds .k-fav{padding:0 11px}
+.kinds .k-fav[aria-pressed="true"] .ic path{fill:currentColor}
+@media (max-width:380px){.s3-slot{font-size:15px}.s3-title{font-size:21px}.s3-day{padding:8px 7px 9px}}
+/* favoris */
+.fav-count{font-size:13px;font-weight:800;color:var(--wing);margin:2px 0 6px}
+.pk-r{font-weight:800;min-height:40px;display:flex;align-items:center}
+.pk-fav span{display:grid;line-height:1.2}
+.pk-fav small{font-size:12px;font-weight:600;color:var(--ink-3)}
+.fav-actions{position:sticky;bottom:0;padding:12px 0 calc(env(safe-area-inset-bottom) + 4px);background:linear-gradient(transparent,var(--glass-strong) 30%)}
+.btn .ic{width:18px;height:18px}
+.card-star{display:inline-flex;vertical-align:-2px;margin-right:5px;color:#f5a300}
+.card-star .ic{width:17px;height:17px}.card-star .ic path{fill:currentColor}
+.mk.is-fav .mk-dot{box-shadow:0 0 0 3px #f5a300,0 4px 12px rgba(0,0,0,.25)}
+.kinds .k-fav .ic{width:18px;height:18px;flex:none;color:#f5a300}.kinds .k-fav[aria-pressed="true"] .ic{color:#f5a300}
+@media (max-width:440px){.kinds .k-fav svg{display:block}}

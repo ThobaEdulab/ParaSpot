@@ -22,7 +22,7 @@ const LEVEL_FFVL = { vert: { label: "Brevet initial", color: "#2e9d55" }, bleu: 
 
 /* Réglages : stockés sur l'appareil */
 const settings = Object.assign(
-  { level: "intermediaire", scoreMin: 55, firstDeparture: "07:00", lastTrain: "20:00", theme: "system", model: "arome", includeCar: true, includeTreuil: false, hidden: [], kind: "tout", notifEnabled: false },
+  { level: "intermediaire", scoreMin: 55, firstDeparture: "07:00", lastTrain: "20:00", theme: "system", model: "arome", includeCar: true, includeTreuil: false, hidden: [], favs: [], favsAsked: false, kind: "tout", notifEnabled: false },
   store.get("fv-settings-v3", {})
 );
 const saveSettings = () => { const { notifEnabled, ...s } = settings; store.set("fv-settings-v3", s); };
@@ -366,13 +366,16 @@ const ICON_DOWN = '<svg class="ic ic--l" viewBox="0 0 24 24" aria-hidden="true">
 /* ---------- Sélection des données ---------- */
 /* Classement : score du meilleur créneau ; à score proche, train + skate passe devant la voiture, puis les sites hors club */
 function rankScore(x) { return x.slots[0] ? x.slots[0].score - (x.spot.clubOnly ? 5 : 0) - (x.spot.access.mode === "voiture" ? 8 : 0) - (x.spot.limit ? 3 : 0) : -1; }
+const STAR = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.8z"/></svg>';
+function favBonus(x) { return settings.favs.includes(x.spot.id) ? 6 : 0; }
+function kindOk(s, kind) { return kind === "tout" || (kind === "favoris" ? settings.favs.includes(s.id) : s.kind === kind); }
 function spotsForDay(dayIndex, kind) {
   if (!FORECAST || !FORECAST[dayIndex]) return [];
-  return SPOTS.filter(s => kind === "tout" || s.kind === kind).map(spot => {
+  return SPOTS.filter(s => kindOk(s, kind)).map(spot => {
     const d = FORECAST[dayIndex].bySpot[spot.id];
     const maxScore = Math.max(0, ...d.hours.filter(h => h.reachable).map(h => h.score));
     return { spot, hours: d.hours, slots: d.slots, lowSlots: d.lowSlots, maxScore };
-  }).sort((a, b) => rankScore(b) - rankScore(a) || b.maxScore - a.maxScore);
+  }).sort((a, b) => rankScore(b) + favBonus(b) - rankScore(a) - favBonus(a) || b.maxScore - a.maxScore);
 }
 function bestVerdictOfDay(dayIndex, kind) {
   const items = spotsForDay(dayIndex, kind), w = items.filter(x => x.slots.length);
@@ -400,7 +403,7 @@ function routeLatLngs(spot) {
 /* COMPOSANT: map-marker (contenu HTML d'un marqueur Leaflet) */
 function markerKey(h) { return h.reachable ? h.verdict.key : "off"; }
 function renderMarker(spot, h, selected) {
-  return `<div class="mk mk--${markerKey(h)} ${selected ? "is-sel" : ""}"><span class="mk-dot">${renderVerdictIcon(h.reachable ? h.verdict.key : "non")}</span><span class="mk-label">${esc(spot.name)}</span></div>`;
+  return `<div class="mk mk--${markerKey(h)} ${selected ? "is-sel" : ""} ${settings.favs.includes(spot.id) ? "is-fav" : ""}"><span class="mk-dot">${renderVerdictIcon(h.reachable ? h.verdict.key : "non")}</span><span class="mk-label">${esc(spot.name)}</span></div>`;
 }
 /* COMPOSANT: map-cluster (plusieurs spots proches quand on dézoome) */
 function renderCluster(members, bestKey) {
@@ -414,8 +417,9 @@ function renderDays(dayIndex, kind) {
 }
 /* COMPOSANT: kind-filter */
 function renderKinds(kind) {
-  return [["tout", "Tout", ""], ["gonflage", "Gonflage", I.ground], ["vol", "Vol", I.sail]]
-    .map(([k, l, ic]) => `<button type="button" data-action="kind" data-kind="${k}" aria-pressed="${k === kind}">${ic}${l}</button>`).join("");
+  const list = [["tout", "Tout", ""], ["gonflage", "Gonflage", I.ground], ["vol", "Vol", I.sail]];
+  if (settings.favs.length || kind === "favoris") list.push(["favoris", "", STAR]);
+  return list.map(([k, l, ic]) => `<button type="button" data-action="kind" data-kind="${k}" aria-pressed="${k === kind}" ${k === "favoris" ? 'class="k-fav" aria-label="Mes favoris"' : ""}>${ic}${l}</button>`).join("");
 }
 
 /* COMPOSANT: statement (Je pars ou pas ? Où ? À quelle heure ?) */
@@ -441,6 +445,28 @@ function renderStatement({ day, slot, spot, next, offline, updatedAt, reason }) 
   </button>`;
 }
 
+/* COMPOSANT: spot-3-jours (le spot suivi sur aujourd'hui, demain et après-demain) */
+function renderSpotDays(spot, fav) {
+  const off = state.offline ? `<span class="pill-off">${I.offline}Hors connexion · prévisions de ${fmtHHMM(UPDATED_AT.slice(11, 16))}</span>` : "";
+  const tiles = DAYS.map((day, i) => {
+    const d = FORECAST[i].bySpot[spot.id], slot = d.slots[0], s = spotSummary(d.hours, slot);
+    return `<button type="button" class="s3-day glass" data-action="day" data-day="${i}" aria-pressed="${i === state.day}" aria-label="${esc(day.short)} : ${s.verdict.label}, ${slot ? "créneau " + fmtRange(slot.start, slot.end) : "aucun créneau"}">
+      <span class="s3-d">${esc(i === 0 ? "Auj." : day.short)}</span>
+      <span class="s3-v s3-v--${s.verdict.key}">${renderVerdictIcon(s.verdict.key)}${s.verdict.label}</span>
+      <b class="s3-slot num">${slot ? fmtRange(slot.start, slot.end) : "Aucun"}</b>
+      <span class="s3-w num">${renderWindArrow(s.dir, 13)}${frDir(sectorCode(s.dir))} ${s.wind}<small> km/h</small></span>
+      ${renderRibbon(d.hours, state.hour)}
+    </button>`;
+  }).join("");
+  return `<div class="statement spot3 anim">${off}
+    <div class="s3-head">
+      <button type="button" class="s3-name" data-action="open" data-spot="${spot.id}" aria-label="${esc(spot.name)} : ouvrir le plan de vol"><span class="s3-title">${esc(spot.name)}</span><span class="s3-sub">${practiceLabel(spot)} · ${esc(spot.city)}</span><span class="st-cta">Plan de vol ${I.chevron}</span></button>
+      <button type="button" class="s3-fav glass ${fav ? "is-on" : ""}" data-action="fav" data-spot="${spot.id}" aria-pressed="${fav}" aria-label="${fav ? "Retirer des favoris" : "Ajouter aux favoris"}">${STAR}</button>
+    </div>
+    <div class="s3-days">${tiles}</div>
+  </div>`;
+}
+
 /* COMPOSANT: spot-card */
 function renderRibbon(hours, hour) {
   return `<div class="ribbon" aria-hidden="true">${hours.map(h => `<i class="rb--${h.reachable ? h.verdict.key : "off"}"></i>`).join("")}<span class="now" style="left:${((hour - 7 + 0.5) / 15 * 100).toFixed(2)}%"></span></div>`;
@@ -450,7 +476,7 @@ function renderCard(spot, hours, slot, selected, hour) {
   return `<button type="button" class="card glass ${selected ? "is-sel" : ""}" data-action="card" data-spot="${spot.id}" aria-label="${esc(spot.name)}, ${s.verdict.label}, ${slot ? "créneau " + fmtRange(slot.start, slot.end) : "aucun créneau"}. ${selected ? "Ouvrir le détail." : "Centrer sur la carte."}">
     <span class="card-top"><span class="vbadge vbadge--${s.verdict.key}">${renderVerdictIcon(s.verdict.key)}${s.verdict.label}</span>
       <span class="chip num">${spot.access.mode === "local" ? I.skate + fmtKm(spot.access.rideKm) : accessIcon(spot) + fmtDur(travelMinutes(spot))}${spot.clubOnly ? " · club" : ""}${spot.limit ? " · +10 km" : ""}</span></span>
-    <span><span class="card-name" style="display:block">${esc(spot.name)}</span><span class="card-sub" style="display:block">${practiceLabel(spot)} · ${esc(spot.city)}</span></span>
+    <span><span class="card-name" style="display:block">${settings.favs.includes(spot.id) ? `<span class="card-star" aria-label="Favori">${STAR}</span>` : ""}${esc(spot.name)}</span><span class="card-sub" style="display:block">${practiceLabel(spot)} · ${esc(spot.city)}</span></span>
     <span class="card-mid">
       <span class="wind-big num">${renderWindArrow(s.dir, 30)}<span><b>${s.wind}</b><small>km/h · raf. ${s.gust} · ${frDir(sectorCode(s.dir))}</small></span></span>
       <span class="slot-big num">${slot ? `<b>${fmtRange(slot.start, slot.end)}</b><small>meilleur créneau</small>` : `<b style="font-size:15px">Aucun</b><small>créneau</small>`}</span>
@@ -589,7 +615,7 @@ function renderDetail(spot, dayIndex, hour) {
       <div><h2 class="d-title" id="d-title">${esc(spot.name)}</h2>
         <p class="d-sub"><span>${kindIcon(spot.kind)}${practiceLabel(spot)} · ${esc(spot.city)}</span></p>
         <p class="d-sub num"><span>${I.calendar}${esc(capFirst(day.long))}</span><span>${I.sunrise}${fmtHHMM(sun.sunrise)}</span><span>${I.sunset}${fmtHHMM(sun.sunset)}</span><span>${I.model}${esc(MODELS[usedModel].label)}</span></p></div>
-      <button type="button" class="close" data-action="close-detail" aria-label="Fermer">${ICON_DOWN}</button>
+      <span class="d-acts"><button type="button" class="s3-fav glass ${settings.favs.includes(spot.id) ? "is-on" : ""}" data-action="fav" data-spot="${spot.id}" aria-pressed="${settings.favs.includes(spot.id)}" aria-label="Favori">${STAR}</button><button type="button" class="close" data-action="close-detail" aria-label="Fermer">${ICON_DOWN}</button></span>
     </div>
     <div class="d-verdict"><span class="vbadge vbadge--${s.verdict.key}">${renderVerdictIcon(s.verdict.key)}${s.verdict.label}</span><b class="num">${slot ? fmtRange(slot.start, slot.end) : "Pas de créneau"}</b></div>
     <section class="d-sec"><h3>Vent</h3><div class="instrument">${renderCompass(spot, d.hours, focus)}${renderGauge(spot, focus)}</div></section>
@@ -614,6 +640,7 @@ function renderDetail(spot, dayIndex, hour) {
 function renderPanel(s, notifState, onbStep, subJson) {
   const seg = (name, opts, val) => `<div class="seg" role="group" aria-label="${name}">${opts.map(([k, l]) => `<button type="button" data-setting="${name}" data-value="${k}" aria-pressed="${k === val}">${l}</button>`).join("")}</div>`;
   const head = `<div class="d-head"><div><h2 class="p-title" id="p-title">${onbStep >= 0 ? "Notifications" : "Réglages"}</h2></div><button type="button" class="close" data-action="${onbStep >= 0 ? "onb-back" : "close-panel"}" aria-label="${onbStep >= 0 ? "Retour aux réglages" : "Fermer"}">${I.close}</button></div>`;
+  if (state.favStep) return renderFavPicker(s);
   if (onbStep >= 0) return `<div class="panel-in">${head}
     <p class="hint">Sur iPhone, les notifications ne fonctionnent qu'une fois l'app ajoutée à l'écran d'accueil.</p>
     <div class="onb"><div class="onb-dots" aria-hidden="true">${[0, 1, 2].map(i => `<i class="${i <= onbStep ? "on" : ""}"></i>`).join("")}</div>${renderOnboardingIos(onbStep)}</div>
@@ -629,6 +656,7 @@ function renderPanel(s, notifState, onbStep, subJson) {
       <div class="field"><label class="check"><input type="checkbox" data-setting="includeCar" ${s.includeCar ? "checked" : ""}>Afficher aussi les sites sans gare proche (voiture, covoiturage club)</label>
         <label class="check"><input type="checkbox" data-setting="includeTreuil" ${s.includeTreuil ? "checked" : ""}>Afficher les terrains de treuil</label>
         <p class="hint">Treuils : ne se pratiquent qu'avec un club. Saint-Séglin et Massérac sont des terrains FFVL, Crocy et Martigny viennent de wikiparapente, Sougéal seulement de ParaglidingEarth : à confirmer auprès des clubs.</p></div>
+      <div class="field"><div class="row"><span class="lbl">Spots favoris</span><span class="status ${s.favs.length ? "status--on" : "status--off"}">${s.favs.length || "Aucun"}</span></div><p class="hint">Tes favoris sont mis en avant (étoile) et le bouton étoile en bas de l'écran n'affiche qu'eux.</p><button type="button" class="btn btn--ghost" data-action="fav-open">${STAR}Choisir mes spots favoris</button></div>
       <div class="field"><span class="lbl">Mes spots</span><p class="hint">Décoche les spots que tu ne veux pas voir sur la carte ni dans les cartes.</p>${renderSpotPicker(s)}</div>
     </div>
     <div class="group">
@@ -646,7 +674,7 @@ function renderPanel(s, notifState, onbStep, subJson) {
 /* =========================================================
    MOTEUR : caméra, champ de vent, ciel
    ========================================================= */
-const state = { subJson: "", kindInit: true, windOn: true, layer: "plan", day: 0, kind: ["tout","gonflage","vol"].includes(settings.kind) ? settings.kind : "tout", sel: null, hour: 14, playing: false, detail: false, panel: false, onbStep: -1, loading: false, offline: !navigator.onLine, notifState: "" };
+const state = { subJson: "", kindInit: true, windOn: true, layer: "plan", day: 0, kind: ["tout","gonflage","vol","favoris"].includes(settings.kind) ? settings.kind : "tout", sel: null, pinned: false, favStep: false, hour: 14, playing: false, detail: false, panel: false, onbStep: -1, loading: false, offline: !navigator.onLine, notifState: "" };
 const $ = s => document.querySelector(s);
 const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -731,6 +759,22 @@ function flyTo(latlngs, maxZoom, instant) {
   else map.flyToBounds(b, { ...viewPad(), maxZoom, duration: 1.15, easeLinearity: 0.2 });
 }
 function frameSpot(spot) { const r = routeLatLngs(spot); flyTo(r.skate.length ? r.skate : [[spot.lat, spot.lon]], spot.access.mode === "local" ? 13.5 : 13); }
+/* Vue de départ : la Bretagne, Rennes au centre de la zone visible (cadre symétrique autour de Rennes) */
+function homeView(instant) {
+  if (!map) return;
+  const dLon = 3.2, W = map.getSize().x, H = map.getSize().y;
+  const z = map.getBoundsZoom(L.latLngBounds([[RENNES[0], RENNES[1] - dLon], [RENNES[0] + 0.01, RENNES[1] + dLon]]), false, L.point(16, 0));
+  const top = $(".top").offsetHeight, dock = $(".dock").offsetHeight;
+  const yTarget = top + 40 < H - dock - 40 ? (top + H - dock) / 2 : H / 2; // milieu de la zone de carte visible
+  const c = map.unproject(map.project(RENNES, z).add([0, H / 2 - yTarget]), z);
+  map.setView(c, z, { animate: !(reduce || instant), duration: 0.8 });
+}
+/* Spot choisi : on ne recadre que s'il est caché par l'interface, sans changer le zoom */
+function revealSpot(spot) {
+  if (!map) return;
+  const pad = viewPad();
+  map.panInside([spot.lat, spot.lon], { paddingTopLeft: pad.paddingTopLeft, paddingBottomRight: pad.paddingBottomRight, animate: !reduce });
+}
 function frameAll(instant) { flyTo([...items().map(x => [x.spot.lat, x.spot.lon]), RENNES], 11, instant); }
 function renderRoute(spot) {
   if (!routeLayer) return;
@@ -746,7 +790,7 @@ function renderMarkers() {
   if (!map || !markersLayer) return;
   if (!FORECAST) { markersLayer.clearLayers(); return; }
   markersLayer.clearLayers(); markerObjs = {}; clusterObjs = [];
-  const vis = SPOTS.filter(s => state.kind === "tout" || s.kind === state.kind);
+  const vis = SPOTS.filter(s => kindOk(s, state.kind));
   const groups = [];
   vis.forEach(s => {
     const p = map.latLngToLayerPoint([s.lat, s.lon]);
@@ -773,7 +817,7 @@ function refreshMarkerStates() {
   Object.entries(markerObjs).forEach(([id, mk]) => {
     const el = mk.getElement && mk.getElement(); if (!el) return;
     const h = hourOf(id, state.day, state.hour), node = el.querySelector(".mk");
-    node.className = `mk mk--${markerKey(h)} ${id === state.sel ? "is-sel" : ""}`;
+    node.className = `mk mk--${markerKey(h)} ${id === state.sel ? "is-sel" : ""} ${settings.favs.includes(id) ? "is-fav" : ""}`;
     node.querySelector(".mk-dot").innerHTML = renderVerdictIcon(h.reachable ? h.verdict.key : "non");
   });
   clusterObjs.forEach(({ c, m }) => {
@@ -789,7 +833,7 @@ function setMapFocus(on) {
 }
 function pickSpot(id) {
   setMapFocus(false);
-  state.sel = id; syncSelection(true);
+  pinSpot(id); syncSelection(false);
   const c = $(`.card[data-spot="${id}"]`); if (c) c.scrollIntoView({ inline: "center", block: "nearest", behavior: reduce ? "instant" : "smooth" });
 }
 
@@ -870,6 +914,14 @@ function pickDefault() {
 function renderTop() {
   if (!FORECAST) return renderWaiting();
   $("#days").innerHTML = renderDays(state.day, state.kind);
+  document.body.classList.toggle("is-pinned", !!(state.pinned && state.sel));
+  if (state.pinned && state.sel) {
+    const spot = spotById(state.sel), fav = settings.favs.includes(spot.id);
+    $("#eyebrow").innerHTML = `<p class="st-eyebrow"><span class="live"></span>Spot suivi · 3 jours</p>
+      <button type="button" class="upd glass" data-action="unpin" aria-label="Revenir à la vue d'ensemble de tous les spots">${I.close}Tous les spots</button>`;
+    $("#statement").innerHTML = renderSpotDays(spot, fav);
+    return;
+  }
   const it = items(), best = it.find(x => x.slots.length);
   let reason = "";
   if (!best) {
@@ -891,13 +943,22 @@ function renderScrubOnly() {
   const x = selItem(); if (!x) { $("#scrub").innerHTML = ""; return; }
   $("#scrub").innerHTML = renderScrub(x.spot, x.hours, state.hour, state.playing);
 }
-function syncSelection(fly = true) {
+/* Suivre un spot : il reste sélectionné quand on change de jour, le haut de l'écran montre ses 3 jours */
+function pinSpot(id) {
+  state.sel = id; state.pinned = true;
+  const d = FORECAST[state.day].bySpot[id], sl = d && d.slots[0];
+  if (sl) state.hour = Math.max(7, Math.min(21, sl.start));
+  renderTop(); refreshCards();
+}
+function unpin() { state.pinned = false; pickDefault(); renderAll(false); }
+function refreshCards() { document.querySelectorAll(".card").forEach(c => c.classList.toggle("is-sel", c.dataset.spot === state.sel)); }
+function syncSelection(fly = false) {
   const x = selItem(); if (!x) return; state.sel = x.spot.id;
   document.querySelectorAll(".card").forEach(c => c.classList.toggle("is-sel", c.dataset.spot === state.sel));
   renderRoute(x.spot);
   renderMarkers(); renderScrubOnly();
   setWindTarget(hourOf(x.spot.id, state.day, state.hour));
-  if (fly) frameSpot(x.spot);
+  if (fly) revealSpot(x.spot);
 }
 function setHour(h, fromDetail) {
   state.hour = h;
@@ -910,14 +971,15 @@ function setHour(h, fromDetail) {
   const lab = $(".scrub-hour"); if (lab) lab.innerHTML = `${h}h<small>${hr.wind} km/h</small>`;
   if (state.detail) { updateDetailHour(h); updateModelCompareHour(h); }
 }
-function renderAll(fly = true) {
+function renderAll(fly = false) {
   renderTop(); renderDock(); syncSelection(fly); applySky();
   requestAnimationFrame(() => { const c = $(`.card[data-spot="${state.sel}"]`); if (c) c.scrollIntoView({ inline: "center", block: "nearest", behavior: "instant" }); });
 }
 
 /* Détail : s'ouvre depuis le rectangle de la carte (clip-path) */
 function openDetail(spotId) {
-  state.sel = spotId; syncSelection(true);
+  if (state.sel !== spotId || !state.pinned) { state.sel = spotId; state.pinned = true; renderTop(); refreshCards(); }
+  syncSelection(false);
   const el = $("#detail"), card = $(`.card[data-spot="${spotId}"]`) || $("#statement");
   const r = card.getBoundingClientRect();
   el.style.setProperty("--clip", `${r.top}px ${innerWidth - r.right}px ${innerHeight - r.bottom}px ${r.left}px`);
@@ -943,7 +1005,7 @@ function updateDetailHour(h) {
 /* Réglages */
 function openPanel() { state.panel = true; renderPanelOnly(); $("#panel").classList.add("is-open"); setTimeout(() => $("#panel").focus(), 50); }
 function renderPanelOnly() { $("#panel").innerHTML = renderPanel(settings, state.notifState, state.onbStep, state.subJson); }
-function closePanel() { state.panel = false; state.onbStep = -1; $("#panel").classList.remove("is-open"); }
+function closePanel() { if (state.favStep && !settings.favsAsked) { settings.favsAsked = true; saveSettings(); } state.panel = false; state.onbStep = -1; state.favStep = false; $("#panel").classList.remove("is-open"); }
 function applyTheme() {
   if (settings.theme === "system") document.documentElement.removeAttribute("data-theme"); else document.documentElement.setAttribute("data-theme", settings.theme);
   windColors(); applySky(); setTiles();
@@ -984,11 +1046,27 @@ document.addEventListener("click", e => {
   if (seg) { settings[seg.dataset.setting] = seg.dataset.value; saveSettings(); if (seg.dataset.setting === "theme") applyTheme(); if (["level", "model"].includes(seg.dataset.setting)) { buildForecast(); if (seg.dataset.setting === "model") pickDefault(); renderAll(false); updateModelButton(); } renderPanelOnly(); return; }
   const el = e.target.closest("[data-action]"); if (!el) return;
   const a = el.dataset.action;
-  if (a === "day") { setMapFocus(false); state.day = +el.dataset.day; togglePlay(false); pickDefault(); renderAll(); }
-  else if (a === "kind") { setMapFocus(false); state.kind = el.dataset.kind; settings.kind = state.kind; saveSettings(); if (!items().some(x => x.spot.id === state.sel)) pickDefault(); renderAll(); }
-  else if (a === "card") { if (el.dataset.spot === state.sel) openDetail(el.dataset.spot); else { state.sel = el.dataset.spot; syncSelection(true); el.scrollIntoView({ inline: "center", block: "nearest", behavior: reduce ? "instant" : "smooth" }); } }
+  if (a === "day") {
+    setMapFocus(false); state.day = +el.dataset.day; togglePlay(false);
+    if (state.pinned && state.sel) { const sl = FORECAST[state.day].bySpot[state.sel].slots[0]; if (sl) state.hour = Math.max(7, Math.min(21, sl.start)); }
+    else pickDefault();
+    renderAll(false);
+  }
+  else if (a === "kind") { setMapFocus(false); state.kind = el.dataset.kind; settings.kind = state.kind; saveSettings(); if (!items().some(x => x.spot.id === state.sel)) { state.pinned = false; pickDefault(); } renderAll(false); }
+  else if (a === "card") { if (el.dataset.spot === state.sel && state.pinned) openDetail(el.dataset.spot); else { pinSpot(el.dataset.spot); syncSelection(true); el.scrollIntoView({ inline: "center", block: "nearest", behavior: reduce ? "instant" : "smooth" }); } }
+  else if (a === "unpin") unpin();
+  else if (a === "fav-open") openFavPicker();
+  else if (a === "fav-done") finishFavs(false);
+  else if (a === "fav-skip") finishFavs(true);
+  else if (a === "fav") {
+    const id = el.dataset.spot;
+    settings.favs = settings.favs.includes(id) ? settings.favs.filter(x => x !== id) : [...settings.favs, id]; saveSettings();
+    if (state.kind === "favoris" && !settings.favs.length) { state.kind = "tout"; settings.kind = "tout"; saveSettings(); }
+    renderAll(false);
+    if (state.detail) { const b = $("#detail [data-action='fav']"); if (b) { const on = settings.favs.includes(id); b.classList.toggle("is-on", on); b.setAttribute("aria-pressed", String(on)); } }
+  }
   else if (a === "layer") { state.layer = LAYERS[(LAYERS.indexOf(state.layer) + 1) % LAYERS.length]; setTiles(); }
-  else if (a === "model") { settings.model = MODEL_KEYS[(MODEL_KEYS.indexOf(settings.model) + 1) % MODEL_KEYS.length]; saveSettings(); buildForecast(); if (!state.detail) pickDefault(); renderAll(!state.detail); updateModelButton(); if (state.detail) openDetail(state.sel); }
+  else if (a === "model") { settings.model = MODEL_KEYS[(MODEL_KEYS.indexOf(settings.model) + 1) % MODEL_KEYS.length]; saveSettings(); buildForecast(); if (!state.detail && !state.pinned) pickDefault(); renderAll(false); updateModelButton(); if (state.detail) openDetail(state.sel); }
   else if (a === "copy-sub") { navigator.clipboard?.writeText(state.subJson).then(() => { state.notifState = "Abonnement copié."; renderPanelOnly(); }).catch(() => {}); }
   else if (a === "install") { installPrompt?.prompt(); installPrompt = null; renderPanelOnly(); }
   else if (a === "overview") { frameAll(); }
@@ -998,7 +1076,7 @@ document.addEventListener("click", e => {
   else if (a === "close-detail") closeDetail();
   else if (a === "hour") setHour(+el.dataset.hour);
   else if (a === "play") togglePlay();
-  else if (a === "home") { frameAll(); }
+  else if (a === "home") { setMapFocus(false); state.pinned = false; pickDefault(); renderAll(false); homeView(); }
   else if (a === "refresh") refresh(true);
   else if (a === "open-panel") openPanel();
   else if (a === "close-panel") closePanel();
@@ -1008,13 +1086,20 @@ document.addEventListener("click", e => {
   else if (a === "onb-prev") { state.onbStep = Math.max(0, state.onbStep - 1); renderPanelOnly(); }
   else if (a === "onb-done") { state.onbStep = -1; if (isStandalone() || !isIOS) enablePush(); else { state.notifState = "Ajoute l'app à l'écran d'accueil, ouvre-la depuis sa nouvelle icône, puis touche à nouveau « Activer »."; renderPanelOnly(); } }
   else if (a === "test-notif") testNotification();
-  else if (a === "toast-open") { $("#toast").classList.remove("is-on"); closePanel(); state.day = Math.max(0, +el.dataset.day); pickDefault(); renderAll(false); openDetail(el.dataset.spot); }
+  else if (a === "toast-open") { $("#toast").classList.remove("is-on"); closePanel(); state.day = Math.max(0, +el.dataset.day); state.sel = el.dataset.spot; state.pinned = true; renderAll(false); openDetail(el.dataset.spot); }
 });
 document.addEventListener("input", e => {
   if (e.target.id === "hour") { togglePlay(false); setHour(+e.target.value); }
   if (e.target.id === "set-score") $("#out-score").textContent = e.target.value;
 });
 document.addEventListener("change", e => {
+  if (e.target.dataset.favToggle) {
+    const id = e.target.dataset.favToggle;
+    settings.favs = e.target.checked ? [...new Set([...settings.favs, id])] : settings.favs.filter(x => x !== id);
+    saveSettings();
+    const c = $("#fav-count"); if (c) c.textContent = `${settings.favs.length} favori${settings.favs.length > 1 ? "s" : ""}`;
+    return;
+  }
   if (e.target.dataset.spotToggle) {
     const id = e.target.dataset.spotToggle;
     settings.hidden = e.target.checked ? settings.hidden.filter(x => x !== id) : [...new Set([...settings.hidden, id])];
@@ -1046,7 +1131,7 @@ $("#carousel").addEventListener("scroll", () => {
     userScroll = false;
     const mid = innerWidth / 2; let best = null, dist = 1e9;
     document.querySelectorAll(".card").forEach(c => { const r = c.getBoundingClientRect(), d = Math.abs(r.left + r.width / 2 - mid); if (d < dist) { dist = d; best = c; } });
-    if (best && best.dataset.spot !== state.sel) { state.sel = best.dataset.spot; syncSelection(true); }
+    if (best && best.dataset.spot !== state.sel) { if (state.pinned) pinSpot(best.dataset.spot); else { state.sel = best.dataset.spot; refreshCards(); } syncSelection(false); }
   }, 140);
 }, { passive: true });
 addEventListener("resize", () => { windResize(); if (map) map.invalidateSize(); });
@@ -1134,9 +1219,37 @@ function renderSpotPicker(s) {
       ${list.map(x => `<label class="check pk-spot"><input type="checkbox" data-spot-toggle="${x.id}" ${s.hidden.includes(x.id) ? "" : "checked"}>${kindIcon(x.kind)}${esc(x.name)}</label>`).join("")}</details>`;
   }).join("")}</div>`;
 }
+/* COMPOSANT: choix des spots favoris (premier lancement et réglages) */
+function renderFavPicker(s) {
+  const regions = {};
+  ALL_SPOTS.filter(x => !s.hidden.includes(x.id) && (s.includeTreuil || x.profile !== "treuil" || s.favs.includes(x.id))).forEach(x => { (regions[x.region || "Autre"] ||= []).push(x); });
+  const first = !s.favsAsked;
+  return `<div class="panel-in">
+    <div class="d-head"><div><h2 class="p-title" id="p-title">${first ? "Bienvenue sur ParaSpot" : "Mes spots favoris"}</h2></div>${first ? "" : `<button type="button" class="close" data-action="fav-done" aria-label="Valider et revenir aux réglages">${I.close}</button>`}</div>
+    <p class="hint" style="font-size:15px">${first ? "Quels sont tes spots préférés ? " : ""}Coche-les : ils seront mis en avant dans l'app, et le bouton ${STAR} en bas de l'écran permet de passer de tes favoris à tous les spots. Tu pourras les changer dans les Réglages.</p>
+    <p class="fav-count" id="fav-count">${s.favs.length} favori${s.favs.length > 1 ? "s" : ""}</p>
+    <div class="picker">${Object.entries(regions).map(([r, list]) => {
+      const n = list.filter(x => s.favs.includes(x.id)).length;
+      return `<details class="pk-reg" ${n || r === "Rennes" ? "open" : ""}><summary><span class="pk-r">${esc(r)}</span><span class="pk-n">${n ? `${n} ★` : list.length}</span></summary>
+        ${list.map(x => `<label class="check pk-spot pk-fav"><input type="checkbox" data-fav-toggle="${x.id}" ${s.favs.includes(x.id) ? "checked" : ""}>${kindIcon(x.kind)}<span>${esc(x.name)}<small>${esc(x.city)}</small></span></label>`).join("")}</details>`;
+    }).join("")}</div>
+    <div class="btn-row fav-actions"><button type="button" class="btn btn--wing" data-action="fav-done">${first ? "C'est parti" : "Valider"}</button>${first ? `<button type="button" class="btn btn--ghost" data-action="fav-skip">Plus tard</button>` : ""}</div>
+  </div>`;
+}
+function openFavPicker() { state.favStep = true; state.panel = true; renderPanelOnly(); $("#panel").classList.add("is-open"); $("#panel").scrollTop = 0; setTimeout(() => $("#panel").focus(), 50); }
+function finishFavs(skip) {
+  const first = !settings.favsAsked;
+  settings.favsAsked = true; state.favStep = false;
+  if (!skip && settings.favs.length && first) { state.kind = "favoris"; settings.kind = "favoris"; }
+  if (state.kind === "favoris" && !settings.favs.length) { state.kind = "tout"; settings.kind = "tout"; }
+  saveSettings();
+  if (first) closePanel(); else renderPanelOnly();
+  if (!state.pinned) pickDefault();
+  if (FORECAST) renderAll(false);
+}
 function renderLegend() {
   const it = (cls, ic, txt) => `<span class="lg"><span class="mk ${cls}" style="width:30px;height:30px"><span class="mk-dot" style="animation:none">${ic}</span></span>${txt}</span>`;
-  return `${it("mk--top", renderVerdictIcon("top"), "Top")}${it("mk--ok", renderVerdictIcon("ok"), "Jouable")}${it("mk--limite", renderVerdictIcon("limite"), "Limite")}${it("mk--non", renderVerdictIcon("non"), "Non (vent ou pluie)")}${it("mk--off", renderVerdictIcon("non"), "Pas atteignable à cette heure")}
+  return `${it("mk--top", renderVerdictIcon("top"), "Top")}${it("mk--ok", renderVerdictIcon("ok"), "Jouable")}${it("mk--limite", renderVerdictIcon("limite"), "Limite")}${it("mk--non", renderVerdictIcon("non"), "Non (vent ou pluie)")}${it("mk--off", renderVerdictIcon("non"), "Pas atteignable à cette heure")}${it("mk--ok is-fav", renderVerdictIcon("ok"), "Spot favori (cercle doré)")}
     <span class="lg"><span class="mk-cluster c--top" style="width:30px;height:30px;border-width:3px;animation:none"><b style="font-size:12px">3</b></span>Plusieurs spots : touche pour zoomer</span>
     <span class="lg"><span class="stn">${I.train}</span>Gare</span>`;
 }
@@ -1247,13 +1360,13 @@ async function enablePush() {
 function afterData() {
   pickDefault();
   renderTop(); renderDock(); applySky();
-  frameAll(true); renderMarkers();
+  homeView(true); renderMarkers();
   const h = hourOf(state.sel, state.day, state.hour); if (h) { setWindTarget(h); wind.dir = wind.target.dir; wind.speed = wind.target.speed; }
-  setTimeout(() => { syncSelection(true); const c = $(`.card[data-spot="${state.sel}"]`); if (c) c.scrollIntoView({ inline: "center", block: "nearest", behavior: "instant" }); }, reduce ? 0 : 900);
+  setTimeout(() => { syncSelection(false); const c = $(`.card[data-spot="${state.sel}"]`); if (c) c.scrollIntoView({ inline: "center", block: "nearest", behavior: "instant" }); }, reduce ? 0 : 900);
 }
 function openFromUrl() {
   const p = new URLSearchParams(location.search);
-  if (p.get("kind") && ["tout", "gonflage", "vol"].includes(p.get("kind"))) { state.kind = p.get("kind"); pickDefault(); renderAll(false); }
+  if (p.get("kind") && ["tout", "gonflage", "vol", "favoris"].includes(p.get("kind"))) { state.kind = p.get("kind"); pickDefault(); renderAll(false); }
   if (p.get("date")) { const i = DAYS.findIndex(d => d.date === p.get("date")); if (i >= 0) { state.day = i; pickDefault(); renderAll(false); } }
   if (p.get("spot") && SPOTS.some(s => s.id === p.get("spot"))) { state.sel = p.get("spot"); const sl = FORECAST[state.day].bySpot[state.sel].slots[0]; if (sl) state.hour = Math.max(7, Math.min(21, sl.start)); openDetail(state.sel); }
   if (p.get("view") === "map") setMapFocus(true);
@@ -1270,7 +1383,7 @@ async function init() {
   }
   if ("Notification" in window && Notification.permission === "granted") settings.notifEnabled = true;
   windColors(); windResize();
-  initMap(); map.setView([48.3, -2.0], 7); buildLabels(); zoomClasses();
+  initMap(); map.setView(RENNES, 7); homeView(true); buildLabels(); zoomClasses();
   $("#legend").innerHTML = renderLegend();
   applyTheme(); updateModelButton();
   windStart();
@@ -1278,6 +1391,7 @@ async function init() {
   STATIONS.forEach(st => L.marker([st.lat, st.lon], { icon: L.divIcon({ className: "", html: `<div class="stn">${I.train}</div>`, iconSize: [26, 26], iconAnchor: [13, 13] }), interactive: false, keyboard: false, title: "Gare de " + st.name }).addTo(map));
   const cached = loadCache();
   if (cached) { RAW = cached; setupFromRaw(); afterData(); openFromUrl(); }
+  if (!settings.favsAsked && !new URLSearchParams(location.search).get("spot")) openFavPicker();
   else renderWaiting();
   const had = !!FORECAST;
   await refresh(!cached);
