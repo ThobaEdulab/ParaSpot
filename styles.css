@@ -627,3 +627,11 @@ path.m-route-car{vector-effect:none}
 .toast .toast-x{position:absolute;top:6px;right:6px;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--glass-strong);color:var(--ink-2);cursor:pointer}
 .toast .toast-x svg{width:16px;height:16px}
 .legend .mk,.legend-in .mk{position:relative;margin:0;transform:none;flex:none}
+/* explication du score */
+.explain{margin-top:8px;border:1px solid var(--hair);border-radius:var(--r-md);padding:4px 12px;background:var(--glass)}
+.explain summary{display:flex;align-items:center;gap:8px;min-height:44px;font-weight:800;font-size:14px;color:var(--ink);cursor:pointer;list-style:none}
+.explain summary::-webkit-details-marker{display:none}
+.explain summary svg{width:18px;height:18px;flex:none;color:var(--wing)}
+.explain p,.explain li{font-size:13.5px;line-height:1.45;color:var(--ink-2)}
+.explain ul{margin:6px 0;padding-left:18px;display:grid;gap:6px}
+.explain-scale{display:flex;flex-wrap:wrap;gap:6px}

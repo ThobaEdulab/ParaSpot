@@ -650,7 +650,22 @@ function renderPanel(s, notifState, onbStep, subJson) {
     <div class="group"><div class="field"><span class="lbl">Niveau</span>${seg("level", Object.entries(LEVELS).map(([k, v]) => [k, v.label]), s.level)}<p class="hint">Ajuste la plage de vent idéale et le plafond de chaque site.</p></div>
       <div class="field"><span class="lbl">Modèle de prévision</span>${seg("model", MODEL_KEYS.map(k => [k, MODELS[k].label]), s.model)}<p class="hint">AROME HD (Météo-France, 1,5 km, 2 jours, comblé par AROME/ARPEGE au-delà), ECMWF IFS (9 km) ou GFS (NOAA). La fiche de chaque spot compare les trois.</p></div></div>
     <div class="group">
-      <div class="field"><div class="row"><label class="lbl" for="set-score">Score minimum d'un créneau</label><output class="big-val num" id="out-score">${s.scoreMin}</output></div><input type="range" id="set-score" min="30" max="90" step="5" value="${s.scoreMin}" data-setting="scoreMin"></div>
+      <div class="field"><div class="row"><label class="lbl" for="set-score">Score minimum d'un créneau</label><output class="big-val num" id="out-score">${s.scoreMin}</output></div><input type="range" id="set-score" min="30" max="90" step="5" value="${s.scoreMin}" data-setting="scoreMin">
+        <p class="hint">${s.scoreMin >= 75 ? "Seulement les très bonnes conditions (Top) : moins de créneaux, mais plus sûrs." : s.scoreMin >= 55 ? "Créneaux Jouable et Top." : "Inclut des créneaux limites : plus de propositions, plus de risques de te déplacer pour rien."}</p>
+        <details class="explain"><summary>${I.info}Comment est calculé le score ?</summary>
+          <p>Pour chaque spot et chaque heure, l'app donne une note de 0 à 100. Elle part de 100 et enlève des points selon :</p>
+          <ul>
+            <li><b>La direction du vent</b> : plein face au décollage, on garde tout. Un peu de travers, la note baisse. De côté ou de dos, elle tombe à 0. (Pas pris en compte pour le gonflage.)</li>
+            <li><b>La force du vent</b> : chaque pratique a sa plage idéale (gonflage 12 à 22 km/h, soaring côtier 18 à 27 km/h). Trop faible ou trop fort, la note baisse. Le niveau choisi plus haut décale ces seuils.</li>
+            <li><b>Les rafales</b> : trop fortes ou trop éloignées du vent moyen, la note baisse.</li>
+            <li><b>Pluie, orage, brouillard ou nuit</b> : la note tombe à 0.</li>
+            <li><b>L'instabilité</b> (risque d'orage) : la note baisse pour le vol.</li>
+          </ul>
+          <p class="explain-scale"><span class="vbadge vbadge--top">75 et plus : Top</span><span class="vbadge vbadge--ok">55 à 74 : Jouable</span><span class="vbadge vbadge--limite">30 à 54 : Limite</span><span class="vbadge vbadge--non">moins de 30 : Non</span></p>
+          <p>Un <b>créneau</b> est une suite d'heures qui ont toutes au moins ce score minimum, atteignables en train avec ton premier départ et ton dernier train, et qui durent au moins 1 h pour le gonflage, 2 h pour le vol.</p>
+          <p>Les notifications ont leur propre seuil (60, dans le fichier data/config.json) : ce curseur ne les change pas.</p>
+          <p>C'est un point de départ prudent : après quelques sorties, compare ton ressenti avec la note et ajuste. Vérifie toujours une balise en temps réel avant de partir.</p>
+        </details></div>
       <div class="field"><div class="row"><label class="lbl" for="set-dep">Premier départ de Rennes</label><input type="time" id="set-dep" value="${s.firstDeparture}" data-setting="firstDeparture"></div></div>
       <div class="field"><div class="row"><label class="lbl" for="set-last">Dernier train retour</label><input type="time" id="set-last" value="${s.lastTrain}" data-setting="lastTrain"></div><p class="hint">Les heures hors de cette fenêtre sont grisées sur le ruban du temps.</p></div>
       <div class="field"><label class="check"><input type="checkbox" data-setting="includeCar" ${s.includeCar ? "checked" : ""}>Afficher aussi les sites sans gare proche (voiture, covoiturage club)</label>
