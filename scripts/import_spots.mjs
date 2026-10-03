@@ -103,8 +103,12 @@ function km(a, b) {
 async function ffvl() {
   let data;
   for (const u of FFVL_URLS) {
-    try { data = await getJson(u); console.log(`FFVL : fichier reçu depuis ${u}.`); break; }
-    catch (e) { console.log(`FFVL : ${u} indisponible (${e.message}).`); }
+    try {
+      const r = await fetch(u, { headers: { "User-Agent": "ParaSpot (application libre de prévisions parapente)", Accept: "application/json" } });
+      const txt = await r.text();
+      try { data = JSON.parse(txt); console.log(`FFVL : fichier reçu depuis ${u}.`); break; }
+      catch { console.log(`FFVL : ${u} répond (HTTP ${r.status}) mais pas en JSON. Message complet de la FFVL :\n${txt.slice(0, 800)}`); }
+    } catch (e) { console.log(`FFVL : ${u} injoignable (${e.message}).`); }
   }
   if (!data) { console.log("FFVL : aucune adresse ne répond, import FFVL ignoré (ParaglidingEarth seul)."); return []; }
   const list = findList(data) || [];
