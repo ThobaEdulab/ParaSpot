@@ -19,7 +19,7 @@ Ces éléments gardent leur propre licence, qui ne change pas :
 | Élément | Source | Licence |
 |---|---|---|
 | Prévisions météo et marées, recherche de ville | Open-Meteo | CC BY 4.0, usage gratuit non commercial |
-| Sites de vol (`data/france.json`) | FFVL, liste des sites de pratique ; ParaglidingEarth | ODbL (FFVL) ; conditions de ParaglidingEarth |
+| Sites de vol (`data/france.json`) | FFVL, liste des sites de pratique ; ParaglidingEarth | ODbL (FFVL) ; CC BY-SA 3.0 (ParaglidingEarth) |
 | Gares (`data/gares.json`) | SNCF Open Data | ODbL |
 | Communes | geo.api.gouv.fr | Licence Ouverte Etalab |
 | Fond de carte embarqué | Natural Earth | Domaine public |

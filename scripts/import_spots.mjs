@@ -13,7 +13,7 @@
 
 import { writeFile, readFile } from "node:fs/promises";
 
-const FFVL_URL = "https://data.ffvl.fr/json/sites.json";
+const FFVL_URLS = ["https://data.ffvl.fr/json/sites.json", "http://data.ffvl.fr/json/sites.json"];
 const PGE_URL = (n, s, e, w) => `https://www.paraglidingearth.com/api/geojson/getBoundingBoxSites.php?north=${n}&south=${s}&east=${e}&west=${w}&limit=3000&style=detailled`;
 const GARES_URL = "https://ressources.data.sncf.com/api/explore/v2.1/catalog/datasets/gares-de-voyageurs/exports/json?lang=fr&timezone=Europe%2FParis";
 const GEO_URL = (lat, lon) => `https://geo.api.gouv.fr/communes?lat=${lat}&lon=${lon}&fields=nom,codeDepartement&format=json`;
@@ -102,7 +102,11 @@ function km(a, b) {
 /* ---------- FFVL ---------- */
 async function ffvl() {
   let data;
-  try { data = await getJson(FFVL_URL); } catch (e) { console.log(`FFVL : téléchargement impossible (${e.message}).`); return []; }
+  for (const u of FFVL_URLS) {
+    try { data = await getJson(u); console.log(`FFVL : fichier reçu depuis ${u}.`); break; }
+    catch (e) { console.log(`FFVL : ${u} indisponible (${e.message}).`); }
+  }
+  if (!data) { console.log("FFVL : aucune adresse ne répond, import FFVL ignoré (ParaglidingEarth seul)."); return []; }
   const list = findList(data) || [];
   console.log(`FFVL : ${list.length} entrées reçues.`);
   if (list[0]) console.log("FFVL, exemple de fiche :", JSON.stringify(list[0]).slice(0, 900));

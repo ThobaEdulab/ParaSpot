@@ -27,17 +27,19 @@ const settings = Object.assign(
   STORED
 );
 /* Transport : train + mobilité douce (vélo, vélo électrique, skate) et/ou voiture */
-settings.trans = { train: true, car: STORED.includeCar !== false, soft: "skate", softKm: 10, maxDrive: 150, ...(STORED.trans || {}) };
+settings.trans = { train: true, car: STORED.includeCar !== false, soft: "vel", softKm: 10, maxDrive: 150, ...(STORED.trans || {}) };
 const saveSettings = () => { const { notifEnabled, ...s } = settings; store.set("fv-settings-v3", s); };
 
 const toMin = s => { const [h, m] = s.split(":").map(Number); return h * 60 + m; };
 const toHour = s => toMin(s) / 60;
 const SOFT = {
-  velo: { label: "Vélo", short: "Vélo", verb: "à vélo", kmh: 15 },
-  vae: { label: "Vélo électrique", short: "Vélo électrique", verb: "en vélo électrique", kmh: 20 },
-  skate: { label: "Skate ou trottinette électrique", short: "Skate", verb: "en skate", kmh: 18 }
+  pied: { label: "À pied", short: "À pied", verb: "à pied", kmh: 4.5 },
+  velo: { label: "Vélo ou skate", short: "Vélo ou skate", verb: "à vélo ou en skate", kmh: 14 },
+  vel: { label: "Véhicule électrique léger", short: "Véhicule électrique léger", verb: "en véhicule électrique léger", kmh: 20 }
 };
-const soft = () => SOFT[settings.trans.soft] || SOFT.skate;
+// anciens choix : skate électrique et vélo électrique deviennent « véhicule électrique léger »
+if (settings.trans.soft === "skate" || settings.trans.soft === "vae") settings.trans.soft = "vel";
+const soft = () => SOFT[settings.trans.soft] || SOFT.vel;
 const RENNES_HOME = { name: "Rennes", lat: 48.1035, lon: -1.6724 };
 const HOME = () => settings.home || RENNES_HOME;
 const HOME_LL = () => [HOME().lat, HOME().lon];
@@ -243,7 +245,7 @@ function fmtDur(m) { if (m < 60) return `${m} min`; const h = Math.floor(m / 60)
 function fmtClock(min) { min = Math.round(min); const h = Math.floor(min / 60), m = min % 60; return `${h}h${String(m).padStart(2, "0")}`; }
 const fmtHHMM = s => s.replace(":", "h");
 const kindLabel = k => k === "vol" ? "Vol" : "Gonflage";
-const softIcon = () => settings.trans.soft === "skate" ? I.skate : I.bike;
+const softIcon = () => settings.trans.soft === "pied" ? I.walk : settings.trans.soft === "vel" ? I.skate : I.bike;
 const accessIcon = s => s.access.mode === "train" ? I.train : s.access.mode === "voiture" ? I.car : softIcon();
 const updatedLabel = iso => `Mis à jour à ${fmtHHMM(iso.slice(11, 16))}`;
 const capFirst = s => s.charAt(0).toUpperCase() + s.slice(1);
@@ -254,6 +256,7 @@ const spotById = id => SPOTS.find(s => s.id === id);
 const I = {
   refresh: '<svg class="ic spin" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/></svg>',
   train: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="3" width="12" height="13" rx="3"/><path d="M6 10h12M9 19.5 7 22M15 19.5l2 2.5"/><circle cx="9.5" cy="13" r=".6"/><circle cx="14.5" cy="13" r=".6"/></svg>',
+  walk: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="13" cy="4.5" r="2"/><path d="M11 21l2-6-3-3 1-5 3 3 3 1M10 12l-3 2-1 4"/></svg>',
   bike: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="16" r="3.5"/><circle cx="18" cy="16" r="3.5"/><path d="M6 16l4-7h5l3 7M10 9l-1.5-3H6M15 9l-3 7h-6"/></svg>',
   skate: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 13h18"/><path d="M5 13l1.2-2.5h11.6L19 13"/><circle cx="8" cy="17" r="1.8"/><circle cx="16" cy="17" r="1.8"/></svg>',
   wave: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9c2 0 2-2 4.5-2S10 9 12 9s2.5-2 4.5-2S19 9 21 9M3 15c2 0 2-2 4.5-2s2.5 2 4.5 2 2.5-2 4.5-2 2.5 2 4.5 2"/></svg>',
@@ -822,7 +825,7 @@ function renderPanel(s, notifState, onbStep, subJson) {
     <div class="group"><div class="field"><span class="lbl">Contact</span><p class="hint">Une idée, un bug, un spot à corriger ? Écris-nous.</p>
       <a class="btn btn--ghost" href="mailto:tobalab@proton.me?subject=${encodeURIComponent("ParaSpot")}">${I.mail}Contacter ParaSpot</a>
       <p class="hint">ParaSpot est gratuit, pour un usage non commercial : la vente de l'application est interdite (licence PolyForm Noncommercial 1.0.0). <a href="LICENCE.md" target="_blank" rel="noopener">Lire la licence</a></p></div></div>
-    <p class="hint">Prévisions Open-Meteo (AROME HD et AROME/ARPEGE Météo-France, ECMWF IFS, NOAA GFS ; CC BY 4.0), marées Open-Meteo Marine indicatives. Fiches : wikiparapente.fr, FFVL, ParaglidingEarth, spots.guru, clubs. Sites de France : liste FFVL (ODbL) et ParaglidingEarth, importés chaque semaine. Gares : SNCF Open Data (ODbL). Communes : geo.api.gouv.fr. Recherche de ville : Open-Meteo. Balises et carte : Spot Air. Fond de carte embarqué : Natural Earth. ${ALL_SPOTS.length} spots.</p>
+    <p class="hint">Prévisions Open-Meteo (AROME HD et AROME/ARPEGE Météo-France, ECMWF IFS, NOAA GFS ; CC BY 4.0), marées Open-Meteo Marine indicatives. Fiches : wikiparapente.fr, FFVL, ParaglidingEarth, spots.guru, clubs. Sites de France : liste FFVL (ODbL) et ParaglidingEarth (CC BY-SA 3.0), importés chaque semaine. Gares : SNCF Open Data (ODbL). Communes : geo.api.gouv.fr. Recherche de ville : Open-Meteo. Balises et carte : Spot Air. Fond de carte embarqué : Natural Earth. ${ALL_SPOTS.length} spots.</p>
   </div>`;
 }
 
@@ -909,15 +912,22 @@ function unrot(x, y) { if (!MAP_ROT) return [x, y]; const r = -MAP_ROT * Math.PI
   L.Draggable.prototype._onDown = function (e) { const r = down.call(this, wrap(e)); if (MAP_ROT && this._parentScale) this._parentScale = { x: 1, y: 1, boundingClientRect: this._parentScale.boundingClientRect }; return r; };
   L.Draggable.prototype._onMove = function (e) { return move.call(this, wrap(e)); };
 })();
+function visibleCenterY() {
+  const H = innerHeight, top = $(".top")?.getBoundingClientRect().bottom || 0;
+  const low = document.querySelector(".dock .dock-head")?.getBoundingClientRect().top || H;
+  return low - top > 120 ? (top + low) / 2 : H / 2;
+}
 function setMapRotation(deg) {
   const el = $("#map");
   deg = ((deg % 360) + 540) % 360 - 180;
   if (Math.abs(deg) < 0.5 && compass.mode === "north") deg = 0;
   if (deg && !compass.sized) {
-    const W = innerWidth, H = innerHeight, D = Math.ceil(Math.hypot(W, H));
-    Object.assign(el.style, { inset: "auto", width: D + "px", height: D + "px", left: (W - D) / 2 + "px", top: (H - D) / 2 + "px" });
+    // pivot de rotation : milieu de la partie de carte visible (là où se place ta position)
+    const W = innerWidth, H = innerHeight, yP = visibleCenterY(), D = Math.ceil(2 * Math.hypot(W / 2, Math.max(yP, H - yP)));
+    Object.assign(el.style, { inset: "auto", width: D + "px", height: D + "px", left: (W - D) / 2 + "px", top: (yP - D / 2) + "px" });
     map.setMaxBounds(null); // la carte agrandie dépasse les limites : on les lève pendant la rotation
     compass.sized = true; map.invalidateSize({ pan: true, animate: false });
+    if (me.ll && me.follow) centerOnMe(false);
   }
   MAP_ROT = deg;
   el.style.transform = deg ? `rotate(${deg}deg)` : "";
@@ -943,7 +953,7 @@ function compassLoop() {
     if (compass.smooth == null) compass.smooth = compass.heading;
     const d = ((compass.heading - compass.smooth + 540) % 360) - 180;
     compass.smooth = (compass.smooth + d * 0.18 + 360) % 360;
-    setMapRotation(-compass.smooth);
+    setMapRotation(-compass.smooth); updateMeArrow();
   }
   compass.raf = requestAnimationFrame(compassLoop);
 }
@@ -961,20 +971,58 @@ async function startCompass() {
   }
   return true;
 }
+/* Ma position : flèche bleue orientée dans le sens du téléphone, carte centrée tant qu'on ne la déplace pas */
+const me = { watch: null, marker: null, ll: null, follow: true, acc: null };
+function meIcon() { return L.divIcon({ className: "", html: `<div class="me"><div class="me-arrow"></div><div class="me-dot"></div></div>`, iconSize: [44, 44], iconAnchor: [22, 22] }); }
+function startPosition() {
+  if (!navigator.geolocation) { showInfo("Position indisponible", "Ce navigateur ne donne pas la position : la boussole oriente seulement la carte."); return; }
+  me.follow = true;
+  if (me.watch != null) { if (me.ll) centerOnMe(true); return; }
+  me.watch = navigator.geolocation.watchPosition(pos => {
+    const first = !me.ll;
+    me.ll = [pos.coords.latitude, pos.coords.longitude];
+    if (!me.marker) { me.marker = L.marker(me.ll, { icon: meIcon(), interactive: false, keyboard: false, zIndexOffset: 2000 }).addTo(map); }
+    else me.marker.setLatLng(me.ll);
+    updateMeArrow();
+    if (me.follow) centerOnMe(first);
+  }, err => {
+    showInfo("Position refusée", err.code === 1 ? "Autorise la localisation pour ParaSpot dans les réglages du téléphone pour voir ta position. La carte tourne quand même avec la boussole." : "Position introuvable pour l'instant (signal GPS faible).");
+  }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 });
+}
+function stopPosition() {
+  if (me.watch != null) navigator.geolocation.clearWatch(me.watch);
+  me.watch = null; me.ll = null;
+  if (me.marker) { map.removeLayer(me.marker); me.marker = null; }
+}
+function centerOnMe(first) {
+  if (!me.ll || !map) return;
+  const z = first ? Math.max(map.getZoom(), 11) : map.getZoom();
+  // carte tournée : le centre de la carte est déjà au milieu de la partie visible ; sinon on décale
+  const dy = compass.sized ? 0 : innerHeight / 2 - visibleCenterY();
+  const c = map.unproject(map.project(me.ll, z).add([0, dy]), z);
+  map.setView(c, z, { animate: !reduce && !first });
+}
+function updateMeArrow() {
+  const el = me.marker?.getElement()?.querySelector(".me-arrow"); if (!el) return;
+  const h = compass.smooth ?? compass.heading;
+  el.style.display = h == null ? "none" : "";
+  if (h != null) el.style.transform = `rotate(${h}deg)`;
+}
 async function setCompassMode(mode) {
   if (mode === "follow") {
     if (!(await startCompass())) return;
     compass.mode = "follow"; compass.smooth = null; cancelAnimationFrame(compass.raf); compassLoop();
-    setTimeout(() => { if (compass.mode === "follow" && compass.heading == null) { setCompassMode("north"); showInfo("Boussole indisponible", "Ce téléphone ou ce navigateur ne donne pas son orientation. La carte reste orientée vers le nord."); } }, 2500);
+    setMapFocus(true); startPosition();
+    setTimeout(() => { if (compass.mode === "follow" && compass.heading == null) { compass.mode = "north"; cancelAnimationFrame(compass.raf); setMapRotation(0); document.querySelectorAll('[data-action="compass"]').forEach(b => b.setAttribute("aria-pressed", "true")); showInfo("Boussole indisponible", "Ce téléphone ne donne pas son orientation : la carte reste au nord, centrée sur ta position. Touche à nouveau la boussole pour arrêter."); compass.mode = "position"; } }, 2500);
   } else {
-    compass.mode = "north"; cancelAnimationFrame(compass.raf); setMapRotation(0);
+    compass.mode = "north"; cancelAnimationFrame(compass.raf); setMapRotation(0); stopPosition();
   }
   document.querySelectorAll('[data-action="compass"]').forEach(b => {
     b.setAttribute("aria-pressed", String(compass.mode === "follow"));
     b.setAttribute("aria-label", compass.mode === "follow" ? "Boussole : la carte suit l'orientation du téléphone. Toucher pour revenir au nord." : "Boussole : carte orientée vers le nord. Toucher pour suivre l'orientation du téléphone.");
   });
   document.querySelectorAll(".rose-btn").forEach(b => b.textContent = compass.mode === "follow" ? "Rose orientée comme ton téléphone · revenir au nord" : "Orienter la rose avec mon téléphone");
-  if (compass.mode === "follow") showInfo("Boussole active", "La carte tourne avec ton téléphone : ce qui est en haut de l'écran est devant toi. Touche à nouveau la boussole pour revenir au nord.");
+  if (compass.mode === "follow") showInfo("Boussole active", "La flèche bleue, c'est toi. La carte tourne avec ton téléphone : ce qui est en haut de l'écran est devant toi. Touche à nouveau la boussole pour revenir au nord.");
 }
 let map = null, tileLayer = null, stationLayer = null, farLayer = null, markersLayer = null, routeLayer = null, markerObjs = {}, clusterObjs = [];
 function initMap() {
@@ -992,6 +1040,7 @@ function initMap() {
   markersLayer = L.layerGroup().addTo(map);
   map.on("zoomend", () => { renderMarkers(); renderFar(); zoomClasses(); buildBasemap(); });
   map.on("moveend", () => renderFar());
+  map.on("dragstart", () => { me.follow = false; });
   map.on("movestart", () => document.body.classList.add("is-moving"));
   /* Mode carte : dès que l'utilisateur manipule la carte, l'interface se replie pour laisser voir le fond */
   ["pointerdown", "wheel", "touchstart"].forEach(ev => $("#map").addEventListener(ev, () => setMapFocus(true), { passive: true }));
@@ -1053,11 +1102,25 @@ function drawStations() {
 function renderFar() {
   if (!farLayer || !map) return;
   farLayer.clearLayers();
-  if (map.getZoom() < 8) return;
-  const b = map.getBounds().pad(0.2);
-  ALL_SPOTS.filter(s => !FETCH_IDS.has(s.id) && (settings.includeTreuil || s.profile !== "treuil") && b.contains([s.lat, s.lon])).slice(0, 400).forEach(s => {
-    const mk = L.marker([s.lat, s.lon], { icon: L.divIcon({ className: "", html: `<div class="mk-far" title="${esc(s.name)}"></div>`, iconSize: [18, 18], iconAnchor: [9, 9] }), title: s.name, keyboard: false });
-    mk.on("click", () => showFar(s)); mk.addTo(farLayer);
+  const b = map.getBounds().pad(0.15), z = map.getZoom(), cell = z >= 9 ? 0 : 34;
+  const list = ALL_SPOTS.filter(s => !FETCH_IDS.has(s.id) && (settings.includeTreuil || s.profile !== "treuil") && b.contains([s.lat, s.lon]));
+  // regroupement par case d'écran quand on est loin : un point gris avec le nombre de spots
+  const cells = new Map();
+  list.forEach(s => {
+    const p = map.latLngToLayerPoint([s.lat, s.lon]), k = cell ? `${Math.floor(p.x / cell)}:${Math.floor(p.y / cell)}` : s.id;
+    if (!cells.has(k)) cells.set(k, []); cells.get(k).push(s);
+  });
+  [...cells.values()].slice(0, 600).forEach(g => {
+    if (g.length === 1) {
+      const s = g[0];
+      const mk = L.marker([s.lat, s.lon], { icon: L.divIcon({ className: "", html: `<div class="mk-far" title="${esc(s.name)}"></div>`, iconSize: [18, 18], iconAnchor: [9, 9] }), title: s.name, keyboard: false });
+      mk.on("click", () => showFar(s)); mk.addTo(farLayer);
+    } else {
+      const lat = g.reduce((t, s) => t + s.lat, 0) / g.length, lon = g.reduce((t, s) => t + s.lon, 0) / g.length;
+      const mk = L.marker([lat, lon], { icon: L.divIcon({ className: "", html: `<div class="mk-far-n">${g.length}</div>`, iconSize: [26, 26], iconAnchor: [13, 13] }), title: `${g.length} spots sans prévisions (hors de portée)`, keyboard: false });
+      mk.on("click", () => map.flyToBounds(L.latLngBounds(g.map(s => [s.lat, s.lon])), { padding: [60, 60], maxZoom: 11, duration: 0.8 }));
+      mk.addTo(farLayer);
+    }
   });
 }
 function showFar(s) {
@@ -1288,7 +1351,7 @@ function updateDetailHour(h) {
 
 /* Réglages */
 function openPanel() { state.panel = true; renderPanelOnly(); $("#panel").classList.add("is-open"); setTimeout(() => $("#panel").focus(), 50); }
-function renderPanelOnly() { $("#panel").innerHTML = renderPanel(settings, state.notifState, state.onbStep, state.subJson); }
+function renderPanelOnly() { $("#panel").innerHTML = renderPanel(settings, state.notifState, state.onbStep, state.subJson); syncPickerHeads(); }
 function closePanel() { if (state.favStep && !settings.favsAsked) { settings.favsAsked = true; saveSettings(); } if (state.setup?.first) return; // premier lancement : la ville de départ est nécessaire
   state.panel = false; state.onbStep = -1; state.favStep = false; state.setup = null; state.spotForm = null; state.delConfirm = null; state.backupMsg = ""; $("#panel").classList.remove("is-open"); }
 function applyTheme() {
@@ -1345,14 +1408,25 @@ document.addEventListener("click", e => {
   else if (a === "legend-close") { settings.legendHidden = true; saveSettings(); document.body.classList.add("no-legend"); }
   else if (a === "toast-close") { $("#toast").classList.remove("is-on"); }
   else if (a === "fav-open") openFavPicker();
+  else if (a === "fav-all") {
+    const ids = favCandidates(settings).list.map(x => x.id);
+    settings.favs = el.dataset.on === "1" ? [...new Set([...settings.favs, ...ids])] : settings.favs.filter(x => !ids.includes(x));
+    saveSettings(); const l = $("#fav-list"); if (l) l.innerHTML = renderFavList(settings); syncPickerHeads();
+    const c = $("#fav-count"); if (c) c.textContent = `${settings.favs.length} favori${settings.favs.length > 1 ? "s" : ""}`;
+  }
+  else if (a === "spots-all") {
+    const ids = ALL_SPOTS.filter(x => FETCH_IDS.has(x.id)).map(x => x.id);
+    settings.hidden = el.dataset.on === "1" ? settings.hidden.filter(x => !ids.includes(x)) : [...new Set([...settings.hidden, ...ids])];
+    saveSettings(); applySpotFilter(); if (!items().some(x => x.spot.id === state.sel)) { state.pinned = false; pickDefault(); } if (FORECAST) renderAll(false); renderPanelOnly();
+  }
   else if (a === "setup-open") openSetup(false);
-  else if (a === "compass") setCompassMode(compass.mode === "follow" ? "north" : "follow");
+  else if (a === "compass") setCompassMode(compass.mode === "north" ? "follow" : "north");
   else if (a === "pf-reset") { settings.profiles = {}; saveSettings(); buildForecast(); renderAll(false); renderPanelOnly(); }
   else if (a === "setup-cancel") { state.setup = null; renderPanelOnly(); }
   else if (a === "setup-search") setupSearch();
   else if (a === "setup-geo") setupGeo();
   else if (a === "setup-pick") { const st = state.setup, r = st.results[+el.dataset.i]; st.home = { name: r.name, lat: r.lat, lon: r.lon }; st.results = []; st.msg = ""; renderPanelOnly(); }
-  else if (a === "st-soft") { state.setup.trans.soft = el.dataset.value; renderPanelOnly(); }
+  else if (a === "st-soft") { const t = state.setup.trans; t.soft = el.dataset.value; if (t.soft === "pied" && t.softKm > 5) t.softKm = 2; renderPanelOnly(); }
   else if (a === "st-km") { state.setup.trans.softKm = +el.dataset.value; renderPanelOnly(); }
   else if (a === "st-drive") { state.setup.trans.maxDrive = +el.dataset.value; renderPanelOnly(); }
   else if (a === "setup-save") setupSave();
@@ -1426,13 +1500,13 @@ document.addEventListener("toggle", e => {
   const tmp = document.createElement("div"); const keepQ = state.favQ;
   const s = settings, norm = t => (t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(), q = norm(keepQ).trim();
   let list = ALL_SPOTS.filter(x => !s.hidden.includes(x.id) && (s.includeTreuil || x.profile !== "treuil" || s.favs.includes(x.id)));
-  if (q) list = list.filter(x => norm(`${x.name} ${x.city} ${x.region} ${x.dept}`).includes(q));
+  if (q) list = list.filter(x => norm(`${x.name} ${x.city} ${x.region} ${x.dept} ${DEPT_NAMES[x.dept] || ""}`).includes(q));
   const g = byDept(list).find(([r]) => r === name); if (!g) return;
   tmp.innerHTML = g[1].map(x => `<label class="check pk-spot pk-fav"><input type="checkbox" data-fav-toggle="${x.id}" ${s.favs.includes(x.id) ? "checked" : ""}>${kindIcon(x.kind)}<span>${esc(x.name)}<small>${esc(x.city.replace(/\s*\((\d{2}|2A|2B)\)/, ""))}${x.distKm != null ? ` · ${x.distKm} km` : ""}${x.imported ? ` · ${x.sources[0].replace(" (ODbL)", "")}` : ""}</small></span></label>`).join("");
   d.append(...tmp.childNodes);
 }, true);
 document.addEventListener("input", e => {
-  if (e.target.id === "fav-q") { state.favQ = e.target.value; const l = $("#fav-list"); if (l) l.innerHTML = renderFavList(settings); return; }
+  if (e.target.id === "fav-q") { state.favQ = e.target.value; const l = $("#fav-list"); if (l) l.innerHTML = renderFavList(settings); syncPickerHeads(); return; }
   const sf = e.target.dataset?.sf;
   if (sf && state.spotForm) {
     if (sf === "tide") state.spotForm.tide = e.target.checked;
@@ -1463,17 +1537,27 @@ document.addEventListener("change", e => {
     settings.favs = e.target.checked ? [...new Set([...settings.favs, id])] : settings.favs.filter(x => x !== id);
     saveSettings();
     const c = $("#fav-count"); if (c) c.textContent = `${settings.favs.length} favori${settings.favs.length > 1 ? "s" : ""}`;
-    return;
+    syncPickerHeads(); return;
+  }
+  if (e.target.dataset.favGroup) {
+    const ids = e.target.dataset.favGroup.split(",");
+    settings.favs = e.target.checked ? [...new Set([...settings.favs, ...ids])] : settings.favs.filter(x => !ids.includes(x));
+    saveSettings();
+    e.target.closest("details").querySelectorAll("[data-fav-toggle]").forEach(i => i.checked = e.target.checked);
+    const c = $("#fav-count"); if (c) c.textContent = `${settings.favs.length} favori${settings.favs.length > 1 ? "s" : ""}`;
+    syncPickerHeads(); return;
   }
   if (e.target.dataset.spotToggle) {
     const id = e.target.dataset.spotToggle;
     settings.hidden = e.target.checked ? settings.hidden.filter(x => x !== id) : [...new Set([...settings.hidden, id])];
-    saveSettings(); applySpotFilter(); if (!items().some(x => x.spot.id === state.sel)) pickDefault(); renderAll(false); return;
+    saveSettings(); applySpotFilter(); if (!items().some(x => x.spot.id === state.sel)) pickDefault(); renderAll(false); syncPickerHeads(); return;
   }
   if (e.target.dataset.regionToggle) {
     const ids = e.target.dataset.regionToggle.split(",");
     settings.hidden = e.target.checked ? settings.hidden.filter(x => !ids.includes(x)) : [...new Set([...settings.hidden, ...ids])];
-    saveSettings(); applySpotFilter(); if (!items().some(x => x.spot.id === state.sel)) pickDefault(); renderAll(false); renderPanelOnly(); return;
+    saveSettings(); applySpotFilter(); if (!items().some(x => x.spot.id === state.sel)) pickDefault(); renderAll(false);
+    e.target.closest("details").querySelectorAll("[data-spot-toggle]").forEach(i => i.checked = e.target.checked);
+    syncPickerHeads(); return;
   }
   const k = e.target.dataset.setting; if (!k) return;
   if (e.target.type === "checkbox") settings[k] = e.target.checked;
@@ -1579,9 +1663,10 @@ function renderSpotAir(spot) {
 }
 function renderSpotPicker(s) {
   const groups = byDept(ALL_SPOTS.filter(x => FETCH_IDS.has(x.id) && (s.includeTreuil || x.profile !== "treuil")));
-  return `<div class="picker">${groups.map(([r, list]) => {
+  return `<div class="pk-all"><button type="button" class="mini-btn" data-action="spots-all" data-on="1">Tout sélectionner</button><button type="button" class="mini-btn" data-action="spots-all" data-on="0">Tout désélectionner</button></div>
+    <div class="picker">${groups.map(([r, list]) => {
     const on = list.filter(x => !s.hidden.includes(x.id)).length;
-    return `<details class="pk-reg"><summary><label class="check" onclick="event.stopPropagation()"><input type="checkbox" data-region-toggle="${esc(list.map(x => x.id).join(","))}" ${on ? "checked" : ""}>${esc(r)}</label><span class="pk-n">${on}/${list.length}</span></summary>
+    return `<details class="pk-reg" data-ids="${esc(list.map(x => x.id).join(","))}" data-mode="show"><summary><label class="check" onclick="event.stopPropagation()"><input type="checkbox" class="pk-head" data-region-toggle="${esc(list.map(x => x.id).join(","))}" ${on === list.length ? "checked" : ""}>${esc(r)}</label><span class="pk-n">${on}/${list.length}</span></summary>
       ${list.map(x => `<label class="check pk-spot"><input type="checkbox" data-spot-toggle="${x.id}" ${s.hidden.includes(x.id) ? "" : "checked"}>${kindIcon(x.kind)}${esc(x.name)}</label>`).join("")}</details>`;
   }).join("")}</div>`;
 }
@@ -1633,7 +1718,7 @@ function renderCustomProfiles(s) {
 /* COMPOSANT: ville de départ et transport (premier lancement et réglages) */
 function transportSummary(t) {
   const parts = [];
-  if (t.train) parts.push(`Train + ${SOFT[t.soft].label.toLowerCase()} (${t.softKm} km max depuis la gare)`);
+  if (t.train) parts.push(`Train + ${(SOFT[t.soft] || SOFT.vel).label.toLowerCase()} (${t.softKm} km max depuis la gare)`);
   if (t.car) parts.push(`Voiture (${fmtDur(t.maxDrive)} max)`);
   return parts.join(" · ") || "Aucun mode choisi";
 }
@@ -1644,18 +1729,18 @@ function renderSetup(st) {
     ${st.first ? `<p class="hint" style="font-size:15px">ParaSpot cherche les créneaux de vol et de gonflage à ta portée. Deux questions pour commencer.</p>` : ""}
     <div class="group">
       <div class="field"><label class="lbl" for="setup-q">D'où pars-tu ?</label>
-        <div class="setup-search"><input class="txt" id="setup-q" placeholder="Ta ville, ex. Rennes, Lyon, Annecy" value="${esc(st.q || "")}" autocomplete="off" enterkeyhint="search"><button type="button" class="btn btn--wing" data-action="setup-search">Chercher</button></div>
+        <div class="setup-search"><input class="txt" id="setup-q" placeholder="Ville ou code postal, ex. Rennes ou 35000" inputmode="search" value="${esc(st.q || "")}" autocomplete="off" enterkeyhint="search"><button type="button" class="btn btn--wing" data-action="setup-search">Chercher</button></div>
         <button type="button" class="btn btn--ghost" data-action="setup-geo">${I.pin}Utiliser ma position</button>
         ${st.loading ? `<p class="hint">Recherche…</p>` : ""}
         ${st.results?.length ? `<div class="setup-res">${st.results.map((r, i) => `<button type="button" class="setup-r" data-action="setup-pick" data-i="${i}"><b>${esc(r.name)}</b><small>${esc(r.sub)}</small></button>`).join("")}</div>` : ""}
         ${st.home ? `<p class="st-sum">${I.pin}<span>Départ : <b>${esc(st.home.name)}</b></span></p>` : ""}
         ${st.msg ? `<p class="hint sf-err">${esc(st.msg)}</p>` : ""}</div>
       <div class="field"><span class="lbl">Comment te déplaces-tu ?</span>
-        <label class="check"><input type="checkbox" data-st="train" ${t.train ? "checked" : ""}>Train + mobilité douce (vélo ou skate)</label>
-        ${t.train ? `<div class="sub-opts"><span class="hint">Pour finir le trajet depuis la gare :</span>${seg("st-soft", Object.entries(SOFT).map(([k, v]) => [k, v.short]), t.soft)}
-          <span class="hint">Distance maximum entre la gare et le site :</span>${seg("st-km", [[5, "5 km"], [10, "10 km"], [15, "15 km"], [20, "20 km"]], t.softKm)}</div>` : ""}
+        <label class="check"><input type="checkbox" data-st="train" ${t.train ? "checked" : ""}>Train + mobilité douce</label>
+        ${t.train ? `<div class="sub-opts"><span class="hint">Pour finir le trajet depuis la gare (véhicule électrique léger : trottinette, skate ou vélo électrique) :</span>${seg("st-soft", Object.entries(SOFT).map(([k, v]) => [k, v.short]), t.soft)}
+          <span class="hint">Distance maximum entre la gare et le site :</span>${seg("st-km", [[2, "2 km"], [5, "5 km"], [10, "10 km"], [15, "15 km"], [20, "20 km"]], t.softKm)}</div>` : ""}
         <label class="check"><input type="checkbox" data-st="car" ${t.car ? "checked" : ""}>Voiture ou covoiturage</label>
-        ${t.car ? `<div class="sub-opts"><span class="hint">Temps de route maximum :</span>${seg("st-drive", [[60, "1 h"], [90, "1 h 30"], [120, "2 h"], [180, "3 h"], [240, "4 h"]], t.maxDrive)}</div>` : ""}
+        ${t.car ? `<div class="sub-opts"><span class="hint">Temps de route maximum :</span>${seg("st-drive", [[60, "1 h"], [90, "1 h 30"], [120, "2 h"], [150, "2 h 30"], [180, "3 h"], [240, "4 h"]], t.maxDrive)}</div>` : ""}
         <p class="hint">Les spots proches de chez toi (moins de ${t.softKm} km) sont toujours proposés. Les temps de train et de route sont estimés d'après les distances : vérifie toujours les horaires.</p></div>
     </div>
     <div class="btn-row fav-actions"><button type="button" class="btn btn--wing" data-action="setup-save">${st.first ? "Continuer" : "Enregistrer"}</button></div>
@@ -1667,8 +1752,17 @@ function openSetup(first) {
 }
 async function setupSearch() {
   const st = state.setup, q = ($("#setup-q")?.value || "").trim(); st.q = q;
-  if (q.length < 2) { st.msg = "Écris au moins deux lettres."; renderPanelOnly(); return; }
+  if (q.length < 2) { st.msg = "Écris au moins deux lettres ou un code postal."; renderPanelOnly(); return; }
   st.loading = true; st.msg = ""; st.results = []; renderPanelOnly();
+  const cp = /\b(\d{5})\b/.exec(q);
+  if (cp) {
+    try {
+      const r = await (await fetch(`https://geo.api.gouv.fr/communes?codePostal=${cp[1]}&fields=nom,centre,departement,codesPostaux&format=json`)).json();
+      st.results = (r || []).filter(x => x.centre?.coordinates).map(x => ({ name: x.nom, lat: x.centre.coordinates[1], lon: x.centre.coordinates[0], sub: [cp[1], x.departement?.nom].filter(Boolean).join(" · ") }));
+      if (!st.results.length) st.msg = `Aucune commune pour le code postal ${cp[1]}.`;
+    } catch { st.msg = "Recherche par code postal impossible sans connexion. Réessaie."; }
+    st.loading = false; renderPanelOnly(); return;
+  }
   try {
     const r = await (await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=6&language=fr&countryCode=FR&format=json`)).json();
     st.results = (r.results || []).map(x => ({ name: x.name, lat: x.latitude, lon: x.longitude, sub: [x.admin2, x.admin1, x.postcodes?.[0]].filter(Boolean).join(" · ") }));
@@ -1706,6 +1800,16 @@ function syncFetch(force) {
   computeFetchSet(); applySpotFilter(); drawStations(); renderFar();
   const missing = fetchSpots().some(s => !RAW?.results.some(r => r.spot.id === s.id));
   if (RAW && (missing || force)) { RAW.stale = true; refresh(true); }
+}
+/* Cases de département : cochées si tout est choisi, à moitié si une partie, avec le compte à jour */
+function syncPickerHeads() {
+  document.querySelectorAll("#panel details.pk-reg[data-ids]").forEach(d => {
+    const ids = d.dataset.ids.split(","), fav = d.dataset.mode === "fav";
+    const n = ids.filter(id => fav ? settings.favs.includes(id) : !settings.hidden.includes(id)).length;
+    const head = d.querySelector(".pk-head");
+    if (head) { head.checked = n === ids.length; head.indeterminate = n > 0 && n < ids.length; }
+    const lab = d.querySelector(".pk-n"); if (lab) lab.textContent = fav ? `${n} ★ / ${ids.length}` : `${n}/${ids.length}`;
+  });
 }
 /* COMPOSANT: spots ajoutés (liste et formulaire) */
 function renderCustomList(s) {
@@ -1788,17 +1892,24 @@ function restoreFrom(text) {
   setTimeout(() => location.reload(), 900);
 }
 /* COMPOSANT: choix des spots favoris (premier lancement et réglages) */
-function renderFavList(s) {
+function favCandidates(s) {
   const norm = t => (t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   const q = norm(state.favQ).trim();
   let list = ALL_SPOTS.filter(x => !s.hidden.includes(x.id) && (s.includeTreuil || x.profile !== "treuil" || s.favs.includes(x.id)));
-  if (q) list = list.filter(x => norm(`${x.name} ${x.city} ${x.region} ${x.dept}`).includes(q));
+  if (q) list = list.filter(x => norm(`${x.name} ${x.city} ${x.region} ${x.dept} ${DEPT_NAMES[x.dept] || ""}`).includes(q));
+  return { list, q };
+}
+function renderFavList(s) {
+  const { list, q } = favCandidates(s);
   if (!list.length) return `<p class="hint">Aucun spot ne correspond. Tu peux l'ajouter toi-même dans Réglages > Mes spots ajoutés.</p>`;
   const homeD = homeDeptGuess(), groups = byDept(list), many = list.length > 60;
-  return `<div class="picker">${groups.map(([r, items]) => {
+  return `<div class="pk-all"><button type="button" class="mini-btn" data-action="fav-all" data-on="1">Tout sélectionner${q ? ` (${list.length})` : ""}</button><button type="button" class="mini-btn" data-action="fav-all" data-on="0">Tout désélectionner</button></div>
+    ${!q && list.length > 80 ? `<p class="hint">Astuce : cherche un département ou une ville avant « Tout sélectionner ».</p>` : ""}
+    <div class="picker">${groups.map(([r, items]) => {
     const n = items.filter(x => s.favs.includes(x.id)).length;
     const open = q ? items.length <= 40 || groups.length === 1 : n || (homeD && r.includes(`(${homeD})`));
-    return `<details class="pk-reg" ${open ? "open" : ""}><summary><span class="pk-r">${esc(r)}</span><span class="pk-n">${n ? `${n} ★ · ` : ""}${items.length}</span></summary>
+    const ids = items.map(x => x.id).join(",");
+    return `<details class="pk-reg" ${open ? "open" : ""} data-ids="${esc(ids)}" data-mode="fav"><summary><label class="check pk-r" onclick="event.stopPropagation()"><input type="checkbox" class="pk-head" data-fav-group="${esc(ids)}" ${n === items.length ? "checked" : ""}>${esc(r)}</label><span class="pk-n">${n} ★ / ${items.length}</span></summary>
       ${items.slice(0, many && !open ? 0 : 400).map(x => `<label class="check pk-spot pk-fav"><input type="checkbox" data-fav-toggle="${x.id}" ${s.favs.includes(x.id) ? "checked" : ""}>${kindIcon(x.kind)}<span>${esc(x.name)}<small>${esc(x.city.replace(/\s*\((\d{2}|2A|2B)\)/, ""))}${x.distKm != null ? ` · ${x.distKm} km` : ""}${x.imported ? ` · ${x.sources[0].replace(" (ODbL)", "")}` : ""}</small></span></label>`).join("")}</details>`;
   }).join("")}</div>`;
 }
