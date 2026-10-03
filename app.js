@@ -208,11 +208,11 @@ function buildForecast() {
     const fresh = ALL_SPOTS.find(s => s.id === spot.id) || spot;
     const byModel = {};
     avail.forEach(k => { if (forecasts[k]) byModel[k] = analyzeSpot(fresh, forecasts[k], ss, tide); });
-    return { spot: fresh, a: byModel[usedModel], low: analyzeSpot(fresh, forecasts[usedModel], { ...ss, minScore: 40 }, tide), byModel, days: forecasts[usedModel].days };
+    return { spot: fresh, a: byModel[usedModel], low: analyzeSpot(fresh, forecasts[usedModel], { ...ss, minScore: 40 }, tide), byModel, days: forecasts[usedModel].days, tide };
   });
   FORECAST = DAYS.map(d => {
     const bySpot = {};
-    analyses.forEach(({ spot, a, low, byModel, days }) => {
+    analyses.forEach(({ spot, a, low, byModel, days, tide }) => {
       const sun = days?.[d.date];
       const pick = an => an.hours.filter(h => h.date === d.date && h.hour >= 7 && h.hour <= 21).map(roundHour).map(h => pastFix(d.date, h));
       const models = {};
@@ -223,7 +223,9 @@ function buildForecast() {
         agree: hours.map((h, i) => agreement(Object.values(models).map(m => m[i]))),
         slots: a.windows.filter(w => w.date === d.date && stillOk(spot, w)).sort(bySlot),
         lowSlots: low.windows.filter(w => w.date === d.date && stillOk(spot, w)).sort(bySlot),
-        sun: sun ? { sunrise: sun.sunrise.slice(11, 16), sunset: sun.sunset.slice(11, 16) } : null
+        sun: sun ? { sunrise: sun.sunrise.slice(11, 16), sunset: sun.sunset.slice(11, 16) } : null,
+        lows: spot.tide ? (tide?._lows || []).filter(l => l.time.startsWith(d.date)).map(l => l.time.slice(11, 16)) : [],
+        highs: spot.tide ? (tide?._highs || []).filter(l => l.time.startsWith(d.date)).map(l => l.time.slice(11, 16)) : []
       };
     });
     return { date: d.date, bySpot };
@@ -564,6 +566,19 @@ function renderStatement({ day, slot, spot, next, offline, updatedAt, reason }) 
   </button>`;
 }
 
+/* COMPOSANT: marée (basse mer et créneau autorisé autour de la basse mer) */
+const hm = t => t.replace(":", "h");
+function tideWindows(spot, lows) {
+  const k = spot.tideRule?.aroundLow; if (!k) return [];
+  return lows.map(t => { const [h, m] = t.split(":").map(Number), c = h * 60 + m; return [Math.max(0, c - k * 60), Math.min(24 * 60 - 1, c + k * 60)]; });
+}
+function renderTide(spot, d) {
+  if (!d.lows?.length && !d.highs?.length) return `<p class="hint">Horaires de marée indisponibles pour ce jour : vérifie sur le SHOM.</p>`;
+  const win = tideWindows(spot, d.lows || []);
+  return `<div class="tide-row">${(d.lows || []).map(t => `<span class="tide-chip tide-low">${I.wave}Basse mer <b class="num">${hm(t)}</b></span>`).join("")}${(d.highs || []).map(t => `<span class="tide-chip">Pleine mer <b class="num">${hm(t)}</b></span>`).join("")}</div>
+    ${win.length ? `<p class="tide-rule"><b>Vol autorisé ${spot.tideRule.aroundLow} h avant et après la basse mer</b> : ${win.map(([a, b]) => `${fmtClock(a)} à ${fmtClock(b)}`).join(" et ")}. Les heures en dehors sont notées « Non ».</p>` : ""}
+    <p class="hint">Heures indicatives (modèle Open-Meteo Marine, précision de l'ordre d'une demi-heure) : vérifie toujours sur le SHOM avant de partir.</p>`;
+}
 /* COMPOSANT: spot-3-jours (le spot suivi sur aujourd'hui, demain et après-demain) */
 function renderSpotDays(spot, fav) {
   const off = state.offline ? `<span class="pill-off">${I.offline}Hors connexion · prévisions de ${fmtHHMM(UPDATED_AT.slice(11, 16))}</span>` : "";
@@ -574,6 +589,7 @@ function renderSpotDays(spot, fav) {
       <span class="s3-v s3-v--${s.verdict.key}">${renderVerdictIcon(s.verdict.key)}${s.verdict.label}</span>
       <b class="s3-slot num">${slot ? fmtRange(slot.start, slot.end) : "Aucun"}</b>
       <span class="s3-w num">${renderWindArrow(s.dir, 13)}${frDir(sectorCode(s.dir))} ${s.wind}<small> km/h</small></span>
+      ${spot.tide && d.lows?.length ? `<span class="s3-tide num">BM ${d.lows.map(hm).join(" · ")}</span>` : ""}
       ${renderRibbon(d.hours, state.hour)}
     </button>`;
   }).join("");
@@ -600,6 +616,7 @@ function renderCard(spot, hours, slot, selected, hour) {
       <span class="wind-big num">${renderWindArrow(s.dir, 30)}<span><b>${s.wind}</b><small>km/h · raf. ${s.gust} · ${frDir(sectorCode(s.dir))}</small></span></span>
       <span class="slot-big num">${slot ? `<b>${fmtRange(slot.start, slot.end)}</b><small>meilleur créneau</small>` : `<b style="font-size:15px">Aucun</b><small>créneau</small>`}</span>
     </span>
+    ${spot.tide ? (() => { const dd = FORECAST?.[state.day]?.bySpot[spot.id]; return dd?.lows?.length ? `<span class="card-tide num">${I.wave}Basse mer ${dd.lows.map(hm).join(" · ")}${spot.tideRule ? ` · vol ±${spot.tideRule.aroundLow} h` : ""}</span>` : ""; })() : ""}
     ${renderRibbon(hours, hour)}
   </button>`;
 }
@@ -739,6 +756,7 @@ function renderDetail(spot, dayIndex, hour) {
     <div class="d-verdict"><span class="vbadge vbadge--${s.verdict.key}">${renderVerdictIcon(s.verdict.key)}${s.verdict.label}</span><b class="num">${slot ? fmtRange(slot.start, slot.end) : "Pas de créneau"}</b></div>
     <section class="d-sec"><h3>Vent</h3><div class="instrument">${renderCompass(spot, d.hours, focus)}${renderGauge(spot, focus)}</div>
       <button type="button" class="mini-btn rose-btn" data-action="compass" aria-pressed="${compass.mode === "follow"}">${compass.mode === "follow" ? "Rose orientée comme ton téléphone · revenir au nord" : "Orienter la rose avec mon téléphone"}</button></section>
+    ${spot.tide ? `<section class="d-sec"><h3>Marée</h3>${renderTide(spot, d)}</section>` : ""}
     <section class="d-sec"><h3>Heure par heure</h3><div class="hours" id="d-hours">${d.hours.map(h => renderHourChip(h, h.hour === focus.hour)).join("")}</div></section>
     <section class="d-sec"><h3>Modèles de prévision</h3>${renderModelCompare(spot, d, focus.hour)}</section>
     <section class="d-sec"><h3>Plan de vol</h3>${renderTripPlan(spot, slot, d.hours, day, sun)}</section>
@@ -1331,13 +1349,14 @@ function openDetail(spotId) {
   el.style.setProperty("--clip", `${r.top}px ${innerWidth - r.right}px ${innerHeight - r.bottom}px ${r.left}px`);
   el.innerHTML = renderDetail(spotById(spotId), state.day, state.hour);
   if (MAP_ROT) { const rose = el.querySelector(".compass"); if (rose) rose.style.transform = `rotate(${MAP_ROT}deg)`; }
-  history.replaceState(null, "", `?spot=${spotId}&date=${DAYS[state.day].date}`);
+  const url = `?spot=${spotId}&date=${DAYS[state.day].date}`;
+  if (state.detail) history.replaceState(history.state, "", url); else navPush("detail", url);
   el.scrollTop = 0; void el.offsetWidth;
   el.classList.add("is-open"); state.detail = true;
   setTimeout(() => el.focus(), 50);
   const p = el.querySelector('.hc[aria-pressed="true"]'); if (p) { const sc = $("#d-hours"); sc.scrollLeft = p.offsetLeft - 16; }
 }
-function closeDetail() { $("#detail").classList.remove("is-open"); state.detail = false; history.replaceState(null, "", location.pathname); const c = $(`.card[data-spot="${state.sel}"]`); if (c) c.focus({ preventScroll: true }); }
+function closeDetail() { $("#detail").classList.remove("is-open"); state.detail = false; if (!history.state?.ov) history.replaceState(null, "", location.pathname); const c = $(`.card[data-spot="${state.sel}"]`); if (c) c.focus({ preventScroll: true }); }
 function updateDetailHour(h) {
   const spot = spotById(state.sel), d = FORECAST[state.day].bySpot[spot.id], f = d.hours.find(x => x.hour === h), g = gaugeModel(spot, f);
   const rot = $("#cp-rot"); if (!rot) return;
@@ -1350,7 +1369,24 @@ function updateDetailHour(h) {
 }
 
 /* Réglages */
-function openPanel() { state.panel = true; renderPanelOnly(); $("#panel").classList.add("is-open"); setTimeout(() => $("#panel").focus(), 50); }
+/* Bouton retour du téléphone : chaque écran ouvert ajoute une étape dans l'historique, « retour » ferme l'écran du dessus */
+let navSkip = 0;
+function navPush(kind, url) { history.pushState({ ov: kind }, "", url ?? location.href); }
+function navDone() { if (history.state?.ov) { navSkip++; history.back(); } }
+addEventListener("popstate", () => {
+  if (navSkip > 0) { navSkip--; return; }
+  if (state.picking) { endPick(null); navPush("sub"); return; }
+  if (state.detail) { closeDetail(); return; }
+  if (state.panel) {
+    if (state.setup) { if (state.setup.first) { navPush("panel"); return; } state.setup = null; renderPanelOnly(); return; }
+    if (state.spotForm) { state.spotForm = null; renderPanelOnly(); return; }
+    if (state.favStep) { finishFavs(false, true); return; }
+    if (state.onbStep >= 0) { state.onbStep = -1; renderPanelOnly(); return; }
+    closePanel(); return;
+  }
+  if (document.body.classList.contains("map-focus")) setMapFocus(false);
+});
+function openPanel() { navPush("panel"); state.panel = true; renderPanelOnly(); $("#panel").classList.add("is-open"); setTimeout(() => $("#panel").focus(), 50); }
 function renderPanelOnly() { $("#panel").innerHTML = renderPanel(settings, state.notifState, state.onbStep, state.subJson); syncPickerHeads(); }
 function closePanel() { if (state.favStep && !settings.favsAsked) { settings.favsAsked = true; saveSettings(); } if (state.setup?.first) return; // premier lancement : la ville de départ est nécessaire
   state.panel = false; state.onbStep = -1; state.favStep = false; state.setup = null; state.spotForm = null; state.delConfirm = null; state.backupMsg = ""; $("#panel").classList.remove("is-open"); }
@@ -1422,7 +1458,7 @@ document.addEventListener("click", e => {
   else if (a === "setup-open") openSetup(false);
   else if (a === "compass") setCompassMode(compass.mode === "north" ? "follow" : "north");
   else if (a === "pf-reset") { settings.profiles = {}; saveSettings(); buildForecast(); renderAll(false); renderPanelOnly(); }
-  else if (a === "setup-cancel") { state.setup = null; renderPanelOnly(); }
+  else if (a === "setup-cancel") { navDone(); state.setup = null; renderPanelOnly(); }
   else if (a === "setup-search") setupSearch();
   else if (a === "setup-geo") setupGeo();
   else if (a === "setup-pick") { const st = state.setup, r = st.results[+el.dataset.i]; st.home = { name: r.name, lat: r.lat, lon: r.lon }; st.results = []; st.msg = ""; renderPanelOnly(); }
@@ -1449,7 +1485,7 @@ document.addEventListener("click", e => {
     if (state.delConfirm !== id) { state.delConfirm = id; renderPanelOnly(); }
     else { state.delConfirm = null; settings.custom = settings.custom.filter(c => c.id !== id); settings.favs = settings.favs.filter(x => x !== id); saveSettings(); rebuildSpots(); applySpotFilter(); if (state.sel === id) { state.pinned = false; pickDefault(); } if (FORECAST) { buildForecast(); renderAll(false); } renderPanelOnly(); }
   }
-  else if (a === "sf-cancel") { state.spotForm = null; renderPanelOnly(); }
+  else if (a === "sf-cancel") { navDone(); state.spotForm = null; renderPanelOnly(); }
   else if (a === "sf-prof") { state.spotForm.profile = el.dataset.value; if (el.dataset.value === "soaring") state.spotForm.tide = true; renderPanelOnly(); }
   else if (a === "sf-dir") { const f = state.spotForm, d = el.dataset.dir; f.orientations = f.orientations.includes(d) ? f.orientations.filter(x => x !== d) : [...f.orientations, d]; el.setAttribute("aria-pressed", String(f.orientations.includes(d))); }
   else if (a === "sf-pick") startPick();
@@ -1479,18 +1515,18 @@ document.addEventListener("click", e => {
   else if (a === "unfocus") { setMapFocus(false); }
   else if (a === "wind") { state.windOn = !state.windOn; document.body.classList.toggle("no-wind", !state.windOn); el.setAttribute("aria-pressed", String(!state.windOn)); }
   else if (a === "open") openDetail(el.dataset.spot);
-  else if (a === "close-detail") closeDetail();
+  else if (a === "close-detail") { navDone(); closeDetail(); }
   else if (a === "hour") setHour(+el.dataset.hour);
   else if (a === "play") togglePlay();
   else if (a === "home") { setMapFocus(false); state.pinned = false; pickDefault(); renderAll(false); homeView(); }
   else if (a === "refresh") refresh(true);
   else if (a === "open-panel") openPanel();
-  else if (a === "close-panel") closePanel();
-  else if (a === "onb-start") { if (isIOS && !isStandalone()) { state.onbStep = 0; renderPanelOnly(); } else enablePush(); }
-  else if (a === "onb-back") { state.onbStep = -1; renderPanelOnly(); }
+  else if (a === "close-panel") { if (state.setup?.first) return; navDone(); closePanel(); }
+  else if (a === "onb-start") { if (isIOS && !isStandalone()) { navPush("sub"); state.onbStep = 0; renderPanelOnly(); } else enablePush(); }
+  else if (a === "onb-back") { navDone(); state.onbStep = -1; renderPanelOnly(); }
   else if (a === "onb-next") { state.onbStep = Math.min(2, state.onbStep + 1); renderPanelOnly(); }
   else if (a === "onb-prev") { state.onbStep = Math.max(0, state.onbStep - 1); renderPanelOnly(); }
-  else if (a === "onb-done") { state.onbStep = -1; if (isStandalone() || !isIOS) enablePush(); else { state.notifState = "Ajoute l'app à l'écran d'accueil, ouvre-la depuis sa nouvelle icône, puis touche à nouveau « Activer »."; renderPanelOnly(); } }
+  else if (a === "onb-done") { navDone(); state.onbStep = -1; if (isStandalone() || !isIOS) enablePush(); else { state.notifState = "Ajoute l'app à l'écran d'accueil, ouvre-la depuis sa nouvelle icône, puis touche à nouveau « Activer »."; renderPanelOnly(); } }
   else if (a === "test-notif") testNotification();
   else if (a === "toast-open") { $("#toast").classList.remove("is-on"); closePanel(); state.day = Math.max(0, +el.dataset.day); state.sel = el.dataset.spot; state.pinned = true; renderAll(false); openDetail(el.dataset.spot); }
 });
@@ -1570,7 +1606,7 @@ document.addEventListener("change", e => {
 document.addEventListener("keydown", e => { if (e.key === "Tab") document.body.classList.add("kbd"); });
 document.addEventListener("pointerdown", () => document.body.classList.remove("kbd"));
 document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.id === "setup-q") { e.preventDefault(); setupSearch(); } });
-document.addEventListener("keydown", e => { if (e.key === "Escape") { if (state.panel) closePanel(); else if (state.detail) closeDetail(); } });
+document.addEventListener("keydown", e => { if (e.key === "Escape") { if (history.state?.ov) history.back(); else if (state.panel) closePanel(); else if (state.detail) closeDetail(); } });
 /* Le carrousel pilote la carte : la carte centrée devient la sélection */
 let scrollT = null, userScroll = false;
 ["touchstart", "pointerdown", "wheel"].forEach(ev => $("#carousel").addEventListener(ev, () => { userScroll = true; }, { passive: true }));
@@ -1747,6 +1783,7 @@ function renderSetup(st) {
   </div>`;
 }
 function openSetup(first) {
+  navPush(first ? "panel" : "sub");
   state.setup = { first: !!first, q: "", results: [], loading: false, msg: "", home: settings.home ? { ...settings.home } : null, trans: { ...settings.trans } };
   state.panel = true; renderPanelOnly(); $("#panel").classList.add("is-open"); $("#panel").scrollTop = 0;
 }
@@ -1792,8 +1829,8 @@ function setupSave() {
   if (!(st.home.lat >= GEO.b[0] && st.home.lat <= GEO.b[2] && st.home.lon >= GEO.b[1] && st.home.lon <= GEO.b[3]) && state.layer === "plan") { state.layer = "detail"; setTiles(); }
   rebuildSpots(); syncFetch(true); state.pinned = false; if (FORECAST) { buildForecast(); pickDefault(); renderAll(false); }
   if (moved) homeView();
-  if (first && !settings.favsAsked) openFavPicker();
-  else if (first) closePanel(); else renderPanelOnly();
+  if (first && !settings.favsAsked) openFavPicker(true); // même étape de l'historique : l'écran des favoris remplace celui du départ
+  else if (first) { navDone(); closePanel(); } else { navDone(); renderPanelOnly(); }
 }
 /* Les favoris et les réglages changent la liste des spots à charger */
 function syncFetch(force) {
@@ -1849,6 +1886,7 @@ function parseCoords(t) {
   return lat > 41 && lat < 52 && lon > -6 && lon < 10 ? { lat, lon } : null;
 }
 function openSpotForm(c) {
+  navPush("sub");
   state.spotForm = c ? { ...c, orientations: [...(c.orientations || [])] } : { name: "", city: "", profile: "soaring", orientations: [], tide: true, notes: "" };
   state.panel = true; renderPanelOnly(); $("#panel").classList.add("is-open"); $("#panel").scrollTop = 0;
 }
@@ -1875,7 +1913,7 @@ function saveSpotForm() {
   const isNew = !f.id;
   settings.custom = [...settings.custom.filter(x => x.id !== c.id), c];
   if (isNew && !settings.favs.includes(c.id)) settings.favs = [...settings.favs, c.id];
-  saveSettings(); state.spotForm = null; rebuildSpots(); renderPanelOnly();
+  saveSettings(); state.spotForm = null; navDone(); rebuildSpots(); renderPanelOnly();
   state.backupMsg = ""; refresh(true).then(() => { if (state.panel) renderPanelOnly(); });
 }
 /* Sauvegarde et restauration */
@@ -1924,8 +1962,9 @@ function renderFavPicker(s) {
     <div class="btn-row fav-actions"><button type="button" class="btn btn--wing" data-action="fav-done">${first ? "C'est parti" : "Valider"}</button>${first ? `<button type="button" class="btn btn--ghost" data-action="fav-skip">Plus tard</button>` : ""}</div>
   </div>`;
 }
-function openFavPicker() { state.favStep = true; state.panel = true; renderPanelOnly(); $("#panel").classList.add("is-open"); $("#panel").scrollTop = 0; setTimeout(() => $("#panel").focus(), 50); }
-function finishFavs(skip) {
+function openFavPicker(replace) { if (!replace) navPush(state.panel ? "sub" : "panel"); state.favStep = true; state.panel = true; renderPanelOnly(); $("#panel").classList.add("is-open"); $("#panel").scrollTop = 0; setTimeout(() => $("#panel").focus(), 50); }
+function finishFavs(skip, fromBack) {
+  if (!fromBack) navDone();
   const first = !settings.favsAsked;
   settings.favsAsked = true; state.favStep = false;
   if (!skip && settings.favs.length && first) { state.kind = "favoris"; settings.kind = "favoris"; }

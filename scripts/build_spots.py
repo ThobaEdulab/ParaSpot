@@ -100,9 +100,9 @@ vol(id="roselier", name="Pointe du Roselier", city="Plérin (22)", region="Baie 
     lat=48.5547, lon=-2.7158, orientations=["NNW", "N", "NNE", "NE", "SE"], elevation=65,
     description="Grand classique de la baie de Saint-Brieuc : déco N-NE au-dessus de la plage Martin et déco sud-est vers la baie. Par bonnes conditions, des kilomètres de falaises vers Binic.",
     level="Pilote autonome", landing="Plage Martin (escalier au milieu de la plage pour remonter).",
-    rules=["Volable seulement environ 3 h avant et après la basse mer.", "Priorité aux piétons sur le sentier.", "Lire le panneau du site."],
+    rules=["Volable seulement 3 h avant et 3 h après la basse mer (l'app note « Non » les heures en dehors).", "Priorité aux piétons sur le sentier.", "Lire le panneau du site."],
     warnings=["La balise locale surestime le vent de 5 à 15 km/h : se fier plutôt à la balise Pioupiou proche.", "Vent de terre (S-SO) dangereux."],
-    ffvlId=1571, links={"club": "https://www.goelandarmor.fr/index.php/les-sites-de-vol/pointe-du-roselier"},
+    tideRule={"aroundLow": 3}, ffvlId=1571, links={"club": "https://www.goelandarmor.fr/index.php/les-sites-de-vol/pointe-du-roselier"},
     station="Saint-Brieuc", ride="Par Plérin et le port du Légué, environ 8 km avec une montée sérieuse.", climb=70,
     confidence="haute", sources=["spots.guru", "infos-parapente.com", "FFVL"])
 vol(id="tablettes", name="Les Tablettes (Les Rosaires)", city="Plérin (22)", region="Baie de Saint-Brieuc",

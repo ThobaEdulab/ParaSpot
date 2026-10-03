@@ -178,6 +178,29 @@ export function tideStates(marine) {
     const next = lvl[i + 1] ?? lvl[i];
     out[t] = { level: lvl[i], ratio, trend: next > lvl[i] ? "montante" : "descendante", label: ratio > 0.75 ? "Haute" : ratio < 0.25 ? "Basse" : "Mi-marée" };
   });
+  // Basses et pleines mers : creux et bosses de la courbe horaire, affinés à la minute (parabole sur 3 points)
+  const ext = (sign) => {
+    const res = [];
+    for (let i = 1; i < lvl.length - 1; i++) {
+      const a = lvl[i - 1], b = lvl[i], c = lvl[i + 1];
+      if (a == null || b == null || c == null) continue;
+      if (sign * (b - a) <= 0 && sign * (c - b) > 0) {
+        const den = a - 2 * b + c, off = den ? Math.max(-0.5, Math.min(0.5, (a - c) / (2 * den))) : 0;
+        const idx = i + off, base = time[i], mins = Math.round(off * 60);
+        const d = new Date(`${base}:00Z`); d.setUTCMinutes(d.getUTCMinutes() + mins);
+        res.push({ idx, time: d.toISOString().slice(0, 16), level: Math.round((b - (a - c) * off / 4) * 100) / 100 });
+      }
+    }
+    return res;
+  };
+  const lows = ext(1), highs = ext(-1);
+  time.forEach((t, i) => {
+    if (!out[t]) return;
+    const nl = lows.reduce((m, l) => Math.abs(l.idx - i) < Math.abs(m) ? l.idx - i : m, Infinity);
+    out[t].fromLow = Number.isFinite(nl) ? Math.round(Math.abs(nl) * 10) / 10 : null; // heures jusqu'à la basse mer la plus proche
+  });
+  out._lows = lows.map(({ time: t, level }) => ({ time: t, level }));
+  out._highs = highs.map(({ time: t, level }) => ({ time: t, level }));
   return out;
 }
 
@@ -208,6 +231,9 @@ export function analyzeSpot(spot, forecast, settings = {}, tide = {}) {
     const reachable = !tooLate && h.hour >= Math.ceil(range.from) && h.hour + 1 <= Math.floor(range.to);
     const t = tide[h.time];
     if (spot.tide && t?.label === "Haute") r.reasons.push("Marée haute : plage d'atterrissage réduite");
+    // règle locale : vol autorisé seulement autour de la basse mer (ex. Pointe du Roselier : 3 h avant et après)
+    const around = spot.tideRule?.aroundLow;
+    if (around && t?.fromLow != null && t.fromLow > around) { r.score = 0; r.reasons.push(`Hors créneau de marée (vol seulement ${around} h avant et après la basse mer)`); }
     return { ...h, ...r, reachable, tide: t || null, verdict: verdict(r.score) };
   });
   const minScore = settings.minScore ?? 55;
@@ -302,7 +328,8 @@ export function marineUrl(points) {
     longitude: points.map((s) => s.lon).join(","),
     hourly: "sea_level_height_msl",
     timezone: "Europe/Paris",
-    forecast_days: "3"
+    past_days: "1",
+    forecast_days: "4"
   });
   return `https://marine-api.open-meteo.com/v1/marine?${q}`;
 }

@@ -694,7 +694,7 @@ path.m-route-car{vector-effect:none}
 .cs-list li{flex-wrap:wrap}
 .cs-name{flex:1 1 160px}
 .cs-acts{flex-wrap:wrap}
-.panel-in{min-width:0;overflow-x:hidden}
+.panel-in{min-width:0;overflow-x:clip}
 .pf-f span{white-space:normal;overflow:visible;line-height:1.15;min-height:2.3em;display:flex;align-items:flex-end}
 
 /* v11 : spots hors de portée groupés, ma position */
@@ -705,3 +705,14 @@ path.m-route-car{vector-effect:none}
 .me-arrow{position:absolute;inset:0;transform-origin:50% 50%}
 .me-arrow::before{content:"";position:absolute;left:50%;top:-2px;margin-left:-9px;border-left:9px solid transparent;border-right:9px solid transparent;border-bottom:16px solid #1a73e8;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
 .pk-all{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 8px}
+/* v13 : en-tête collant (fermer toujours visible), marée */
+#detail .d-head,#panel .d-head{position:sticky;top:0;z-index:6;margin:calc(-1 * env(safe-area-inset-top) - 10px) calc(-1 * var(--g)) 0;padding:calc(env(safe-area-inset-top) + 10px) var(--g) 10px;background:var(--glass-strong);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-bottom:1px solid var(--hair)}
+.tide-row{display:flex;flex-wrap:wrap;gap:8px}
+.tide-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:var(--r-pill);background:var(--non-soft);font-size:13px;font-weight:700;color:var(--ink-2)}
+.tide-chip svg{width:16px;height:16px}
+.tide-low{background:#dcebfb;color:#0d4a8f}
+:root[data-theme="dark"] .tide-low{background:#16365c;color:#cfe3ff}
+.tide-rule{font-size:14px;line-height:1.45;margin:10px 0 4px;color:var(--ink)}
+.s3-tide{font-size:11px;font-weight:800;color:#1a5fb4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-tide{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:#1a5fb4}
+.card-tide svg{width:14px;height:14px}

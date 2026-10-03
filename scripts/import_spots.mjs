@@ -13,7 +13,14 @@
 
 import { writeFile, readFile } from "node:fs/promises";
 
-const FFVL_URLS = ["https://data.ffvl.fr/json/sites.json", "http://data.ffvl.fr/json/sites.json"];
+// La FFVL demande désormais une clé d'API (à demander à informatique@ffvl.fr), rangée dans le secret GitHub FFVL_KEY.
+// Si la FFVL indique une autre adresse avec sa clé, il suffit de la mettre dans la variable GitHub FFVL_URL ({key} sera remplacé).
+const FFVL_KEY = process.env.FFVL_KEY || "";
+const FFVL_URLS = process.env.FFVL_URL
+  ? [process.env.FFVL_URL.replace("{key}", encodeURIComponent(FFVL_KEY))]
+  : FFVL_KEY
+    ? [`https://data.ffvl.fr/json/sites.json?key=${encodeURIComponent(FFVL_KEY)}`, `https://data.ffvl.fr/api/?base=terrains&mode=json&key=${encodeURIComponent(FFVL_KEY)}`]
+    : ["https://data.ffvl.fr/json/sites.json"];
 const PGE_URL = (n, s, e, w) => `https://www.paraglidingearth.com/api/geojson/getBoundingBoxSites.php?north=${n}&south=${s}&east=${e}&west=${w}&limit=3000&style=detailled`;
 const GARES_URL = "https://ressources.data.sncf.com/api/explore/v2.1/catalog/datasets/gares-de-voyageurs/exports/json?lang=fr&timezone=Europe%2FParis";
 const GEO_URL = (lat, lon) => `https://geo.api.gouv.fr/communes?lat=${lat}&lon=${lon}&fields=nom,codeDepartement&format=json`;
@@ -106,9 +113,9 @@ async function ffvl() {
     try {
       const r = await fetch(u, { headers: { "User-Agent": "ParaSpot (application libre de prévisions parapente)", Accept: "application/json" } });
       const txt = await r.text();
-      try { data = JSON.parse(txt); console.log(`FFVL : fichier reçu depuis ${u}.`); break; }
-      catch { console.log(`FFVL : ${u} répond (HTTP ${r.status}) mais pas en JSON. Message complet de la FFVL :\n${txt.slice(0, 800)}`); }
-    } catch (e) { console.log(`FFVL : ${u} injoignable (${e.message}).`); }
+      try { data = JSON.parse(txt); console.log("FFVL : fichier reçu."); break; }
+      catch { console.log(`FFVL : ${u.replace(FFVL_KEY || "\u0000", "***")} répond (HTTP ${r.status}) mais pas en JSON. Message complet de la FFVL :\n${txt.slice(0, 800)}`); }
+    } catch (e) { console.log(`FFVL : adresse injoignable (${e.message}).`); }
   }
   if (!data) { console.log("FFVL : aucune adresse ne répond, import FFVL ignoré (ParaglidingEarth seul)."); return []; }
   const list = findList(data) || [];

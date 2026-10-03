@@ -172,7 +172,7 @@
    "level": "Pilote autonome",
    "landing": "Plage Martin (escalier au milieu de la plage pour remonter).",
    "rules": [
-    "Volable seulement environ 3 h avant et après la basse mer.",
+    "Volable seulement 3 h avant et 3 h après la basse mer (l'app note « Non » les heures en dehors).",
     "Priorité aux piétons sur le sentier.",
     "Lire le panneau du site."
    ],
@@ -208,7 +208,10 @@
     "climbM": 70
    },
    "limit": false,
-   "levelFfvl": null
+   "levelFfvl": null,
+   "tideRule": {
+    "aroundLow": 3
+   }
   },
   {
    "id": "tablettes",
