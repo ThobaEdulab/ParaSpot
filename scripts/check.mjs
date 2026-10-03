@@ -16,8 +16,26 @@ const today = toLocalDate(now);
 const tomorrow = toLocalDate(new Date(now.getTime() + 86400000));
 const targetDays = mode === "morning" ? [today, tomorrow] : [tomorrow];
 
-const spots = spotsData.spots.filter(
-  (s) => !config.excludeSpots.includes(s.id) && config.notify[s.kind] !== false && (config.includeCar !== false || s.access.mode !== "voiture") && (config.includeTreuil === true || s.profile !== "treuil")
+// Spots ajoutés à la main (data/mes-spots.json, exporté depuis l'app) et spots validés de la communauté (data/communaute.json)
+const optJson = async (f) => { try { return JSON.parse(await readFile(new URL(f, root), "utf8")); } catch { return null; } };
+const HOME = config.home || { lat: 48.1035, lon: -1.6724 };
+const ALL8 = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+const km = (a, b) => { const r = Math.PI / 180, dLat = (b.lat - a.lat) * r, dLon = (b.lon - a.lon) * r; const x = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLon / 2) ** 2; return 12742 * Math.asin(Math.sqrt(x)); };
+function fromCustom(c) {
+  const d = km(HOME, c), kind = c.profile === "gonflage" ? "gonflage" : "vol";
+  const access = d * 1.25 <= (config.softKm ?? 10)
+    ? { mode: "local", rideKm: Math.round(d * 12.5) / 10 }
+    : { mode: "voiture", driveKm: Math.round(d * 1.3), driveMinutes: Math.round(d * 1.3 / 75 * 60 + 10) };
+  return { id: c.id, name: c.name, city: c.city || "", lat: c.lat, lon: c.lon, kind, profile: c.profile || "plaine", orientations: kind === "gonflage" || !c.orientations?.length ? ALL8 : c.orientations, tide: !!c.tide, access, rules: [], warnings: [], links: {}, stations: [] };
+}
+const extra = [...((await optJson("data/mes-spots.json"))?.spots || []), ...((await optJson("data/communaute.json"))?.spots || [])]
+  .filter((c) => c && c.id && Number.isFinite(c.lat) && Number.isFinite(c.lon) && c.name)
+  .filter((c) => !spotsData.spots.some((s) => s.id === c.id))
+  .map(fromCustom);
+if (extra.length) console.log(`${extra.length} spot(s) ajouté(s) à la main ou de la communauté pris en compte.`);
+
+const spots = [...spotsData.spots, ...extra].filter(
+  (s) => (!config.onlySpots?.length || config.onlySpots.includes(s.id)) && !config.excludeSpots.includes(s.id) && config.notify[s.kind] !== false && (config.includeCar !== false || s.access.mode !== "voiture") && (config.includeTreuil === true || s.profile !== "treuil")
 );
 
 // Mode test hors-ligne : MOCK=chemin/vers/reponses.json (format renvoyé par fetchAll)

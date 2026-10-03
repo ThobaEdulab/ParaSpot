@@ -65,3 +65,28 @@ npm install
 npm run check:dry        # calcule et affiche la notification sans l'envoyer
 npx serve .              # puis ouvrir http://localhost:3000
 ```
+
+## 7. Spots de toute la France (robot hebdomadaire)
+
+Le fichier `.github/workflows/spots.yml` lance chaque lundi `scripts/import_spots.mjs`, qui crée `data/france.json` (sites FFVL et ParaglidingEarth, avec commune et département) et `data/gares.json` (gares voyageurs SNCF).
+
+1. Envoie `scripts/import_spots.mjs` sur GitHub (Add file > Upload files, dans le dossier `scripts`).
+2. Crée le robot : Add file > Create new file, nom `.github/workflows/spots.yml`, colle le contenu du fichier.
+3. Onglet **Actions** > « Mise à jour des spots de France » > **Run workflow**. Après 2 à 5 minutes, les deux fichiers apparaissent dans `data/`.
+4. Si le journal indique 0 site FFVL, copie les lignes « FFVL, exemple de fiche » : le format de la FFVL a changé et le script doit être ajusté.
+
+Sans ces fichiers, l'app fonctionne avec les spots soignés de Bretagne et Normandie.
+
+## 8. Notifications pour les spots ajoutés à la main
+
+1. Dans l'app : Réglages > Mes spots ajoutés > **Fichier pour les notifications** (télécharge `mes-spots.json`).
+2. Sur GitHub : dossier `data` > Add file > Upload files > dépose `mes-spots.json` > Commit.
+3. Le robot de notifications surveille ces spots dès le passage suivant. Refais l'envoi quand tu ajoutes ou modifies un spot.
+
+Pour ne recevoir des alertes que sur certains spots, ajoute dans `data/config.json` une ligne `"onlySpots": ["bellangerais", "roselier", "perso-..."]`.
+Pour des seuils de vent personnels dans les notifications, remplis `"profiles"` dans `data/config.json` (mêmes noms que dans l'app : windMin, idealMin, idealMax, windMax, gustMax par pratique).
+
+## 9. Spots proposés par les utilisateurs (pour tout le monde)
+
+Dans l'app, le bouton **Proposer** d'un spot ajouté envoie un mail à tobalab@proton.me avec la fiche et une ligne de code.
+Après vérification (fiche FFVL, club local), colle cette ligne dans la liste `spots` de `data/communaute.json` (séparée des autres par une virgule), puis Commit. Le spot apparaît pour tout le monde au prochain lancement de l'app et il est surveillé par le robot.

@@ -635,3 +635,64 @@ path.m-route-car{vector-effect:none}
 .explain p,.explain li{font-size:13.5px;line-height:1.45;color:var(--ink-2)}
 .explain ul{margin:6px 0;padding-left:18px;display:grid;gap:6px}
 .explain-scale{display:flex;flex-wrap:wrap;gap:6px}
+/* v7 : spots ajoutés, sauvegarde */
+.txt{min-height:var(--tap);padding:0 14px;border-radius:12px;border:1px solid var(--hair);background:var(--glass-strong);font:inherit;font-weight:700;font-size:16px;color:var(--ink);width:100%;box-sizing:border-box}
+.cs-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.cs-list li{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border:1px solid var(--hair);border-radius:var(--r-md);background:var(--glass-strong)}
+.cs-name{display:flex;align-items:center;gap:8px;min-width:0;font-weight:800}
+.cs-name svg{width:18px;height:18px;flex:none;color:var(--ink-3)}
+.cs-name span{display:grid;min-width:0}
+.cs-name small{font-size:12px;font-weight:600;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cs-acts{display:flex;gap:6px;flex:none}
+.mini-btn{min-height:36px;padding:0 10px;border-radius:var(--r-pill);border:1px solid var(--hair);background:transparent;font-weight:800;font-size:12px;color:var(--ink-2)}
+.mini-btn.is-danger{background:#c8372d;border-color:#c8372d;color:#fff}
+.dir-pick{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.dir-pick button{min-height:44px;border-radius:12px;border:1px solid var(--hair);background:var(--glass-strong);font-weight:800;color:var(--ink-2)}
+.dir-pick button[aria-pressed="true"]{background:var(--ink);color:var(--glass-strong);border-color:var(--ink)}
+:root[data-theme="dark"] .dir-pick button[aria-pressed="true"]{color:#0b1b33}
+.file-btn{cursor:pointer}
+.sf-err{color:#c8372d;font-weight:800}
+.is-picking #map{cursor:crosshair}
+.is-picking .dock,.is-picking .top{visibility:hidden}
+.pickbar{z-index:66}
+/* v8 : France entière, ville de départ, transport */
+.mk-far{width:12px;height:12px;margin:3px;border-radius:50%;background:var(--glass-strong);border:2px solid var(--ink-3);opacity:.85;box-shadow:0 1px 4px rgba(11,27,51,.25);cursor:pointer}
+.st-sum{display:flex;gap:8px;align-items:flex-start;font-size:14px;line-height:1.4;color:var(--ink-2);margin:0}
+.st-sum svg{width:18px;height:18px;flex:none;color:var(--wing);margin-top:1px}
+.st-sum b{color:var(--ink)}
+.setup-search{display:flex;gap:8px}.setup-search .txt{flex:1;min-width:0}.setup-search .btn{flex:none;min-height:var(--tap);padding:0 16px;font-size:15px}
+.setup-res{display:grid;gap:6px}
+.setup-r{display:grid;text-align:left;gap:2px;padding:10px 12px;border-radius:12px;border:1px solid var(--hair);background:var(--glass-strong);color:var(--ink)}
+.setup-r b{font-size:15px}.setup-r small{font-size:12px;color:var(--ink-3);font-weight:600}
+.sub-opts{display:grid;gap:8px;padding:0 0 6px 36px}
+.sub-opts .seg button{font-size:13px;padding:0 8px}
+#fav-q{margin:4px 0 10px}
+/* v9 : boussole, carte orientée */
+#map{--unrot:0deg}
+#map .mk,#map .mk-cluster,#map .stn,#map .mk-far,#map .plc{rotate:var(--unrot)}
+.compass-btn .needle{transition:none}
+.compass-btn .needle .n{fill:#e8473a;stroke:none}
+.compass-btn .needle .s{fill:var(--ink-3);stroke:none}
+.compass-btn[aria-pressed="true"]{background:var(--ink);color:var(--glass-strong)}
+.compass-btn[aria-pressed="true"] .needle .s{fill:var(--glass-strong)}
+.rose-btn{display:block;margin:10px auto 0;min-height:40px}
+.rose-btn[aria-pressed="true"]{background:var(--ink);color:var(--glass-strong);border-color:var(--ink)}
+/* niveaux et seuils perso */
+.seg button{min-width:0}
+.pf{display:grid;gap:10px;margin-top:6px}
+.pf-set{border:1px solid var(--hair);border-radius:var(--r-md);padding:8px 10px 10px;margin:0}
+.pf-set legend{font-weight:800;font-size:13px;padding:0 4px}
+.pf-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.pf-f{display:grid;gap:4px;font-size:11px;font-weight:700;color:var(--ink-3)}
+.pf-f .txt{padding:0 4px;text-align:center;min-height:40px;font-size:15px}
+.explain small{font-size:12px;color:var(--ink-3)}
+.seg{flex-wrap:wrap}
+.seg button{flex:1 1 auto;padding-left:10px;padding-right:10px}
+.pf-f .txt{width:100%;min-width:0;box-sizing:border-box}
+.pf-f{min-width:0}
+.pf-f span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cs-list li{flex-wrap:wrap}
+.cs-name{flex:1 1 160px}
+.cs-acts{flex-wrap:wrap}
+.panel-in{min-width:0;overflow-x:hidden}
+.pf-f span{white-space:normal;overflow:visible;line-height:1.15;min-height:2.3em;display:flex;align-items:flex-end}

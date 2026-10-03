@@ -18,6 +18,7 @@ Prévisions de **trois modèles au choix et comparés** (AROME HD de Météo-Fra
 | `scoring.js` | Moteur de prévision partagé app + robot |
 | `data/spots.json` | 64 spots : 2 de gonflage (Bellangerais à Rennes, Mont du Père en Suisse normande), 62 de vol (Bretagne, Normandie dont Clécy, Pays de la Loire, treuils) |
 | `scripts/build_spots.py`, `scripts/spots_md.py` | Fiches des spots et génération de `docs/SPOTS.md` |
+| `data/france.json`, `data/gares.json` | Sites de toute la France (FFVL + ParaglidingEarth) et gares SNCF, créés et mis à jour chaque semaine par le robot `scripts/import_spots.mjs` (`.github/workflows/spots.yml`) |
 | `data/config.json` | Réglages des notifications |
 | `manifest.webmanifest`, `sw.js`, `icons/` | Tout ce qui fait de la page une PWA |
 | `scripts/check.mjs`, `.github/workflows/check.yml` | Robot de notifications (GitHub Actions) |
@@ -31,8 +32,12 @@ Prévisions de **trois modèles au choix et comparés** (AROME HD de Météo-Fra
 
 Voir [docs/INSTALLATION.md](docs/INSTALLATION.md).
 
+## Licence
+
+Code sous licence **PolyForm Noncommercial 1.0.0** : usage, copie et modification libres pour un usage non commercial, **vente interdite**. Voir `LICENSE` (texte officiel) et `LICENCE.md` (résumé en français et licences des données). Contact : tobalab@proton.me
+
 ## Avertissement
 
 Outil d'aide à la décision. Il ne remplace ni la fiche FFVL, ni le panneau du site, ni une balise en temps réel, ni ton jugement sur place.
 
-Données météo : [Open-Meteo](https://open-meteo.com/) (CC BY 4.0). Sites : ParaglidingEarth, FFVL.
+Données météo : [Open-Meteo](https://open-meteo.com/) (CC BY 4.0). Sites : FFVL (liste des sites de pratique, ODbL), ParaglidingEarth. Gares : SNCF Open Data (ODbL). Communes : geo.api.gouv.fr.

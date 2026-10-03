@@ -1,6 +1,6 @@
 // ParaSpot v3 « Ciel » : interface issue de la maquette Claude Design, branchée sur scoring.js.
 // 1. données et adaptateur  2. utilitaires et composants (maquette)  3. moteur carte, vent, ciel  4. événements et démarrage
-import { fetchAll, analyzeSpot, profileFor, accessRange, toLocalDate, notificationText, agreement, MODELS, MODEL_KEYS, SECTORS } from "./scoring.js";
+import { fetchAll, analyzeSpot, profileFor, accessRange, toLocalDate, notificationText, agreement, MODELS, MODEL_KEYS, SECTORS, DEFAULT_PROFILES, LEVEL_SHIFT } from "./scoring.js";
 import { GEO, RAILS, BASEMAP, PLACES_ALL } from "./basemap.js";
 import { VAPID_PUBLIC_KEY } from "./config.js";
 
@@ -14,52 +14,165 @@ const store = {
 
 const HOURS = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21];
 const PROFILES = { soaring: { label: "Soaring" }, gonflage: { label: "Gonflage" }, treuil: { label: "Treuil" }, plaine: { label: "Thermique" } };
-const LEVELS = { debutant: { label: "Débutant" }, intermediaire: { label: "Intermédiaire" }, confirme: { label: "Confirmé" } };
+const LEVELS = { debutant: { label: "Débutant" }, intermediaire: { label: "Intermédiaire" }, confirme: { label: "Confirmé" }, perso: { label: "Perso" } };
 const VERDICTS = { top: { key: "top", label: "Top" }, ok: { key: "ok", label: "Jouable" }, limite: { key: "limite", label: "Limite" }, non: { key: "non", label: "Non" } };
 const ORIENT_DEG = SECTORS;
 const angDiff = (a, b) => { const d = Math.abs(((a - b) % 360 + 360) % 360); return d > 180 ? 360 - d : d; };
 const LEVEL_FFVL = { vert: { label: "Brevet initial", color: "#2e9d55" }, bleu: { label: "Brevet de pilote", color: "#2f6fd6" }, marron: { label: "Brevet de pilote confirmé", color: "#8a5a32" } };
 
 /* Réglages : stockés sur l'appareil */
+const STORED = store.get("fv-settings-v3", {});
 const settings = Object.assign(
-  { level: "intermediaire", scoreMin: 55, firstDeparture: "07:00", lastTrain: "20:00", theme: "system", model: "arome", includeCar: true, includeTreuil: false, hidden: [], favs: [], favsAsked: false, kind: "tout", notifEnabled: false },
-  store.get("fv-settings-v3", {})
+  { level: "intermediaire", scoreMin: 55, firstDeparture: "07:00", lastTrain: "20:00", theme: "system", model: "arome", includeCar: true, includeTreuil: false, hidden: [], favs: [], favsAsked: false, custom: [], kind: "tout", home: null, notifEnabled: false },
+  STORED
 );
+/* Transport : train + mobilité douce (vélo, vélo électrique, skate) et/ou voiture */
+settings.trans = { train: true, car: STORED.includeCar !== false, soft: "skate", softKm: 10, maxDrive: 150, ...(STORED.trans || {}) };
 const saveSettings = () => { const { notifEnabled, ...s } = settings; store.set("fv-settings-v3", s); };
 
 const toMin = s => { const [h, m] = s.split(":").map(Number); return h * 60 + m; };
 const toHour = s => toMin(s) / 60;
-const SKATE_KMH = 18;
-const rideMinutes = km => Math.round((km || 0) / SKATE_KMH * 60);
-const scoringSettings = () => ({ level: settings.level, minScore: settings.scoreMin, firstDeparture: toHour(settings.firstDeparture), lastTrainBack: toHour(settings.lastTrain), skateKmh: SKATE_KMH });
+const SOFT = {
+  velo: { label: "Vélo", short: "Vélo", verb: "à vélo", kmh: 15 },
+  vae: { label: "Vélo électrique", short: "Vélo électrique", verb: "en vélo électrique", kmh: 20 },
+  skate: { label: "Skate ou trottinette électrique", short: "Skate", verb: "en skate", kmh: 18 }
+};
+const soft = () => SOFT[settings.trans.soft] || SOFT.skate;
+const RENNES_HOME = { name: "Rennes", lat: 48.1035, lon: -1.6724 };
+const HOME = () => settings.home || RENNES_HOME;
+const HOME_LL = () => [HOME().lat, HOME().lon];
+const homeIsRennes = () => distKm(HOME_LL(), [RENNES_HOME.lat, RENNES_HOME.lon]) < 8;
+const rideMinutes = km => Math.round((km || 0) / soft().kmh * 60);
+const scoringSettings = () => ({ level: settings.level, profiles: settings.level === "perso" ? settings.profiles : undefined, minScore: settings.scoreMin, firstDeparture: toHour(settings.firstDeparture), lastTrainBack: toHour(settings.lastTrain), skateKmh: soft().kmh });
 const travelMinutes = spot => accessRange(spot, scoringSettings()).travelMinutes;
 const gaugeProfile = spot => profileFor(spot, scoringSettings());
 
-let ALL_SPOTS = [];  // data/spots.json
-let SPOTS = [];      // spots affichés (filtre voiture)
+let ALL_SPOTS = [];  // spots soignés (data/spots.json) + spots de France importés + spots ajoutés
+let SPOTS = [];      // spots affichés avec prévisions
+let FETCH_IDS = new Set(); // spots dont on charge les prévisions
 let STATIONS = [];
 let DAYS = [];
 let FORECAST = null; // [{ date, bySpot: { id: { hours, slots, lowSlots, sun, models, agree } } }]
+let BASE_DATA = null; // data/spots.json brut
+let FRANCE = [];      // data/france.json (import automatique FFVL + ParaglidingEarth)
+let GARES = [];       // data/gares.json [nom, lat, lon]
+let COMMUNITY = [];   // data/communaute.json : spots proposés par les utilisateurs et validés
 let RAW = null;      // { at, results } mis en cache
 let UPDATED_AT = null;
 let usedModel = settings.model;
+const MAX_FETCH = 250; // au-delà, Open-Meteo et le téléphone peinent : on garde les plus proches
 
 const localIso = d => `${toLocalDate(d)}T${new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", hour: "2-digit", minute: "2-digit" }).format(d)}`;
 const longDate = iso => new Date(iso.slice(0, 10) + "T12:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
 const nowHour = () => Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Paris", hour: "2-digit", hourCycle: "h23" }).format(new Date()));
 
-function prepareSpots(data) {
-  ALL_SPOTS = data.spots.map(s => ({
-    ...s, rules: s.rules || [], warnings: s.warnings || [], links: s.links || {}, stations: s.stations || [],
-    access: { ...s.access, ride: s.access.ride || s.access.summary || "", rideKm: s.access.rideKm ?? 0, trainMinutes: s.access.trainMinutes ?? 0 }
-  }));
-  const st = { Rennes: { name: "Rennes", lat: 48.1035, lon: -1.6724 } };
-  ALL_SPOTS.forEach(s => { if (s.access.mode === "train" && !st[s.access.station]) st[s.access.station] = { name: s.access.station, lat: s.access.stationLat, lon: s.access.stationLon }; });
-  STATIONS = Object.values(st);
+/* Départements (nom affiché dans les listes) */
+const DEPT_NAMES = { "01": "Ain", "02": "Aisne", "03": "Allier", "04": "Alpes-de-Haute-Provence", "05": "Hautes-Alpes", "06": "Alpes-Maritimes", "07": "Ardèche", "08": "Ardennes", "09": "Ariège", "10": "Aube", "11": "Aude", "12": "Aveyron", "13": "Bouches-du-Rhône", "14": "Calvados", "15": "Cantal", "16": "Charente", "17": "Charente-Maritime", "18": "Cher", "19": "Corrèze", "2A": "Corse-du-Sud", "2B": "Haute-Corse", "21": "Côte-d'Or", "22": "Côtes-d'Armor", "23": "Creuse", "24": "Dordogne", "25": "Doubs", "26": "Drôme", "27": "Eure", "28": "Eure-et-Loir", "29": "Finistère", "30": "Gard", "31": "Haute-Garonne", "32": "Gers", "33": "Gironde", "34": "Hérault", "35": "Ille-et-Vilaine", "36": "Indre", "37": "Indre-et-Loire", "38": "Isère", "39": "Jura", "40": "Landes", "41": "Loir-et-Cher", "42": "Loire", "43": "Haute-Loire", "44": "Loire-Atlantique", "45": "Loiret", "46": "Lot", "47": "Lot-et-Garonne", "48": "Lozère", "49": "Maine-et-Loire", "50": "Manche", "51": "Marne", "52": "Haute-Marne", "53": "Mayenne", "54": "Meurthe-et-Moselle", "55": "Meuse", "56": "Morbihan", "57": "Moselle", "58": "Nièvre", "59": "Nord", "60": "Oise", "61": "Orne", "62": "Pas-de-Calais", "63": "Puy-de-Dôme", "64": "Pyrénées-Atlantiques", "65": "Hautes-Pyrénées", "66": "Pyrénées-Orientales", "67": "Bas-Rhin", "68": "Haut-Rhin", "69": "Rhône", "70": "Haute-Saône", "71": "Saône-et-Loire", "72": "Sarthe", "73": "Savoie", "74": "Haute-Savoie", "75": "Paris", "76": "Seine-Maritime", "77": "Seine-et-Marne", "78": "Yvelines", "79": "Deux-Sèvres", "80": "Somme", "81": "Tarn", "82": "Tarn-et-Garonne", "83": "Var", "84": "Vaucluse", "85": "Vendée", "86": "Vienne", "87": "Haute-Vienne", "88": "Vosges", "89": "Yonne", "90": "Territoire de Belfort", "91": "Essonne", "92": "Hauts-de-Seine", "93": "Seine-Saint-Denis", "94": "Val-de-Marne", "95": "Val-d'Oise" };
+
+function prepareSpots(data, france = FRANCE, gares = GARES, community = COMMUNITY) {
+  BASE_DATA = data; FRANCE = france || []; GARES = gares || []; COMMUNITY = community || [];
+  const curated = data.spots.map(s => {
+    const access = { ...s.access, ride: s.access.ride || s.access.summary || "", rideKm: s.access.rideKm ?? 0, trainMinutes: s.access.trainMinutes ?? 0 };
+    const m = /\((\d{2}|2A|2B)\)/.exec(s.city || "");
+    return { ...s, rules: s.rules || [], warnings: s.warnings || [], links: s.links || {}, stations: s.stations || [], access, baseAccess: access, baseLimit: !!s.limit, curated: true, dept: m ? m[1] : /Rennes/.test(s.city || "") ? "35" : "" };
+  });
+  ALL_SPOTS = [...curated, ...FRANCE.map(franceToSpot)];
+  COMMUNITY.forEach(c => { try { if (c?.id && !ALL_SPOTS.some(s => s.id === c.id)) ALL_SPOTS.push({ ...customToSpot(c), custom: false, community: true, region: "Spots de la communauté", confidence: "communaute", sources: ["Proposé par un utilisateur, validé par ParaSpot"], rules: ["Spot proposé par un pilote : vérifie la fiche FFVL, le panneau ou le club local avant de voler."] }); } catch { /* ignoré */ } });
+  (settings.custom || []).forEach(c => { try { ALL_SPOTS.push(customToSpot(c)); } catch { /* spot ajouté illisible : ignoré */ } });
+  buildGareIndex();
+  ALL_SPOTS.forEach(s => { const r = computeAccess(s); s.access = r.access; s.limit = r.limit; s.reach = r.reach; s.distKm = Math.round(distKm(HOME_LL(), [s.lat, s.lon])); });
+  computeFetchSet();
   applySpotFilter();
 }
+function franceToSpot(f) {
+  const ffvl = f.src === "ffvl";
+  return {
+    id: f.id, name: f.n, city: f.c ? `${f.c}${f.d ? ` (${f.d})` : ""}` : f.d ? `Département ${f.d}` : "France", region: DEPT_NAMES[f.d] || "France", dept: f.d || "",
+    lat: f.lat, lon: f.lon, orientations: f.o, elevation: f.alt ?? null,
+    description: ffvl ? "Site de la liste FFVL, importé automatiquement : l'app connaît sa position et ses orientations. Consulte la fiche FFVL pour le niveau, l'atterrissage et les règles." : "Site importé de ParaglidingEarth (base communautaire) : position et orientations à vérifier auprès des pilotes locaux.",
+    level: "", landing: "", rules: ["Consulte la fiche du site (FFVL, club local) avant de voler : règles, niveau, atterrissage, espace aérien."], warnings: [],
+    links: f.ffvl ? { ffvl: `https://federation.ffvl.fr/terrain/${f.ffvl}`, spotair: `https://www.spotair.mobi/spotpg/ffvl/${f.ffvl}` } : { spotair: `https://www.spotair.mobi?lat=${f.lat}&lng=${f.lon}&zoom=14&layers=spotpg,wind` },
+    confidence: ffvl ? "moyenne" : "faible", sources: [ffvl ? "FFVL (ODbL)" : "ParaglidingEarth"], kind: "vol", profile: f.treuil ? "treuil" : f.p === "soaring" ? "soaring" : "plaine",
+    stations: [], tide: false, levelFfvl: null, imported: true, access: { mode: "voiture", rideKm: 0, trainMinutes: 0, ride: "" }
+  };
+}
+/* ---------- Distances, gares, accès depuis la ville de départ ---------- */
+const ALL8 = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+function distKm(a, b) {
+  const r = Math.PI / 180, dLat = (b[0] - a[0]) * r, dLon = (b[1] - a[1]) * r;
+  const x = Math.sin(dLat / 2) ** 2 + Math.cos(a[0] * r) * Math.cos(b[0] * r) * Math.sin(dLon / 2) ** 2;
+  return 12742 * Math.asin(Math.sqrt(x));
+}
+let GARE_GRID = new Map();
+function buildGareIndex() {
+  // gares : fichier SNCF importé, sinon les gares connues des fiches soignées
+  let list = GARES.length ? GARES.map(([name, lat, lon]) => ({ name, lat, lon })) : [];
+  if (!list.length) {
+    const by = {}; by.Rennes = { name: "Rennes", lat: 48.1035, lon: -1.6724 };
+    (BASE_DATA?.spots || []).forEach(s => { const ac = s.access || {}; if (ac.mode === "train" && ac.station && ac.stationLat != null) by[ac.station] = { name: ac.station, lat: ac.stationLat, lon: ac.stationLon }; });
+    list = Object.values(by);
+  }
+  GARE_GRID = new Map();
+  list.forEach(g => { const k = `${Math.floor(g.lat * 4)}:${Math.floor(g.lon * 4)}`; if (!GARE_GRID.has(k)) GARE_GRID.set(k, []); GARE_GRID.get(k).push(g); });
+}
+function nearestGare(ll, maxKm = 25) {
+  let best = null, bd = 1e9;
+  const i0 = Math.floor(ll[0] * 4), j0 = Math.floor(ll[1] * 4), R = Math.ceil(maxKm / 20);
+  for (let i = i0 - R; i <= i0 + R; i++) for (let j = j0 - R; j <= j0 + R; j++) {
+    (GARE_GRID.get(`${i}:${j}`) || []).forEach(g => { const d = distKm(ll, [g.lat, g.lon]); if (d < bd) { bd = d; best = g; } });
+  }
+  return best && bd <= maxKm ? { ...best, d: bd } : null;
+}
+let HOME_GARE = undefined;
+function computeAccess(s) {
+  const t = settings.trans, h = HOME_LL(), r1 = x => Math.round(x * 10) / 10;
+  if (HOME_GARE === undefined || HOME_GARE?._for !== h.join()) { HOME_GARE = nearestGare(h, 20); if (HOME_GARE) HOME_GARE._for = h.join(); }
+  // fiches soignées au départ de Rennes : on garde leurs vrais temps de train
+  if (s.curated && homeIsRennes()) {
+    const a = s.baseAccess;
+    if (a.mode === "local") return { access: a, limit: s.baseLimit, reach: true };
+    if (a.mode === "train" && t.train && a.rideKm <= t.softKm + 2) return { access: a, limit: a.rideKm > t.softKm, reach: true };
+    if (a.mode === "voiture" && t.car) return { access: a, limit: s.baseLimit, reach: (a.driveMinutes ?? 0) <= t.maxDrive };
+  }
+  const dH = distKm(h, [s.lat, s.lon]);
+  if (dH * 1.25 <= t.softKm) return { access: { mode: "local", rideKm: r1(dH * 1.25), trainMinutes: 0, ride: `Environ ${r1(dH * 1.25)} km depuis ${HOME().name} (estimation).` }, limit: false, reach: true };
+  const sg = nearestGare([s.lat, s.lon], 25);
+  if (t.train && HOME_GARE && sg && sg.name !== HOME_GARE.name && sg.d * 1.25 <= t.softKm) {
+    const tm = Math.round(distKm([HOME_GARE.lat, HOME_GARE.lon], [sg.lat, sg.lon]) * 1.25 / 80 * 60 + 15);
+    if (tm <= 300) return { access: { mode: "train", station: sg.name, stationLat: sg.lat, stationLon: sg.lon, train: `${HOME_GARE.name} - ${sg.name} (durée estimée, vérifie les horaires)`, trainMinutes: tm, rideKm: r1(sg.d * 1.25), ride: `Environ ${r1(sg.d * 1.25)} km depuis la gare de ${sg.name} (estimation).`, estimated: true, fromStation: HOME_GARE.name }, limit: false, reach: true };
+  }
+  const km = Math.round(dH * 1.3), min = Math.round(km / 75 * 60 + 10);
+  return { access: { mode: "voiture", driveKm: km, driveMinutes: min, nearStation: sg ? sg.name : "", rideKm: 0, trainMinutes: 0, ride: "", estimated: true }, limit: false, reach: t.car && min <= t.maxDrive };
+}
+/* Spots dont on charge les prévisions : atteignables, favoris et ajoutés, les plus proches d'abord */
+function computeFetchSet() {
+  const want = ALL_SPOTS.filter(s => (s.reach || settings.favs.includes(s.id) || s.custom) && (settings.includeTreuil || s.profile !== "treuil" || settings.favs.includes(s.id)))
+    .sort((x, y) => (settings.favs.includes(y.id) - settings.favs.includes(x.id)) || x.distKm - y.distKm);
+  FETCH_IDS = new Set(want.slice(0, MAX_FETCH).map(s => s.id));
+}
+const fetchSpots = () => ALL_SPOTS.filter(s => FETCH_IDS.has(s.id));
+/* ---------- Spots ajoutés à la main (enregistrés sur l'appareil, dans les réglages) ---------- */
+function customToSpot(c) {
+  const kind = c.profile === "gonflage" ? "gonflage" : "vol";
+  const m = /\((\d{2}|2A|2B)\)/.exec(c.city || "");
+  return {
+    id: c.id, name: c.name, city: c.city || "Spot ajouté", region: "Mes spots ajoutés", dept: m ? m[1] : "", lat: c.lat, lon: c.lon,
+    orientations: kind === "gonflage" || !c.orientations?.length ? [...ALL8] : c.orientations, elevation: null,
+    description: c.notes || "Spot ajouté à la main sur cet appareil.", level: "", landing: "",
+    rules: ["Spot ajouté par toi : vérifie la fiche FFVL, le panneau du site ou le club local (orientations, règles, espace aérien) avant de voler."],
+    warnings: [], links: { spotair: `https://www.spotair.mobi?lat=${c.lat}&lng=${c.lon}&zoom=14&layers=spotpg,wind` },
+    confidence: "perso", sources: ["Ajouté sur cet appareil"], kind, profile: c.profile, stations: [], tide: !!c.tide,
+    access: { mode: "voiture", rideKm: 0, trainMinutes: 0, ride: "" }, levelFfvl: null, custom: true
+  };
+}
+function rebuildSpots() { if (BASE_DATA) prepareSpots(BASE_DATA); if (RAW) RAW.stale = true; drawStations(); }
 function applySpotFilter() {
-  SPOTS = ALL_SPOTS.filter(s => (settings.includeCar || s.access.mode !== "voiture") && (settings.includeTreuil || s.profile !== "treuil") && !settings.hidden.includes(s.id));
+  SPOTS = ALL_SPOTS.filter(s => FETCH_IDS.has(s.id) && !settings.hidden.includes(s.id)
+    && (!RAW || RAW.results.some(r => r.spot.id === s.id))); // un spot n'apparaît qu'une fois ses prévisions chargées
+  STATIONS = [];
+  const seen = new Set();
+  SPOTS.forEach(s => { if (s.access.mode === "train" && !seen.has(s.access.station)) { seen.add(s.access.station); STATIONS.push({ name: s.access.station, lat: s.access.stationLat, lon: s.access.stationLon }); } });
+  if (HOME_GARE && !seen.has(HOME_GARE.name) && settings.trans.train) STATIONS.unshift({ name: HOME_GARE.name, lat: HOME_GARE.lat, lon: HOME_GARE.lon });
 }
 
 function buildDays(results) {
@@ -130,7 +243,8 @@ function fmtDur(m) { if (m < 60) return `${m} min`; const h = Math.floor(m / 60)
 function fmtClock(min) { min = Math.round(min); const h = Math.floor(min / 60), m = min % 60; return `${h}h${String(m).padStart(2, "0")}`; }
 const fmtHHMM = s => s.replace(":", "h");
 const kindLabel = k => k === "vol" ? "Vol" : "Gonflage";
-const accessIcon = s => s.access.mode === "train" ? I.train : s.access.mode === "voiture" ? I.car : I.skate;
+const softIcon = () => settings.trans.soft === "skate" ? I.skate : I.bike;
+const accessIcon = s => s.access.mode === "train" ? I.train : s.access.mode === "voiture" ? I.car : softIcon();
 const updatedLabel = iso => `Mis à jour à ${fmtHHMM(iso.slice(11, 16))}`;
 const capFirst = s => s.charAt(0).toUpperCase() + s.slice(1);
 const spotById = id => SPOTS.find(s => s.id === id);
@@ -140,6 +254,7 @@ const spotById = id => SPOTS.find(s => s.id === id);
 const I = {
   refresh: '<svg class="ic spin" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/></svg>',
   train: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="3" width="12" height="13" rx="3"/><path d="M6 10h12M9 19.5 7 22M15 19.5l2 2.5"/><circle cx="9.5" cy="13" r=".6"/><circle cx="14.5" cy="13" r=".6"/></svg>',
+  bike: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="16" r="3.5"/><circle cx="18" cy="16" r="3.5"/><path d="M6 16l4-7h5l3 7M10 9l-1.5-3H6M15 9l-3 7h-6"/></svg>',
   skate: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 13h18"/><path d="M5 13l1.2-2.5h11.6L19 13"/><circle cx="8" cy="17" r="1.8"/><circle cx="16" cy="17" r="1.8"/></svg>',
   wave: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9c2 0 2-2 4.5-2S10 9 12 9s2.5-2 4.5-2S19 9 21 9M3 15c2 0 2-2 4.5-2s2.5 2 4.5 2 2.5-2 4.5-2 2.5 2 4.5 2"/></svg>',
   far: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h18M7 8l-4 4 4 4M17 8l4 4-4 4"/></svg>',
@@ -157,6 +272,7 @@ const I = {
   wind: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h7"/></svg>',
   car: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 16V11l2-5h10l2 5v5M3 16h18v3H3zM5 11h14"/><circle cx="7.5" cy="19" r="1.5"/><circle cx="16.5" cy="19" r="1.5"/></svg>',
   model: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18a4 4 0 0 1-.5-8A6 6 0 0 1 18 9a4.5 4.5 0 0 1-.5 9z"/><path d="M9 14h6M12 11v6"/></svg>',
+  mail: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>',
   pin: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>',
   clock: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
   calendar: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
@@ -225,9 +341,9 @@ function generateRecommendations(spot, hours, slot, dayIndex) {
     const hw = hours.filter(h => h.tide).sort((a, b) => b.tide.ratio - a.tide.ratio)[0];
     r.push(hw ? `Marée la plus haute de la journée vers ${hw.hour}h (indicatif) : vérifie sur le SHOM que l'atterrissage reste dégagé.` : "Vérifie l'horaire des marées sur le SHOM si l'atterrissage est sur la plage.");
   }
-  if (slot && spot.access.mode === "train") r.push(`Pars de Rennes vers ${fmtClock(slot.start * 60 - slot.travelMinutes - 10)} pour être prêt à ${slot.start}h (${fmtDur(slot.travelMinutes)} de trajet).`);
-  if (slot && spot.access.mode === "local") r.push(`À ${fmtKm(spot.access.rideKm)} en skate : faisable sur une pause ou après le travail.`);
-  if (slot && spot.access.mode === "voiture") r.push(`Pas de gare proche : voiture ou covoiturage club, environ ${fmtDur(spot.access.driveMinutes)} de route depuis Rennes.`);
+  if (slot && spot.access.mode === "train") r.push(`Pars de ${HOME().name} vers ${fmtClock(slot.start * 60 - slot.travelMinutes - 10)} pour être prêt à ${slot.start}h (${fmtDur(slot.travelMinutes)} de trajet${spot.access.estimated ? ", durée estimée : vérifie les horaires" : ""}).`);
+  if (slot && spot.access.mode === "local") r.push(`À ${fmtKm(spot.access.rideKm)} ${soft().verb} : faisable sur une pause ou après le travail.`);
+  if (slot && spot.access.mode === "voiture") r.push(`${settings.trans.train ? "Pas de gare assez proche : voiture" : "Voiture"} ou covoiturage, environ ${fmtDur(spot.access.driveMinutes)} de route depuis ${HOME().name}${spot.access.estimated ? " (estimation)" : ""}.`);
   if (spot.clubOnly) r.push("Treuil uniquement pendant les sessions du club : vérifie le planning avant de partir.");
   if (settings.level === "debutant" && spot.profile === "soaring") r.push("Niveau débutant : soaring côtier à faire accompagné.");
   if (spot.kind === "gonflage") r.push("Vent prévu à 10 m : au sol, compte 20 à 30 % de moins.");
@@ -392,7 +508,7 @@ function nextWindow(dayIndex, kind) {
 const hourOf = (spotId, dayIndex, h) => FORECAST[dayIndex].bySpot[spotId].hours.find(x => x.hour === h);
 
 /* COMPOSANT: route (train puis skate) : listes [lat, lon] pour la carte */
-const RENNES = [48.1035, -1.6724];
+const RENNES = [48.1035, -1.6724]; // fiches soignées : tracés de train au départ de Rennes
 const RAIL_BY_STATION = { "Saint-Malo": RAILS.stmalo, "Saint-Brieuc": [...RAILS.brieuc, [48.5075, -2.766]] };
 function routeLatLngs(spot) {
   if (spot.access.mode === "voiture") return { train: [], skate: [], car: [RENNES, [spot.lat, spot.lon]] };
@@ -475,7 +591,7 @@ function renderCard(spot, hours, slot, selected, hour) {
   const s = spotSummary(hours, slot);
   return `<button type="button" class="card glass ${selected ? "is-sel" : ""}" data-action="card" data-spot="${spot.id}" aria-label="${esc(spot.name)}, ${s.verdict.label}, ${slot ? "créneau " + fmtRange(slot.start, slot.end) : "aucun créneau"}. ${selected ? "Ouvrir le détail." : "Centrer sur la carte."}">
     <span class="card-top"><span class="vbadge vbadge--${s.verdict.key}">${renderVerdictIcon(s.verdict.key)}${s.verdict.label}</span>
-      <span class="chip num">${spot.access.mode === "local" ? I.skate + fmtKm(spot.access.rideKm) : accessIcon(spot) + fmtDur(travelMinutes(spot))}${spot.clubOnly ? " · club" : ""}${spot.limit ? " · +10 km" : ""}</span></span>
+      <span class="chip num">${spot.access.mode === "local" ? softIcon() + fmtKm(spot.access.rideKm) : accessIcon(spot) + fmtDur(travelMinutes(spot))}${spot.clubOnly ? " · club" : ""}${spot.limit ? " · +10 km" : ""}</span></span>
     <span><span class="card-name" style="display:block">${settings.favs.includes(spot.id) ? `<span class="card-star" aria-label="Favori">${STAR}</span>` : ""}${esc(spot.name)}</span><span class="card-sub" style="display:block">${practiceLabel(spot)} · ${esc(spot.city)}</span></span>
     <span class="card-mid">
       <span class="wind-big num">${renderWindArrow(s.dir, 30)}<span><b>${s.wind}</b><small>km/h · raf. ${s.gust} · ${frDir(sectorCode(s.dir))}</small></span></span>
@@ -577,23 +693,23 @@ function renderTripPlan(spot, slot, hours, day, sun) {
   if (spot.access.mode === "train") {
     const tr = spot.access.trainMinutes, dep = start - tr - ride - 20;
     const leave = toMin(settings.lastTrain) - ride - 15;
-    steps.push(["t", dep, "Rennes", `Train ${spot.access.train}`]);
+    steps.push(["t", dep, spot.access.fromStation ? `Gare de ${spot.access.fromStation}` : HOME().name, `Train ${spot.access.train}`]);
     steps.push(["leg", null, `${fmtDur(tr)} de train`, ""]);
-    steps.push(["t", dep + tr, `Gare de ${spot.access.station}`, `Skate ${fmtKm(spot.access.rideKm)} · ${fmtDur(ride)}${climb}`]);
+    steps.push(["t", dep + tr, `Gare de ${spot.access.station}`, `${soft().short} ${fmtKm(spot.access.rideKm)} · ${fmtDur(ride)}${climb}`]);
     steps.push(["leg", null, `${spot.access.ride}`, ""]);
     steps.push(["t", dep + tr + ride, "Arrivée au site", "Préparation, 10 min"]);
     steps.push(["hl", start, slot ? `Créneau ${fmtRange(slot.start, slot.end)}` : "Première heure atteignable", slot ? `${frDir(slot.sector)} ${slot.wind} km/h, rafales ${slot.gust}` : "Aucun créneau au-dessus du score minimum"]);
-    steps.push(["t", leave, "Quitter le site", "Retour en skate vers la gare"]);
+    steps.push(["t", leave, "Quitter le site", `Retour ${soft().verb} vers la gare`]);
     steps.push(["t", toMin(settings.lastTrain), "Dernier train conseillé", `Depuis ${spot.access.station}, horaires à vérifier`]);
   } else if (spot.access.mode === "voiture") {
     const drive = spot.access.driveMinutes, dep = start - drive - 20;
-    steps.push(["t", dep, "Rennes", `Voiture ou covoiturage club, environ ${spot.access.driveKm} km`]);
+    steps.push(["t", dep, HOME().name, `Voiture ou covoiturage, environ ${spot.access.driveKm} km`]);
     steps.push(["leg", null, `${fmtDur(drive)} de route (estimation)${spot.access.nearStation ? ` · gare la plus proche : ${spot.access.nearStation}` : ""}`, ""]);
     steps.push(["t", dep + drive, "Arrivée au site", "Préparation, 20 min"]);
     steps.push(["hl", start, slot ? `Créneau ${fmtRange(slot.start, slot.end)}` : "Première heure possible", slot ? `${frDir(slot.sector)} ${slot.wind} km/h, rafales ${slot.gust}` : "Aucun créneau au-dessus du score minimum"]);
-    steps.push(["t", toMin(sun.sunset), "Coucher du soleil", `Retour vers Rennes : ${fmtDur(drive)}`]);
+    steps.push(["t", toMin(sun.sunset), "Coucher du soleil", `Retour vers ${HOME().name} : ${fmtDur(drive)}`]);
   } else {
-    steps.push(["t", start - ride - 10, "Rennes, centre", `Skate ${fmtKm(spot.access.rideKm)} · ${fmtDur(ride)}${climb}`]);
+    steps.push(["t", start - ride - 10, HOME().name, `${soft().short} ${fmtKm(spot.access.rideKm)} · ${fmtDur(ride)}${climb}`]);
     steps.push(["leg", null, spot.access.ride, ""]);
     steps.push(["hl", start, slot ? `Créneau ${fmtRange(slot.start, slot.end)}` : "Première heure possible", slot ? `${frDir(slot.sector)} ${slot.wind} km/h, rafales ${slot.gust}` : "Aucun créneau au-dessus du score minimum"]);
     steps.push(["t", toMin(sun.sunset), "Coucher du soleil", "Fin de séance"]);
@@ -607,9 +723,9 @@ function renderDetail(spot, dayIndex, hour) {
   const day = DAYS[dayIndex], d = FORECAST[dayIndex].bySpot[spot.id], slot = d.slots[0], sun = d.sun || day;
   const focus = d.hours.find(h => h.hour === hour) || d.hours[7];
   const s = spotSummary(d.hours, slot);
-  const from = spot.access.mode === "train" ? STATIONS.find(x => x.name === spot.access.station) : STATIONS[0];
+  const from = spot.access.mode === "train" ? { lat: spot.access.stationLat, lon: spot.access.stationLon } : { lat: HOME().lat, lon: HOME().lon };
   const lk = (href, label, ic) => href ? `<a class="lk" href="${esc(href)}" target="_blank" rel="noopener">${ic}${label}</a>` : "";
-  const conf = { haute: ["bonne", 3, "Orientations et règles issues de la fiche FFVL, de wikiparapente ou du club gestionnaire."], moyenne: ["moyenne", 2, "Orientations issues d'une base communautaire (ParaglidingEarth, spots.guru), accès estimé."], faible: ["faible", 1, "Fiche incomplète : à confirmer auprès des pilotes locaux."] }[spot.confidence] || ["inconnue", 0, ""];
+  const conf = { haute: ["bonne", 3, "Orientations et règles issues de la fiche FFVL, de wikiparapente ou du club gestionnaire."], moyenne: ["moyenne", 2, "Orientations issues d'une base communautaire (ParaglidingEarth, spots.guru), accès estimé."], faible: ["faible", 1, "Fiche incomplète : à confirmer auprès des pilotes locaux."], perso: ["à toi de vérifier", 0, "Spot ajouté par toi : l'app ne connaît que sa position, ses orientations et son type."], communaute: ["moyenne", 1, "Spot proposé par un pilote et relu avant publication : l'app connaît sa position, ses orientations et son type."] }[spot.confidence] || ["inconnue", 0, ""];
   return `<div class="detail-in stagger">
     <div class="d-head">
       <div><h2 class="d-title" id="d-title">${esc(spot.name)}</h2>
@@ -618,7 +734,8 @@ function renderDetail(spot, dayIndex, hour) {
       <span class="d-acts"><button type="button" class="s3-fav glass ${settings.favs.includes(spot.id) ? "is-on" : ""}" data-action="fav" data-spot="${spot.id}" aria-pressed="${settings.favs.includes(spot.id)}" aria-label="Favori">${STAR}</button><button type="button" class="close" data-action="close-detail" aria-label="Fermer">${ICON_DOWN}</button></span>
     </div>
     <div class="d-verdict"><span class="vbadge vbadge--${s.verdict.key}">${renderVerdictIcon(s.verdict.key)}${s.verdict.label}</span><b class="num">${slot ? fmtRange(slot.start, slot.end) : "Pas de créneau"}</b></div>
-    <section class="d-sec"><h3>Vent</h3><div class="instrument">${renderCompass(spot, d.hours, focus)}${renderGauge(spot, focus)}</div></section>
+    <section class="d-sec"><h3>Vent</h3><div class="instrument">${renderCompass(spot, d.hours, focus)}${renderGauge(spot, focus)}</div>
+      <button type="button" class="mini-btn rose-btn" data-action="compass" aria-pressed="${compass.mode === "follow"}">${compass.mode === "follow" ? "Rose orientée comme ton téléphone · revenir au nord" : "Orienter la rose avec mon téléphone"}</button></section>
     <section class="d-sec"><h3>Heure par heure</h3><div class="hours" id="d-hours">${d.hours.map(h => renderHourChip(h, h.hour === focus.hour)).join("")}</div></section>
     <section class="d-sec"><h3>Modèles de prévision</h3>${renderModelCompare(spot, d, focus.hour)}</section>
     <section class="d-sec"><h3>Plan de vol</h3>${renderTripPlan(spot, slot, d.hours, day, sun)}</section>
@@ -630,7 +747,7 @@ function renderDetail(spot, dayIndex, hour) {
       ${lk(spot.links.ffvl, "Fiche FFVL", I.info)}${lk(spot.links.spotair, "Spot Air", I.wind)}${lk(spot.links.club, "Club", I.club)}${lk(spot.links.doc, "Document du site", I.info)}
       ${lk(spot.links.webcam, "Webcam", I.ext)}${lk(spot.links.maree, "Hauteur d'eau", I.wave)}${lk(spot.links.meteo, "Prévision locale", I.wind)}
       ${lk("https://www.balisemeteo.com/", "Balises FFVL", I.wind)}${lk(`https://www.windy.com/?${spot.lat},${spot.lon},11`, "Windy", I.wind)}
-      ${lk(spot.access.mode === "voiture" ? `https://www.google.com/maps/dir/?api=1&origin=48.1035,-1.6724&destination=${spot.lat},${spot.lon}&travelmode=driving` : `https://www.openstreetmap.org/directions?engine=fossgis_osrm_bike&route=${from.lat}%2C${from.lon}%3B${spot.lat}%2C${spot.lon}`, spot.access.mode === "voiture" ? "Itinéraire en voiture" : spot.access.mode === "train" ? "Itinéraire gare - site" : "Itinéraire depuis Rennes", accessIcon(spot))}
+      ${lk(spot.access.mode === "voiture" ? `https://www.google.com/maps/dir/?api=1&origin=${HOME().lat},${HOME().lon}&destination=${spot.lat},${spot.lon}&travelmode=driving` : `https://www.openstreetmap.org/directions?engine=fossgis_osrm_bike&route=${from.lat}%2C${from.lon}%3B${spot.lat}%2C${spot.lon}`, spot.access.mode === "voiture" ? "Itinéraire en voiture" : spot.access.mode === "train" ? "Itinéraire gare - site" : `Itinéraire depuis ${HOME().name}`, accessIcon(spot))}
       ${spot.access.mode === "train" ? lk("https://www.sncf-connect.com/", "Horaires SNCF", I.train) : ""}${spot.tide ? lk("https://maree.shom.fr/", "Marées SHOM", I.wave) : ""}
     </div></section>
     <p class="reliab"><b>Fiabilité des données du site : ${conf[0]}</b><span class="meter" aria-hidden="true">${[1, 2, 3].map(n => `<i class="${n <= conf[1] ? "on" : ""}"></i>`).join("")}</span><br>${esc(conf[2])} Prévisions indicatives : vérifie les balises sur place avant de décoller.</p>
@@ -640,14 +757,16 @@ function renderDetail(spot, dayIndex, hour) {
 function renderPanel(s, notifState, onbStep, subJson) {
   const seg = (name, opts, val) => `<div class="seg" role="group" aria-label="${name}">${opts.map(([k, l]) => `<button type="button" data-setting="${name}" data-value="${k}" aria-pressed="${k === val}">${l}</button>`).join("")}</div>`;
   const head = `<div class="d-head"><div><h2 class="p-title" id="p-title">${onbStep >= 0 ? "Notifications" : "Réglages"}</h2></div><button type="button" class="close" data-action="${onbStep >= 0 ? "onb-back" : "close-panel"}" aria-label="${onbStep >= 0 ? "Retour aux réglages" : "Fermer"}">${I.close}</button></div>`;
+  if (state.setup) return renderSetup(state.setup);
   if (state.favStep) return renderFavPicker(s);
+  if (state.spotForm) return renderSpotForm(state.spotForm);
   if (onbStep >= 0) return `<div class="panel-in">${head}
     <p class="hint">Sur iPhone, les notifications ne fonctionnent qu'une fois l'app ajoutée à l'écran d'accueil.</p>
     <div class="onb"><div class="onb-dots" aria-hidden="true">${[0, 1, 2].map(i => `<i class="${i <= onbStep ? "on" : ""}"></i>`).join("")}</div>${renderOnboardingIos(onbStep)}</div>
     <div class="btn-row">${onbStep > 0 ? `<button type="button" class="btn btn--ghost" data-action="onb-prev">Précédent</button>` : ""}${onbStep < 2 ? `<button type="button" class="btn btn--wing" data-action="onb-next">Suivant</button>` : `<button type="button" class="btn btn--wing" data-action="onb-done">C'est fait, activer</button>`}</div>
     <p class="hint" style="text-align:center">Sur Android, aucune installation n'est nécessaire : l'autorisation est demandée directement.</p></div>`;
   return `<div class="panel-in">${head}
-    <div class="group"><div class="field"><span class="lbl">Niveau</span>${seg("level", Object.entries(LEVELS).map(([k, v]) => [k, v.label]), s.level)}<p class="hint">Ajuste la plage de vent idéale et le plafond de chaque site.</p></div>
+    <div class="group"><div class="field"><span class="lbl">Niveau</span>${seg("level", Object.entries(LEVELS).map(([k, v]) => [k, v.label]), s.level)}${renderLevelHelp(s)}</div>
       <div class="field"><span class="lbl">Modèle de prévision</span>${seg("model", MODEL_KEYS.map(k => [k, MODELS[k].label]), s.model)}<p class="hint">AROME HD (Météo-France, 1,5 km, 2 jours, comblé par AROME/ARPEGE au-delà), ECMWF IFS (9 km) ou GFS (NOAA). La fiche de chaque spot compare les trois.</p></div></div>
     <div class="group">
       <div class="field"><div class="row"><label class="lbl" for="set-score">Score minimum d'un créneau</label><output class="big-val num" id="out-score">${s.scoreMin}</output></div><input type="range" id="set-score" min="30" max="90" step="5" value="${s.scoreMin}" data-setting="scoreMin">
@@ -666,10 +785,12 @@ function renderPanel(s, notifState, onbStep, subJson) {
           <p>Les notifications ont leur propre seuil (60, dans le fichier data/config.json) : ce curseur ne les change pas.</p>
           <p>C'est un point de départ prudent : après quelques sorties, compare ton ressenti avec la note et ajuste. Vérifie toujours une balise en temps réel avant de partir.</p>
         </details></div>
-      <div class="field"><div class="row"><label class="lbl" for="set-dep">Premier départ de Rennes</label><input type="time" id="set-dep" value="${s.firstDeparture}" data-setting="firstDeparture"></div></div>
+      <div class="field"><span class="lbl">Départ et transport</span><p class="st-sum">${I.pin}<span>Départ : <b>${esc(HOME().name)}</b><br>${esc(transportSummary(s.trans))}</span></p>
+        <p class="hint">${ALL_SPOTS.filter(x => x.reach).length} spots à ta portée, ${FETCH_IDS.size} avec prévisions (favoris compris).</p>
+        <button type="button" class="btn btn--ghost" data-action="setup-open">Modifier</button></div>
+      <div class="field"><div class="row"><label class="lbl" for="set-dep">Premier départ (${esc(HOME().name)})</label><input type="time" id="set-dep" value="${s.firstDeparture}" data-setting="firstDeparture"></div></div>
       <div class="field"><div class="row"><label class="lbl" for="set-last">Dernier train retour</label><input type="time" id="set-last" value="${s.lastTrain}" data-setting="lastTrain"></div><p class="hint">Les heures hors de cette fenêtre sont grisées sur le ruban du temps.</p></div>
-      <div class="field"><label class="check"><input type="checkbox" data-setting="includeCar" ${s.includeCar ? "checked" : ""}>Afficher aussi les sites sans gare proche (voiture, covoiturage club)</label>
-        <label class="check"><input type="checkbox" data-setting="includeTreuil" ${s.includeTreuil ? "checked" : ""}>Afficher les terrains de treuil</label>
+      <div class="field"><label class="check"><input type="checkbox" data-setting="includeTreuil" ${s.includeTreuil ? "checked" : ""}>Afficher les terrains de treuil</label>
         <p class="hint">Treuils : ne se pratiquent qu'avec un club. Saint-Séglin et Massérac sont des terrains FFVL, Crocy et Martigny viennent de wikiparapente, Sougéal seulement de ParaglidingEarth : à confirmer auprès des clubs.</p></div>
       <div class="field"><div class="row"><span class="lbl">Spots favoris</span><span class="status ${s.favs.length ? "status--on" : "status--off"}">${s.favs.length || "Aucun"}</span></div><p class="hint">Tes favoris sont mis en avant (étoile) et le bouton étoile en bas de l'écran n'affiche qu'eux.</p><button type="button" class="btn btn--ghost" data-action="fav-open">${STAR}Choisir mes spots favoris</button></div>
       <div class="field"><span class="lbl">Mes spots</span><p class="hint">Décoche les spots que tu ne veux pas voir sur la carte ni dans les cartes.</p>${renderSpotPicker(s)}</div>
@@ -680,16 +801,35 @@ function renderPanel(s, notifState, onbStep, subJson) {
       <div class="field"><div class="btn-row">${s.notifEnabled ? "" : `<button type="button" class="btn btn--wing" data-action="onb-start">${I.bell}Activer</button>`}<button type="button" class="btn btn--ghost" data-action="test-notif">Tester une notification</button></div>${notifState ? `<p class="hint" role="status">${esc(notifState)}</p>` : ""}${subJson ? `<label class="lbl" for="sub-box" style="font-size:14px">Abonnement de cet appareil (secret GitHub WEB_PUSH_SUBSCRIPTION)</label><textarea id="sub-box" class="sub-box" readonly>${esc(subJson)}</textarea><button type="button" class="btn btn--ghost" data-action="copy-sub">Copier l'abonnement</button>` : ""}</div>
     </div>
     <div class="group"><div class="field"><span class="lbl">Apparence</span>${seg("theme", [["system", "Système"], ["light", "Clair"], ["dark", "Sombre"]], s.theme)}</div></div>
+    <div class="group">
+      <div class="field"><span class="lbl">Mes spots ajoutés</span>
+        <p class="hint">Un site qui manque ? Ajoute-le : il aura les mêmes prévisions et le même score que les autres. Il reste sur ce téléphone (pense à la sauvegarde ci-dessous).</p>
+        ${renderCustomList(s)}
+        <button type="button" class="btn btn--ghost" data-action="sf-new">${I.pin}Ajouter un spot</button>
+        ${s.custom?.length ? `<p class="hint"><b>Proposer</b> envoie le spot par mail à ParaSpot : une fois vérifié, il est ajouté pour tout le monde. <b>Notifications</b> : télécharge le fichier ci-dessous et dépose-le dans le dossier <code>data</code> du dépôt GitHub (nom <code>mes-spots.json</code>) pour que le robot surveille aussi tes spots.</p>
+        <button type="button" class="btn btn--ghost" data-action="custom-export">${I.bell}Fichier pour les notifications</button>` : ""}</div>
+      <div class="field"><span class="lbl">Sauvegarde</span>
+        <p class="hint">Tes réglages, favoris et spots ajoutés sont enregistrés sur ce téléphone. Fais une sauvegarde pour les retrouver si le téléphone les efface, ou pour les passer sur un autre appareil.</p>
+        <div class="btn-row"><button type="button" class="btn btn--ghost" data-action="backup-file">Télécharger ma sauvegarde</button><button type="button" class="btn btn--ghost" data-action="backup-copy">Copier mon code</button></div>
+        <label class="lbl" for="restore-code" style="font-size:14px">Restaurer : colle un code ou choisis un fichier de sauvegarde</label>
+        <textarea id="restore-code" class="sub-box" placeholder="PARASPOT1:..." rows="3"></textarea>
+        <div class="btn-row"><button type="button" class="btn btn--ghost" data-action="restore-code">Restaurer ce code</button><label class="btn btn--ghost file-btn">Choisir un fichier<input type="file" id="restore-file" accept=".json,application/json,text/plain" hidden></label></div>
+        ${state.backupMsg ? `<p class="hint" role="status"><b>${esc(state.backupMsg)}</b></p>` : ""}
+        ${isIOS && !isStandalone() ? `<p class="hint">Sur iPhone, Safari et l'app ajoutée à l'écran d'accueil ne partagent pas leurs données : ouvre toujours ParaSpot depuis son icône, sinon Safari peut effacer tes réglages au bout de quelques jours.</p>` : ""}</div>
+    </div>
     <div class="group"><div class="field"><span class="lbl">Légende de la carte</span><div class="legend-in">${renderLegend()}</div><label class="check"><input type="checkbox" data-legend-toggle="1" ${s.legendHidden ? "" : "checked"}>Afficher la légende quand je déplace la carte</label></div></div>
     <div class="group"><div class="field"><span class="lbl">Installer sur le téléphone</span><p class="hint">Android (Chrome) : menu ⋮ puis « Installer l'application ». iPhone (Safari) : bouton Partager puis « Sur l'écran d'accueil ».</p>${installPrompt ? `<button type="button" class="btn btn--wing" data-action="install">Installer ParaSpot</button>` : ""}</div></div>
-    <p class="hint">Prévisions Open-Meteo (AROME HD et AROME/ARPEGE Météo-France, ECMWF IFS, NOAA GFS ; CC BY 4.0), marées Open-Meteo Marine indicatives. Fiches : wikiparapente.fr, FFVL, ParaglidingEarth, spots.guru, clubs. Balises et carte : Spot Air. Fond de carte embarqué : Natural Earth. ${ALL_SPOTS.length} spots.</p>
+    <div class="group"><div class="field"><span class="lbl">Contact</span><p class="hint">Une idée, un bug, un spot à corriger ? Écris-nous.</p>
+      <a class="btn btn--ghost" href="mailto:tobalab@proton.me?subject=${encodeURIComponent("ParaSpot")}">${I.mail}Contacter ParaSpot</a>
+      <p class="hint">ParaSpot est gratuit, pour un usage non commercial : la vente de l'application est interdite (licence PolyForm Noncommercial 1.0.0). <a href="LICENCE.md" target="_blank" rel="noopener">Lire la licence</a></p></div></div>
+    <p class="hint">Prévisions Open-Meteo (AROME HD et AROME/ARPEGE Météo-France, ECMWF IFS, NOAA GFS ; CC BY 4.0), marées Open-Meteo Marine indicatives. Fiches : wikiparapente.fr, FFVL, ParaglidingEarth, spots.guru, clubs. Sites de France : liste FFVL (ODbL) et ParaglidingEarth, importés chaque semaine. Gares : SNCF Open Data (ODbL). Communes : geo.api.gouv.fr. Recherche de ville : Open-Meteo. Balises et carte : Spot Air. Fond de carte embarqué : Natural Earth. ${ALL_SPOTS.length} spots.</p>
   </div>`;
 }
 
 /* =========================================================
    MOTEUR : caméra, champ de vent, ciel
    ========================================================= */
-const state = { subJson: "", kindInit: true, windOn: true, layer: "plan", day: 0, kind: ["tout","gonflage","vol","favoris"].includes(settings.kind) ? settings.kind : "tout", sel: null, pinned: false, favStep: false, hour: 14, playing: false, detail: false, panel: false, onbStep: -1, loading: false, offline: !navigator.onLine, notifState: "" };
+const state = { subJson: "", kindInit: true, windOn: true, layer: "plan", day: 0, kind: ["tout","gonflage","vol","favoris"].includes(settings.kind) ? settings.kind : "tout", sel: null, pinned: false, setup: null, favStep: false, spotForm: null, picking: false, delConfirm: null, backupMsg: "", hour: 14, playing: false, detail: false, panel: false, onbStep: -1, loading: false, offline: !navigator.onLine, notifState: "" };
 const $ = s => document.querySelector(s);
 const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -737,9 +877,108 @@ function zoomClasses() {
   m.classList.toggle("z-hi", z >= 12); m.classList.toggle("z-lo", z < 10);
   m.dataset.tier = z < 7.75 ? "1" : z < 9.25 ? "2" : "3";
 }
-let map = null, tileLayer = null, markersLayer = null, routeLayer = null, markerObjs = {}, clusterObjs = [];
+/* =========================================================
+   BOUSSOLE : carte orientée vers le nord ou dans le sens du téléphone
+   La carte entière tourne (élément #map agrandi à sa diagonale), les marqueurs et les noms restent droits.
+   ========================================================= */
+const MAP_BOUNDS = [[40.5, -7.5], [52, 11]];
+let MAP_ROT = 0; // rotation appliquée à la carte, en degrés (sens horaire)
+const compass = { mode: "north", heading: null, smooth: null, raf: 0, listening: false, sized: false };
+function unrot(x, y) { if (!MAP_ROT) return [x, y]; const r = -MAP_ROT * Math.PI / 180, c = Math.cos(r), s = Math.sin(r); return [x * c - y * s, x * s + y * c]; }
+(function patchLeafletForRotation() {
+  // Position d'un toucher dans le repère de la carte non tournée (clics, zoom à deux doigts)
+  const orig = L.Map.prototype.mouseEventToContainerPoint;
+  L.Map.prototype.mouseEventToContainerPoint = function (e) {
+    if (!MAP_ROT) return orig.call(this, e);
+    const el = this._container, rect = el.getBoundingClientRect(), cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
+    const [dx, dy] = unrot(e.clientX - cx, e.clientY - cy);
+    return L.point(dx + el.offsetWidth / 2, dy + el.offsetHeight / 2);
+  };
+  // Glisser la carte : on ramène le déplacement du doigt dans le repère de la carte
+  const wrap = e => {
+    if (!MAP_ROT) return e;
+    const f = e.touches ? e.touches[0] : e; if (!f) return e;
+    const [x, y] = unrot(f.clientX, f.clientY), t = { clientX: x, clientY: y, target: f.target };
+    return new Proxy(e, { get(o, k) {
+      if (k === "touches") return o.touches ? [t, ...Array.prototype.slice.call(o.touches, 1)] : undefined;
+      if (k === "clientX") return x; if (k === "clientY") return y;
+      const v = o[k]; return typeof v === "function" ? v.bind(o) : v;
+    } });
+  };
+  const down = L.Draggable.prototype._onDown, move = L.Draggable.prototype._onMove;
+  L.Draggable.prototype._onDown = function (e) { const r = down.call(this, wrap(e)); if (MAP_ROT && this._parentScale) this._parentScale = { x: 1, y: 1, boundingClientRect: this._parentScale.boundingClientRect }; return r; };
+  L.Draggable.prototype._onMove = function (e) { return move.call(this, wrap(e)); };
+})();
+function setMapRotation(deg) {
+  const el = $("#map");
+  deg = ((deg % 360) + 540) % 360 - 180;
+  if (Math.abs(deg) < 0.5 && compass.mode === "north") deg = 0;
+  if (deg && !compass.sized) {
+    const W = innerWidth, H = innerHeight, D = Math.ceil(Math.hypot(W, H));
+    Object.assign(el.style, { inset: "auto", width: D + "px", height: D + "px", left: (W - D) / 2 + "px", top: (H - D) / 2 + "px" });
+    map.setMaxBounds(null); // la carte agrandie dépasse les limites : on les lève pendant la rotation
+    compass.sized = true; map.invalidateSize({ pan: true, animate: false });
+  }
+  MAP_ROT = deg;
+  el.style.transform = deg ? `rotate(${deg}deg)` : "";
+  el.style.setProperty("--unrot", `${-deg}deg`);
+  document.querySelectorAll(".compass-btn .needle").forEach(n => n.style.transform = `rotate(${deg}deg)`);
+  const rose = document.querySelector("#detail .compass"); if (rose) rose.style.transform = deg ? `rotate(${deg}deg)` : "";
+  if (!deg && compass.sized) {
+    Object.assign(el.style, { inset: "", width: "", height: "", left: "", top: "" });
+    compass.sized = false; map.invalidateSize({ pan: true, animate: false });
+    map.setMaxBounds(MAP_BOUNDS);
+  }
+}
+function onOrient(e) {
+  let h = null;
+  if (typeof e.webkitCompassHeading === "number") h = e.webkitCompassHeading; // iPhone
+  else if (e.absolute && e.alpha != null) h = 360 - e.alpha;                  // Android
+  if (h == null) return;
+  compass.heading = (h + (screen.orientation?.angle || 0) + 360) % 360;
+}
+function compassLoop() {
+  if (compass.mode !== "follow") return;
+  if (compass.heading != null) {
+    if (compass.smooth == null) compass.smooth = compass.heading;
+    const d = ((compass.heading - compass.smooth + 540) % 360) - 180;
+    compass.smooth = (compass.smooth + d * 0.18 + 360) % 360;
+    setMapRotation(-compass.smooth);
+  }
+  compass.raf = requestAnimationFrame(compassLoop);
+}
+async function startCompass() {
+  try {
+    if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function") {
+      const r = await DeviceOrientationEvent.requestPermission(); // iPhone : autorisation après un geste
+      if (r !== "granted") throw new Error("refus");
+    }
+  } catch { showInfo("Boussole", "Autorisation refusée : dans Réglages de l'iPhone > Safari, autorise « Mouvement et orientation », puis réessaie."); return false; }
+  if (!compass.listening) {
+    if ("ondeviceorientationabsolute" in window) addEventListener("deviceorientationabsolute", onOrient);
+    else addEventListener("deviceorientation", onOrient);
+    compass.listening = true;
+  }
+  return true;
+}
+async function setCompassMode(mode) {
+  if (mode === "follow") {
+    if (!(await startCompass())) return;
+    compass.mode = "follow"; compass.smooth = null; cancelAnimationFrame(compass.raf); compassLoop();
+    setTimeout(() => { if (compass.mode === "follow" && compass.heading == null) { setCompassMode("north"); showInfo("Boussole indisponible", "Ce téléphone ou ce navigateur ne donne pas son orientation. La carte reste orientée vers le nord."); } }, 2500);
+  } else {
+    compass.mode = "north"; cancelAnimationFrame(compass.raf); setMapRotation(0);
+  }
+  document.querySelectorAll('[data-action="compass"]').forEach(b => {
+    b.setAttribute("aria-pressed", String(compass.mode === "follow"));
+    b.setAttribute("aria-label", compass.mode === "follow" ? "Boussole : la carte suit l'orientation du téléphone. Toucher pour revenir au nord." : "Boussole : carte orientée vers le nord. Toucher pour suivre l'orientation du téléphone.");
+  });
+  document.querySelectorAll(".rose-btn").forEach(b => b.textContent = compass.mode === "follow" ? "Rose orientée comme ton téléphone · revenir au nord" : "Orienter la rose avec mon téléphone");
+  if (compass.mode === "follow") showInfo("Boussole active", "La carte tourne avec ton téléphone : ce qui est en haut de l'écran est devant toi. Touche à nouveau la boussole pour revenir au nord.");
+}
+let map = null, tileLayer = null, stationLayer = null, farLayer = null, markersLayer = null, routeLayer = null, markerObjs = {}, clusterObjs = [];
 function initMap() {
-  map = L.map("map", { zoomControl: false, attributionControl: false, minZoom: 6, maxZoom: 16, zoomSnap: 0.25, zoomDelta: 0.5, wheelPxPerZoomLevel: 100, maxBounds: [[45.4, -6.8], [50.7, 2.8]], maxBoundsViscosity: 0.7, keyboard: true });
+  map = L.map("map", { zoomControl: false, attributionControl: false, minZoom: 5, maxZoom: 16, zoomSnap: 0.25, zoomDelta: 0.5, wheelPxPerZoomLevel: 100, maxBounds: MAP_BOUNDS, maxBoundsViscosity: 0.7, keyboard: true });
   const fb = map.createPane("fallback"); fb.style.zIndex = 150;
   map.createPane("base").style.zIndex = 160;
   const lp = map.createPane("labels"); lp.style.zIndex = 450; lp.style.pointerEvents = "none";
@@ -748,13 +987,16 @@ function initMap() {
   svg.innerHTML = GEO.ripples.map(d => `<path class="fb-rip" d="${d}"/>`).join("") + `<path class="fb-land" d="${GEO.land}"/>`;
   L.svgOverlay(svg, [[GEO.b[0], GEO.b[1]], [GEO.b[2], GEO.b[3]]], { pane: "fallback", interactive: false }).addTo(map);
   routeLayer = L.layerGroup().addTo(map);
-  STATIONS.forEach(st => L.marker([st.lat, st.lon], { icon: L.divIcon({ className: "", html: `<div class="stn">${I.train}</div>`, iconSize: [26, 26], iconAnchor: [13, 13] }), interactive: false, keyboard: false }).addTo(map));
+  stationLayer = L.layerGroup().addTo(map);
+  farLayer = L.layerGroup().addTo(map);
   markersLayer = L.layerGroup().addTo(map);
-  map.on("zoomend", () => { renderMarkers(); zoomClasses(); buildBasemap(); });
+  map.on("zoomend", () => { renderMarkers(); renderFar(); zoomClasses(); buildBasemap(); });
+  map.on("moveend", () => renderFar());
   map.on("movestart", () => document.body.classList.add("is-moving"));
   /* Mode carte : dès que l'utilisateur manipule la carte, l'interface se replie pour laisser voir le fond */
   ["pointerdown", "wheel", "touchstart"].forEach(ev => $("#map").addEventListener(ev, () => setMapFocus(true), { passive: true }));
   map.on("moveend", () => document.body.classList.remove("is-moving"));
+  map.on("click", e => { if (state.picking) endPick(e.latlng); });
 }
 function setTiles() {
   if (!map) return;
@@ -774,14 +1016,15 @@ function flyTo(latlngs, maxZoom, instant) {
   else map.flyToBounds(b, { ...viewPad(), maxZoom, duration: 1.15, easeLinearity: 0.2 });
 }
 function frameSpot(spot) { const r = routeLatLngs(spot); flyTo(r.skate.length ? r.skate : [[spot.lat, spot.lon]], spot.access.mode === "local" ? 13.5 : 13); }
-/* Vue de départ : la Bretagne, Rennes au centre de la zone visible (cadre symétrique autour de Rennes) */
+/* Vue de départ : la région, ville de départ au centre de la zone visible */
 function homeView(instant) {
   if (!map) return;
   const dLon = 3.2, W = map.getSize().x, H = map.getSize().y;
-  const z = map.getBoundsZoom(L.latLngBounds([[RENNES[0], RENNES[1] - dLon], [RENNES[0] + 0.01, RENNES[1] + dLon]]), false, L.point(16, 0));
+  const H0 = HOME_LL();
+  const z = map.getBoundsZoom(L.latLngBounds([[H0[0], H0[1] - dLon], [H0[0] + 0.01, H0[1] + dLon]]), false, L.point(16, 0));
   const top = $(".top").offsetHeight, dock = $(".dock").offsetHeight;
   const yTarget = top + 40 < H - dock - 40 ? (top + H - dock) / 2 : H / 2; // milieu de la zone de carte visible
-  const c = map.unproject(map.project(RENNES, z).add([0, H / 2 - yTarget]), z);
+  const c = map.unproject(map.project(H0, z).add([0, H / 2 - yTarget]), z);
   map.setView(c, z, { animate: !(reduce || instant), duration: 0.8 });
 }
 /* Spot choisi : on ne recadre que s'il est caché par l'interface, sans changer le zoom */
@@ -790,7 +1033,7 @@ function revealSpot(spot) {
   const pad = viewPad();
   map.panInside([spot.lat, spot.lon], { paddingTopLeft: pad.paddingTopLeft, paddingBottomRight: pad.paddingBottomRight, animate: !reduce });
 }
-function frameAll(instant) { flyTo([...items().map(x => [x.spot.lat, x.spot.lon]), RENNES], 11, instant); }
+function frameAll(instant) { flyTo([...items().map(x => [x.spot.lat, x.spot.lon]), HOME_LL()], 11, instant); }
 function renderRoute(spot) {
   if (!routeLayer) return;
   routeLayer.clearLayers();
@@ -799,6 +1042,31 @@ function renderRoute(spot) {
   if (r.train.length) { L.polyline(r.train, { className: "m-route-glow", interactive: false }).addTo(routeLayer); L.polyline(r.train, { className: "m-route-train", interactive: false }).addTo(routeLayer); }
   if (r.car) { L.polyline(r.car, { className: "m-route-glow", interactive: false }).addTo(routeLayer); L.polyline(r.car, { className: "m-route-car", interactive: false }).addTo(routeLayer); }
   if (r.skate.length) { L.polyline(r.skate, { className: "m-route-glow", interactive: false }).addTo(routeLayer); L.polyline(r.skate, { className: "m-route-skate", interactive: false }).addTo(routeLayer); }
+}
+/* Gares utiles (départ et arrivée des trajets en train) */
+function drawStations() {
+  if (!stationLayer) return;
+  stationLayer.clearLayers();
+  STATIONS.forEach(st => L.marker([st.lat, st.lon], { icon: L.divIcon({ className: "", html: `<div class="stn">${I.train}</div>`, iconSize: [26, 26], iconAnchor: [13, 13] }), interactive: false, keyboard: false, title: "Gare de " + st.name }).addTo(stationLayer));
+}
+/* Spots hors de portée avec tes réglages : petits points gris, prévisions à la demande (favori) */
+function renderFar() {
+  if (!farLayer || !map) return;
+  farLayer.clearLayers();
+  if (map.getZoom() < 8) return;
+  const b = map.getBounds().pad(0.2);
+  ALL_SPOTS.filter(s => !FETCH_IDS.has(s.id) && (settings.includeTreuil || s.profile !== "treuil") && b.contains([s.lat, s.lon])).slice(0, 400).forEach(s => {
+    const mk = L.marker([s.lat, s.lon], { icon: L.divIcon({ className: "", html: `<div class="mk-far" title="${esc(s.name)}"></div>`, iconSize: [18, 18], iconAnchor: [9, 9] }), title: s.name, keyboard: false });
+    mk.on("click", () => showFar(s)); mk.addTo(farLayer);
+  });
+}
+function showFar(s) {
+  const reason = s.access.mode === "voiture" && settings.trans.car ? `environ ${fmtDur(s.access.driveMinutes)} de route` : "pas accessible avec tes modes de transport";
+  const el = $("#info");
+  el.innerHTML = `<div class="info-in glass"><div><b>${esc(s.name)}</b><p>${esc(s.city)} · ${s.orientations.map(frDir).join(", ")} · ${s.distKm} km de ${esc(HOME().name)} (${reason}). Pas de prévisions pour ce spot avec tes réglages.</p>
+    <button type="button" class="mini-btn" data-action="far-fav" data-id="${s.id}" style="margin-top:8px">${STAR} Ajouter aux favoris et voir ses prévisions</button></div>
+    <button type="button" class="info-x" data-action="info-close" aria-label="Fermer">${I.close}</button></div>`;
+  el.classList.add("is-on"); clearTimeout(infoTimer);
 }
 /* Regroupe les spots trop proches à l'écran (le spot sélectionné reste toujours seul) */
 function renderMarkers() {
@@ -877,7 +1145,7 @@ function windStep() {
   ctx.globalCompositeOperation = "destination-in"; ctx.fillStyle = "rgba(0,0,0,.90)"; ctx.fillRect(0, 0, wind.w, wind.h);
   ctx.globalCompositeOperation = "source-over";
   ctx.strokeStyle = `rgba(${wind.color},${wind.alpha})`; ctx.lineWidth = 1.3; ctx.lineCap = "round";
-  const to = (wind.dir + 180) * Math.PI / 180, base = 0.25 + wind.speed * 0.11;
+  const to = (wind.dir + 180 + MAP_ROT) * Math.PI / 180, base = 0.25 + wind.speed * 0.11;
   tick++;
   ctx.beginPath();
   for (const p of wind.parts) {
@@ -999,6 +1267,7 @@ function openDetail(spotId) {
   const r = card.getBoundingClientRect();
   el.style.setProperty("--clip", `${r.top}px ${innerWidth - r.right}px ${innerHeight - r.bottom}px ${r.left}px`);
   el.innerHTML = renderDetail(spotById(spotId), state.day, state.hour);
+  if (MAP_ROT) { const rose = el.querySelector(".compass"); if (rose) rose.style.transform = `rotate(${MAP_ROT}deg)`; }
   history.replaceState(null, "", `?spot=${spotId}&date=${DAYS[state.day].date}`);
   el.scrollTop = 0; void el.offsetWidth;
   el.classList.add("is-open"); state.detail = true;
@@ -1020,7 +1289,8 @@ function updateDetailHour(h) {
 /* Réglages */
 function openPanel() { state.panel = true; renderPanelOnly(); $("#panel").classList.add("is-open"); setTimeout(() => $("#panel").focus(), 50); }
 function renderPanelOnly() { $("#panel").innerHTML = renderPanel(settings, state.notifState, state.onbStep, state.subJson); }
-function closePanel() { if (state.favStep && !settings.favsAsked) { settings.favsAsked = true; saveSettings(); } state.panel = false; state.onbStep = -1; state.favStep = false; $("#panel").classList.remove("is-open"); }
+function closePanel() { if (state.favStep && !settings.favsAsked) { settings.favsAsked = true; saveSettings(); } if (state.setup?.first) return; // premier lancement : la ville de départ est nécessaire
+  state.panel = false; state.onbStep = -1; state.favStep = false; state.setup = null; state.spotForm = null; state.delConfirm = null; state.backupMsg = ""; $("#panel").classList.remove("is-open"); }
 function applyTheme() {
   if (settings.theme === "system") document.documentElement.removeAttribute("data-theme"); else document.documentElement.setAttribute("data-theme", settings.theme);
   windColors(); applySky(); setTiles();
@@ -1075,6 +1345,49 @@ document.addEventListener("click", e => {
   else if (a === "legend-close") { settings.legendHidden = true; saveSettings(); document.body.classList.add("no-legend"); }
   else if (a === "toast-close") { $("#toast").classList.remove("is-on"); }
   else if (a === "fav-open") openFavPicker();
+  else if (a === "setup-open") openSetup(false);
+  else if (a === "compass") setCompassMode(compass.mode === "follow" ? "north" : "follow");
+  else if (a === "pf-reset") { settings.profiles = {}; saveSettings(); buildForecast(); renderAll(false); renderPanelOnly(); }
+  else if (a === "setup-cancel") { state.setup = null; renderPanelOnly(); }
+  else if (a === "setup-search") setupSearch();
+  else if (a === "setup-geo") setupGeo();
+  else if (a === "setup-pick") { const st = state.setup, r = st.results[+el.dataset.i]; st.home = { name: r.name, lat: r.lat, lon: r.lon }; st.results = []; st.msg = ""; renderPanelOnly(); }
+  else if (a === "st-soft") { state.setup.trans.soft = el.dataset.value; renderPanelOnly(); }
+  else if (a === "st-km") { state.setup.trans.softKm = +el.dataset.value; renderPanelOnly(); }
+  else if (a === "st-drive") { state.setup.trans.maxDrive = +el.dataset.value; renderPanelOnly(); }
+  else if (a === "setup-save") setupSave();
+  else if (a === "far-fav") { const id = el.dataset.id; if (!settings.favs.includes(id)) settings.favs = [...settings.favs, id]; saveSettings(); hideInfo(); rebuildSpots(); renderFar(); refresh(true); }
+  else if (a === "sf-share") {
+    const c = settings.custom.find(x => x.id === el.dataset.id); if (!c) return;
+    const dirs = c.profile === "gonflage" ? "toutes (gonflage)" : c.orientations.map(frDir).join(", ");
+    const body = `Bonjour,\n\nJe propose ce spot pour ParaSpot :\n\nNom : ${c.name}\nCommune : ${c.city || "?"}\nPratique : ${{ gonflage: "Gonflage", soaring: "Vol bord de mer", plaine: "Vol pente" }[c.profile]}\nOrientations : ${dirs}\nPosition du décollage : ${c.lat}, ${c.lon} (https://www.google.com/maps/search/?api=1&query=${c.lat},${c.lon})\nBord de mer : ${c.tide ? "oui" : "non"}\nNotes : ${c.notes || "-"}\n\nComment je connais ce spot (club, fiche FFVL, pratique régulière) : \n\nCode à coller dans data/communaute.json :\n${JSON.stringify({ ...c, id: c.id.replace(/^perso-/, "comm-") })}\n`;
+    location.href = `mailto:tobalab@proton.me?subject=${encodeURIComponent(`ParaSpot - proposition de spot : ${c.name}`)}&body=${encodeURIComponent(body)}`;
+  }
+  else if (a === "custom-export") {
+    const blob = new Blob([JSON.stringify({ note: "Spots ajoutés dans ParaSpot, pour le robot de notifications. À déposer dans data/mes-spots.json.", spots: settings.custom }, null, 1)], { type: "application/json" });
+    const url = URL.createObjectURL(blob), lk = document.createElement("a");
+    lk.href = url; lk.download = "mes-spots.json"; document.body.appendChild(lk); lk.click(); lk.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+  else if (a === "sf-new") { state.delConfirm = null; openSpotForm(null); }
+  else if (a === "sf-edit") { state.delConfirm = null; openSpotForm(settings.custom.find(c => c.id === el.dataset.id)); }
+  else if (a === "sf-del") {
+    const id = el.dataset.id;
+    if (state.delConfirm !== id) { state.delConfirm = id; renderPanelOnly(); }
+    else { state.delConfirm = null; settings.custom = settings.custom.filter(c => c.id !== id); settings.favs = settings.favs.filter(x => x !== id); saveSettings(); rebuildSpots(); applySpotFilter(); if (state.sel === id) { state.pinned = false; pickDefault(); } if (FORECAST) { buildForecast(); renderAll(false); } renderPanelOnly(); }
+  }
+  else if (a === "sf-cancel") { state.spotForm = null; renderPanelOnly(); }
+  else if (a === "sf-prof") { state.spotForm.profile = el.dataset.value; if (el.dataset.value === "soaring") state.spotForm.tide = true; renderPanelOnly(); }
+  else if (a === "sf-dir") { const f = state.spotForm, d = el.dataset.dir; f.orientations = f.orientations.includes(d) ? f.orientations.filter(x => x !== d) : [...f.orientations, d]; el.setAttribute("aria-pressed", String(f.orientations.includes(d))); }
+  else if (a === "sf-pick") startPick();
+  else if (a === "pick-cancel") endPick(null);
+  else if (a === "sf-save") saveSpotForm();
+  else if (a === "backup-copy") { const code = backupCode(); navigator.clipboard?.writeText(code).then(() => { state.backupMsg = "Code copié : colle-le dans une note ou envoie-le toi par message."; renderPanelOnly(); }).catch(() => { const t = $("#restore-code"); if (t) { t.value = code; t.select(); } state.backupMsg = "Copie automatique impossible : le code est dans la case, copie-le à la main."; }); }
+  else if (a === "backup-file") {
+    const blob = new Blob([JSON.stringify(backupObj(), null, 1)], { type: "application/json" }), url = URL.createObjectURL(blob), lk = document.createElement("a");
+    lk.href = url; lk.download = `paraspot-sauvegarde-${new Date().toISOString().slice(0, 10)}.json`; document.body.appendChild(lk); lk.click(); lk.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
+    state.backupMsg = "Fichier de sauvegarde téléchargé."; renderPanelOnly();
+  }
+  else if (a === "restore-code") restoreFrom($("#restore-code")?.value);
   else if (a === "fav-done") finishFavs(false);
   else if (a === "fav-skip") finishFavs(true);
   else if (a === "fav") {
@@ -1107,11 +1420,43 @@ document.addEventListener("click", e => {
   else if (a === "test-notif") testNotification();
   else if (a === "toast-open") { $("#toast").classList.remove("is-on"); closePanel(); state.day = Math.max(0, +el.dataset.day); state.sel = el.dataset.spot; state.pinned = true; renderAll(false); openDetail(el.dataset.spot); }
 });
+document.addEventListener("toggle", e => {
+  const d = e.target; if (!(d instanceof HTMLDetailsElement) || !d.open || !d.closest("#fav-list") || d.querySelector(".pk-spot")) return;
+  const name = d.querySelector(".pk-r")?.textContent;
+  const tmp = document.createElement("div"); const keepQ = state.favQ;
+  const s = settings, norm = t => (t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(), q = norm(keepQ).trim();
+  let list = ALL_SPOTS.filter(x => !s.hidden.includes(x.id) && (s.includeTreuil || x.profile !== "treuil" || s.favs.includes(x.id)));
+  if (q) list = list.filter(x => norm(`${x.name} ${x.city} ${x.region} ${x.dept}`).includes(q));
+  const g = byDept(list).find(([r]) => r === name); if (!g) return;
+  tmp.innerHTML = g[1].map(x => `<label class="check pk-spot pk-fav"><input type="checkbox" data-fav-toggle="${x.id}" ${s.favs.includes(x.id) ? "checked" : ""}>${kindIcon(x.kind)}<span>${esc(x.name)}<small>${esc(x.city.replace(/\s*\((\d{2}|2A|2B)\)/, ""))}${x.distKm != null ? ` · ${x.distKm} km` : ""}${x.imported ? ` · ${x.sources[0].replace(" (ODbL)", "")}` : ""}</small></span></label>`).join("");
+  d.append(...tmp.childNodes);
+}, true);
 document.addEventListener("input", e => {
+  if (e.target.id === "fav-q") { state.favQ = e.target.value; const l = $("#fav-list"); if (l) l.innerHTML = renderFavList(settings); return; }
+  const sf = e.target.dataset?.sf;
+  if (sf && state.spotForm) {
+    if (sf === "tide") state.spotForm.tide = e.target.checked;
+    else if (sf === "coords") { const c = parseCoords(e.target.value); const pos = $("#sf-pos"); if (c) { state.spotForm.lat = c.lat; state.spotForm.lon = c.lon; if (pos) pos.textContent = `Choisie : ${c.lat.toFixed(5)}, ${c.lon.toFixed(5)}`; } else if (pos && e.target.value) pos.textContent = "Coordonnées non reconnues : écris par exemple 48.6862, -1.8432"; }
+    else state.spotForm[sf] = e.target.value;
+    return;
+  }
   if (e.target.id === "hour") { togglePlay(false); setHour(+e.target.value); }
   if (e.target.id === "set-score") $("#out-score").textContent = e.target.value;
 });
 document.addEventListener("change", e => {
+  if (e.target.dataset?.prof) {
+    const k = e.target.dataset.prof, f = e.target.dataset.pf, v = Math.max(0, Math.min(80, Math.round(+e.target.value || 0)));
+    const cur = { windMin: DEFAULT_PROFILES[k].windMin, idealMin: DEFAULT_PROFILES[k].idealMin, idealMax: DEFAULT_PROFILES[k].idealMax, windMax: DEFAULT_PROFILES[k].windMax, gustMax: DEFAULT_PROFILES[k].gustMax, ...(settings.profiles?.[k] || {}), [f]: v };
+    const ok = cur.windMin <= cur.idealMin && cur.idealMin <= cur.idealMax && cur.idealMax <= cur.windMax && cur.windMax <= cur.gustMax;
+    const msg = $("#pf-msg");
+    if (!ok) { if (msg) { msg.textContent = "Valeurs incohérentes : il faut vent mini ≤ idéal de ≤ à ≤ vent maxi ≤ rafales maxi. Rien n'a été changé."; msg.classList.add("sf-err"); } return; }
+    settings.profiles = { ...(settings.profiles || {}), [k]: cur }; saveSettings();
+    if (msg) { msg.textContent = "Seuils enregistrés."; msg.classList.remove("sf-err"); }
+    buildForecast(); renderAll(false); return;
+  }
+  if (e.target.dataset?.st && state.setup) { state.setup.trans[e.target.dataset.st] = e.target.checked; renderPanelOnly(); return; }
+  if (e.target.id === "restore-file" && e.target.files?.[0]) { e.target.files[0].text().then(restoreFrom); return; }
+  if (e.target.dataset?.sf === "tide" && state.spotForm) { state.spotForm.tide = e.target.checked; return; }
   if (e.target.dataset.legendToggle) { settings.legendHidden = !e.target.checked; saveSettings(); document.body.classList.toggle("no-legend", settings.legendHidden); return; }
   if (e.target.dataset.favToggle) {
     const id = e.target.dataset.favToggle;
@@ -1135,11 +1480,12 @@ document.addEventListener("change", e => {
   else if (k === "scoreMin") settings[k] = +e.target.value;
   else if (e.target.value) settings[k] = e.target.value;
   saveSettings();
-  if (["includeCar", "includeTreuil"].includes(k)) { applySpotFilter(); if (!items().some(x => x.spot.id === state.sel)) pickDefault(); }
+  if (k === "includeTreuil") { syncFetch(); if (!items().some(x => x.spot.id === state.sel)) pickDefault(); }
   if (["scoreMin", "firstDeparture", "lastTrain", "includeCar", "includeTreuil"].includes(k)) { buildForecast(); renderAll(false); renderPanelOnly(); }
 });
 document.addEventListener("keydown", e => { if (e.key === "Tab") document.body.classList.add("kbd"); });
 document.addEventListener("pointerdown", () => document.body.classList.remove("kbd"));
+document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.id === "setup-q") { e.preventDefault(); setupSearch(); } });
 document.addEventListener("keydown", e => { if (e.key === "Escape") { if (state.panel) closePanel(); else if (state.detail) closeDetail(); } });
 /* Le carrousel pilote la carte : la carte centrée devient la sélection */
 let scrollT = null, userScroll = false;
@@ -1154,7 +1500,7 @@ $("#carousel").addEventListener("scroll", () => {
     if (best && best.dataset.spot !== state.sel) { if (state.pinned) pinSpot(best.dataset.spot); else { state.sel = best.dataset.spot; refreshCards(); } syncSelection(false); }
   }, 140);
 }, { passive: true });
-addEventListener("resize", () => { windResize(); if (map) map.invalidateSize(); });
+addEventListener("resize", () => { windResize(); if (compass.sized) { compass.sized = false; const d = MAP_ROT; MAP_ROT = 0; $("#map").style.transform = ""; Object.assign($("#map").style, { inset: "", width: "", height: "", left: "", top: "" }); if (map) map.invalidateSize(); if (d) setMapRotation(d); } else if (map) map.invalidateSize(); });
 addEventListener("offline", () => { state.offline = true; renderTop(); });
 addEventListener("online", () => { state.offline = false; refresh(false); });
 if (window.matchMedia) matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", () => { windColors(); applySky(); setTiles(); });
@@ -1197,9 +1543,10 @@ function stationLink(s) {
 }
 function renderSiteSheet(spot) {
   const lv = spot.levelFfvl && LEVEL_FFVL[spot.levelFfvl];
-  const acc = spot.access.mode === "train" ? `Train ${fmtDur(spot.access.trainMinutes)} jusqu'à ${esc(spot.access.station)}, puis ${fmtKm(spot.access.rideKm)} en skate${spot.limit ? " (au-delà de 10 km)" : ""}`
-    : spot.access.mode === "voiture" ? `Voiture, environ ${spot.access.driveKm} km et ${fmtDur(spot.access.driveMinutes)} depuis Rennes${spot.access.nearStation ? ` (gare la plus proche : ${esc(spot.access.nearStation)})` : ""}`
-    : `${fmtKm(spot.access.rideKm)} depuis le centre de Rennes`;
+  const est = spot.access.estimated ? " (estimation)" : "";
+  const acc = spot.access.mode === "train" ? `Train ${fmtDur(spot.access.trainMinutes)}${est}${spot.access.fromStation ? ` depuis ${esc(spot.access.fromStation)}` : ""} jusqu'à ${esc(spot.access.station)}, puis ${fmtKm(spot.access.rideKm)} ${soft().verb}${spot.limit ? ` (au-delà de ${settings.trans.softKm} km)` : ""}`
+    : spot.access.mode === "voiture" ? `Voiture, environ ${spot.access.driveKm} km et ${fmtDur(spot.access.driveMinutes)} depuis ${esc(HOME().name)}${est}${spot.access.nearStation ? ` (gare la plus proche : ${esc(spot.access.nearStation)})` : ""}`
+    : `${fmtKm(spot.access.rideKm)} ${soft().verb} depuis ${esc(HOME().name)}`;
   const st = spot.stations.map(stationLink);
   const row = (k, v) => v ? `<div><dt>${k}</dt><dd>${v}</dd></div>` : "";
   return `<p class="site-desc">${esc(spot.description)}</p>
@@ -1231,7 +1578,7 @@ function renderSpotAir(spot) {
   </div>`;
 }
 function renderSpotPicker(s) {
-  const groups = byDept(ALL_SPOTS.filter(x => (s.includeCar || x.access.mode !== "voiture") && (s.includeTreuil || x.profile !== "treuil")));
+  const groups = byDept(ALL_SPOTS.filter(x => FETCH_IDS.has(x.id) && (s.includeTreuil || x.profile !== "treuil")));
   return `<div class="picker">${groups.map(([r, list]) => {
     const on = list.filter(x => !s.hidden.includes(x.id)).length;
     return `<details class="pk-reg"><summary><label class="check" onclick="event.stopPropagation()"><input type="checkbox" data-region-toggle="${esc(list.map(x => x.id).join(","))}" ${on ? "checked" : ""}>${esc(r)}</label><span class="pk-n">${on}/${list.length}</span></summary>
@@ -1240,27 +1587,229 @@ function renderSpotPicker(s) {
 }
 /* Départements : Bretagne d'abord, puis Pays de la Loire et Normandie */
 const DEPTS = [["35", "Ille-et-Vilaine"], ["22", "Côtes-d'Armor"], ["29", "Finistère"], ["56", "Morbihan"], ["44", "Loire-Atlantique"], ["53", "Mayenne"], ["49", "Maine-et-Loire"], ["85", "Vendée"], ["50", "Manche"], ["14", "Calvados"], ["61", "Orne"], ["27", "Eure"], ["76", "Seine-Maritime"]];
-function deptOf(spot) { const m = /\((\d{2})\)/.exec(spot.city || ""); return m ? m[1] : /Rennes/.test(spot.city || spot.region || "") ? "35" : "??"; }
+function deptOf(spot) { return spot.custom ? "perso" : spot.dept || "??"; }
 function byDept(list) {
   const g = {};
   list.forEach(x => (g[deptOf(x)] ||= []).push(x));
-  const order = DEPTS.map(d => d[0]);
-  return Object.keys(g).sort((x, y) => (order.indexOf(x) + 1 || 99) - (order.indexOf(y) + 1 || 99) || x.localeCompare(y))
-    .map(k => { const d = DEPTS.find(e => e[0] === k); return [d ? `${d[1]} (${k})` : "Autres", g[k].sort((p, q) => p.name.localeCompare(q.name, "fr"))]; });
+  const homeDept = homeDeptGuess();
+  const rank = k => k === "perso" ? 0 : k === homeDept ? 1 : k === "??" ? 3 : 2;
+  return Object.keys(g).sort((x, y) => rank(x) - rank(y) || x.localeCompare(y))
+    .map(k => [k === "perso" ? "Mes spots ajoutés" : DEPT_NAMES[k] ? `${DEPT_NAMES[k]} (${k})` : "Autres", g[k].sort((p, q) => p.name.localeCompare(q.name, "fr"))]);
+}
+/* Département de la ville de départ : celui du spot connu le plus proche */
+function homeDeptGuess() {
+  let best = null, bd = 1e9;
+  ALL_SPOTS.forEach(s => { if (!s.dept) return; const d = distKm(HOME_LL(), [s.lat, s.lon]); if (d < bd) { bd = d; best = s.dept; } });
+  return bd < 60 ? best : null;
+}
+/* COMPOSANT: niveaux expliqués et seuils personnalisés */
+const PRACTICES = [["gonflage", "Gonflage"], ["soaring", "Vol bord de mer (soaring)"], ["plaine", "Vol pente ou thermique"]];
+function levelProfile(k, level) {
+  const b = DEFAULT_PROFILES[k], sh = LEVEL_SHIFT[level] ?? 0;
+  return { ...b, idealMax: b.idealMax + sh, windMax: b.windMax + sh, gustMax: b.gustMax + sh };
+}
+function renderLevelHelp(s) {
+  const line = lv => PRACTICES.map(([k, l]) => { const p = levelProfile(k, lv); return `${l} : idéal ${p.idealMin} à ${p.idealMax} km/h, maxi ${p.windMax}, rafales ${p.gustMax}`; }).join(" · ");
+  const txt = {
+    debutant: "Pour les premiers gonflages et vols, brevet initial ou encadré par un club ou une école. Les plafonds de vent et de rafales sont abaissés de 4 km/h.",
+    intermediaire: "Pilote autonome en conditions calmes à moyennes (brevet de pilote). Valeurs de référence de l'app.",
+    confirme: "Pilote expérimenté, à l'aise en vent soutenu et en soaring (brevet de pilote confirmé). Les plafonds sont relevés de 4 km/h.",
+    perso: "Tes propres seuils, pratique par pratique. Mets des valeurs que tu as déjà vécues sereinement."
+  };
+  return `<details class="explain"><summary>${I.info}Que veulent dire ces niveaux ?</summary>
+    ${["debutant", "intermediaire", "confirme"].map(lv => `<p><b>${LEVELS[lv].label}</b> : ${txt[lv]}<br><small>${line(lv)}.</small></p>`).join("")}
+    <p><b>Perso</b> : ${txt.perso}</p>
+    <p>Vent mesuré à 10 m de haut : au sol, compte 20 à 30 % de moins. Ces seuils sont un point de départ prudent, pas une règle de sécurité.</p></details>
+    ${s.level === "perso" ? renderCustomProfiles(s) : ""}`;
+}
+function renderCustomProfiles(s) {
+  const val = (k, f) => s.profiles?.[k]?.[f] ?? DEFAULT_PROFILES[k][f];
+  const inp = (k, f, lab) => `<label class="pf-f"><span>${lab}</span><input type="number" inputmode="numeric" min="0" max="80" step="1" class="txt num" data-prof="${k}" data-pf="${f}" value="${val(k, f)}"></label>`;
+  return `<div class="pf">${PRACTICES.map(([k, l]) => `<fieldset class="pf-set"><legend>${l}</legend><div class="pf-grid">
+      ${inp(k, "windMin", "Vent mini")}${inp(k, "idealMin", "Idéal de")}${inp(k, "idealMax", "Idéal à")}${inp(k, "windMax", "Vent maxi")}${inp(k, "gustMax", "Rafales maxi")}</div></fieldset>`).join("")}
+    <p class="hint" id="pf-msg">En km/h. Il faut : vent mini ≤ idéal de ≤ à ≤ vent maxi ≤ rafales maxi.</p>
+    <button type="button" class="btn btn--ghost" data-action="pf-reset">Revenir aux valeurs Intermédiaire</button></div>`;
+}
+/* COMPOSANT: ville de départ et transport (premier lancement et réglages) */
+function transportSummary(t) {
+  const parts = [];
+  if (t.train) parts.push(`Train + ${SOFT[t.soft].label.toLowerCase()} (${t.softKm} km max depuis la gare)`);
+  if (t.car) parts.push(`Voiture (${fmtDur(t.maxDrive)} max)`);
+  return parts.join(" · ") || "Aucun mode choisi";
+}
+function renderSetup(st) {
+  const t = st.trans, seg = (act, opts, val) => `<div class="seg" role="group">${opts.map(([k, l]) => `<button type="button" data-action="${act}" data-value="${k}" aria-pressed="${String(k) === String(val)}">${l}</button>`).join("")}</div>`;
+  return `<div class="panel-in">
+    <div class="d-head"><div><h2 class="p-title" id="p-title">${st.first ? "Bienvenue sur ParaSpot" : "Départ et transport"}</h2></div>${st.first ? "" : `<button type="button" class="close" data-action="setup-cancel" aria-label="Annuler">${I.close}</button>`}</div>
+    ${st.first ? `<p class="hint" style="font-size:15px">ParaSpot cherche les créneaux de vol et de gonflage à ta portée. Deux questions pour commencer.</p>` : ""}
+    <div class="group">
+      <div class="field"><label class="lbl" for="setup-q">D'où pars-tu ?</label>
+        <div class="setup-search"><input class="txt" id="setup-q" placeholder="Ta ville, ex. Rennes, Lyon, Annecy" value="${esc(st.q || "")}" autocomplete="off" enterkeyhint="search"><button type="button" class="btn btn--wing" data-action="setup-search">Chercher</button></div>
+        <button type="button" class="btn btn--ghost" data-action="setup-geo">${I.pin}Utiliser ma position</button>
+        ${st.loading ? `<p class="hint">Recherche…</p>` : ""}
+        ${st.results?.length ? `<div class="setup-res">${st.results.map((r, i) => `<button type="button" class="setup-r" data-action="setup-pick" data-i="${i}"><b>${esc(r.name)}</b><small>${esc(r.sub)}</small></button>`).join("")}</div>` : ""}
+        ${st.home ? `<p class="st-sum">${I.pin}<span>Départ : <b>${esc(st.home.name)}</b></span></p>` : ""}
+        ${st.msg ? `<p class="hint sf-err">${esc(st.msg)}</p>` : ""}</div>
+      <div class="field"><span class="lbl">Comment te déplaces-tu ?</span>
+        <label class="check"><input type="checkbox" data-st="train" ${t.train ? "checked" : ""}>Train + mobilité douce (vélo ou skate)</label>
+        ${t.train ? `<div class="sub-opts"><span class="hint">Pour finir le trajet depuis la gare :</span>${seg("st-soft", Object.entries(SOFT).map(([k, v]) => [k, v.short]), t.soft)}
+          <span class="hint">Distance maximum entre la gare et le site :</span>${seg("st-km", [[5, "5 km"], [10, "10 km"], [15, "15 km"], [20, "20 km"]], t.softKm)}</div>` : ""}
+        <label class="check"><input type="checkbox" data-st="car" ${t.car ? "checked" : ""}>Voiture ou covoiturage</label>
+        ${t.car ? `<div class="sub-opts"><span class="hint">Temps de route maximum :</span>${seg("st-drive", [[60, "1 h"], [90, "1 h 30"], [120, "2 h"], [180, "3 h"], [240, "4 h"]], t.maxDrive)}</div>` : ""}
+        <p class="hint">Les spots proches de chez toi (moins de ${t.softKm} km) sont toujours proposés. Les temps de train et de route sont estimés d'après les distances : vérifie toujours les horaires.</p></div>
+    </div>
+    <div class="btn-row fav-actions"><button type="button" class="btn btn--wing" data-action="setup-save">${st.first ? "Continuer" : "Enregistrer"}</button></div>
+  </div>`;
+}
+function openSetup(first) {
+  state.setup = { first: !!first, q: "", results: [], loading: false, msg: "", home: settings.home ? { ...settings.home } : null, trans: { ...settings.trans } };
+  state.panel = true; renderPanelOnly(); $("#panel").classList.add("is-open"); $("#panel").scrollTop = 0;
+}
+async function setupSearch() {
+  const st = state.setup, q = ($("#setup-q")?.value || "").trim(); st.q = q;
+  if (q.length < 2) { st.msg = "Écris au moins deux lettres."; renderPanelOnly(); return; }
+  st.loading = true; st.msg = ""; st.results = []; renderPanelOnly();
+  try {
+    const r = await (await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=6&language=fr&countryCode=FR&format=json`)).json();
+    st.results = (r.results || []).map(x => ({ name: x.name, lat: x.latitude, lon: x.longitude, sub: [x.admin2, x.admin1, x.postcodes?.[0]].filter(Boolean).join(" · ") }));
+    if (!st.results.length) st.msg = "Aucune ville trouvée : vérifie l'orthographe.";
+  } catch { st.msg = "Recherche impossible sans connexion. Réessaie ou utilise ta position."; }
+  st.loading = false; renderPanelOnly();
+  const inp = $("#setup-q"); if (inp && !st.results.length) inp.focus();
+}
+function setupGeo() {
+  const st = state.setup;
+  if (!navigator.geolocation) { st.msg = "Ton téléphone ne donne pas sa position ici : cherche ta ville."; renderPanelOnly(); return; }
+  st.loading = true; st.msg = ""; renderPanelOnly();
+  navigator.geolocation.getCurrentPosition(async pos => {
+    const lat = +pos.coords.latitude.toFixed(4), lon = +pos.coords.longitude.toFixed(4);
+    let name = "Ma position";
+    try { const r = await (await fetch(`https://geo.api.gouv.fr/communes?lat=${lat}&lon=${lon}&fields=nom&format=json`)).json(); if (r?.[0]?.nom) name = r[0].nom; } catch { /* nom facultatif */ }
+    st.home = { name, lat, lon }; st.results = []; st.loading = false; renderPanelOnly();
+  }, () => { st.loading = false; st.msg = "Position refusée ou indisponible : cherche ta ville."; renderPanelOnly(); }, { timeout: 10000, maximumAge: 600000 });
+}
+function setupSave() {
+  const st = state.setup;
+  if (!st.home) { st.msg = "Choisis ta ville de départ (Chercher, puis touche la bonne ville)."; renderPanelOnly(); return; }
+  if (!st.trans.train && !st.trans.car) { st.msg = "Choisis au moins un mode de transport."; renderPanelOnly(); return; }
+  const moved = !settings.home || distKm([settings.home.lat, settings.home.lon], [st.home.lat, st.home.lon]) > 1;
+  settings.home = st.home; settings.trans = { ...st.trans }; saveSettings();
+  const first = st.first; state.setup = null; HOME_GARE = undefined;
+  if (!(st.home.lat >= GEO.b[0] && st.home.lat <= GEO.b[2] && st.home.lon >= GEO.b[1] && st.home.lon <= GEO.b[3]) && state.layer === "plan") { state.layer = "detail"; setTiles(); }
+  rebuildSpots(); syncFetch(true); state.pinned = false; if (FORECAST) { buildForecast(); pickDefault(); renderAll(false); }
+  if (moved) homeView();
+  if (first && !settings.favsAsked) openFavPicker();
+  else if (first) closePanel(); else renderPanelOnly();
+}
+/* Les favoris et les réglages changent la liste des spots à charger */
+function syncFetch(force) {
+  computeFetchSet(); applySpotFilter(); drawStations(); renderFar();
+  const missing = fetchSpots().some(s => !RAW?.results.some(r => r.spot.id === s.id));
+  if (RAW && (missing || force)) { RAW.stale = true; refresh(true); }
+}
+/* COMPOSANT: spots ajoutés (liste et formulaire) */
+function renderCustomList(s) {
+  if (!s.custom?.length) return "";
+  return `<ul class="cs-list">${s.custom.map(c => `<li><span class="cs-name">${kindIcon(c.profile === "gonflage" ? "gonflage" : "vol")}<span>${esc(c.name)}<small>${esc(c.city || "")}${c.city ? " · " : ""}${c.lat.toFixed(4)}, ${c.lon.toFixed(4)}</small></span></span>
+    <span class="cs-acts"><button type="button" class="mini-btn" data-action="sf-share" data-id="${c.id}" title="Proposer ce spot pour tout le monde">Proposer</button><button type="button" class="mini-btn" data-action="sf-edit" data-id="${c.id}">Modifier</button><button type="button" class="mini-btn ${state.delConfirm === c.id ? "is-danger" : ""}" data-action="sf-del" data-id="${c.id}">${state.delConfirm === c.id ? "Confirmer" : "Supprimer"}</button></span></li>`).join("")}</ul>`;
+}
+const DIR_FR = { N: "N", NE: "NE", E: "E", SE: "SE", S: "S", SW: "SO", W: "O", NW: "NO" };
+function renderSpotForm(f) {
+  const prof = [["gonflage", "Gonflage"], ["soaring", "Vol bord de mer"], ["plaine", "Vol pente"]];
+  const hasPos = Number.isFinite(f.lat) && Number.isFinite(f.lon);
+  return `<div class="panel-in">
+    <div class="d-head"><div><h2 class="p-title" id="p-title">${f.id ? "Modifier le spot" : "Ajouter un spot"}</h2></div><button type="button" class="close" data-action="sf-cancel" aria-label="Annuler">${I.close}</button></div>
+    <div class="group">
+      <div class="field"><label class="lbl" for="sf-name">Nom du spot</label><input class="txt" id="sf-name" data-sf="name" value="${esc(f.name || "")}" placeholder="Ex. Pointe du Grouin" maxlength="60"></div>
+      <div class="field"><label class="lbl" for="sf-city">Commune (facultatif)</label><input class="txt" id="sf-city" data-sf="city" value="${esc(f.city || "")}" placeholder="Ex. Cancale (35)" maxlength="60"></div>
+      <div class="field"><span class="lbl">Position du décollage</span>
+        <p class="hint num" id="sf-pos">${hasPos ? `Choisie : ${f.lat.toFixed(5)}, ${f.lon.toFixed(5)}` : "Pas encore choisie."}</p>
+        <button type="button" class="btn btn--wing" data-action="sf-pick">${I.pin}${hasPos ? "Changer sur la carte" : "Choisir sur la carte"}</button>
+        <label class="lbl" for="sf-coords" style="font-size:14px">Ou colle des coordonnées (Google Maps, Spot Air…)</label>
+        <input class="txt num" id="sf-coords" data-sf="coords" placeholder="48.6862, -1.8432" inputmode="decimal"></div>
+      <div class="field"><span class="lbl">Pratique</span><div class="seg" role="group" aria-label="Pratique">${prof.map(([k, l]) => `<button type="button" data-action="sf-prof" data-value="${k}" aria-pressed="${f.profile === k}">${l}</button>`).join("")}</div></div>
+      ${f.profile === "gonflage" ? `<div class="field"><p class="hint">Gonflage : toutes les directions de vent sont acceptées (terrain dégagé).</p></div>` : `<div class="field"><span class="lbl">Orientations du décollage</span><p class="hint">Coche les directions d'où le vent doit venir (vent de face).</p>
+        <div class="dir-pick">${ALL8.map(d => `<button type="button" data-action="sf-dir" data-dir="${d}" aria-pressed="${(f.orientations || []).includes(d)}">${DIR_FR[d]}</button>`).join("")}</div></div>`}
+      <div class="field"><label class="check"><input type="checkbox" data-sf="tide" ${f.tide ? "checked" : ""}>Bord de mer (afficher la marée)</label></div>
+      <div class="field"><label class="lbl" for="sf-notes">Notes (facultatif)</label><textarea id="sf-notes" class="sub-box" data-sf="notes" rows="3" maxlength="400" placeholder="Accès, atterrissage, règles du site…">${esc(f.notes || "")}</textarea></div>
+    </div>
+    ${f.error ? `<p class="hint sf-err" role="alert">${esc(f.error)}</p>` : ""}
+    <p class="hint">Vérifie toujours la fiche FFVL, le panneau du site ou le club local. Un spot ajouté n'est pas pris en compte par les notifications automatiques.</p>
+    <div class="btn-row fav-actions"><button type="button" class="btn btn--wing" data-action="sf-save">Enregistrer</button><button type="button" class="btn btn--ghost" data-action="sf-cancel">Annuler</button></div>
+  </div>`;
+}
+function parseCoords(t) {
+  const m = /(-?\d{1,2}[.,]\d+)\s*[,; ]\s*(-?\d{1,3}[.,]\d+)/.exec(t || "");
+  if (!m) return null;
+  const lat = parseFloat(m[1].replace(",", ".")), lon = parseFloat(m[2].replace(",", "."));
+  return lat > 41 && lat < 52 && lon > -6 && lon < 10 ? { lat, lon } : null;
+}
+function openSpotForm(c) {
+  state.spotForm = c ? { ...c, orientations: [...(c.orientations || [])] } : { name: "", city: "", profile: "soaring", orientations: [], tide: true, notes: "" };
+  state.panel = true; renderPanelOnly(); $("#panel").classList.add("is-open"); $("#panel").scrollTop = 0;
+}
+function startPick() {
+  if (compass.mode !== "north") setCompassMode("north");
+  state.picking = true; closePanelKeep(); setMapFocus(true); document.body.classList.add("is-picking");
+  $("#pickbar").innerHTML = `<div class="info-in glass"><div><b>Touche la carte</b><p>à l'endroit du décollage. Zoome avec deux doigts pour être précis.</p></div><button type="button" class="info-x" data-action="pick-cancel" aria-label="Annuler">${I.close}</button></div>`;
+  $("#pickbar").classList.add("is-on");
+}
+function endPick(latlng) {
+  state.picking = false; document.body.classList.remove("is-picking"); $("#pickbar").classList.remove("is-on");
+  if (latlng) { state.spotForm.lat = +latlng.lat.toFixed(5); state.spotForm.lon = +latlng.lng.toFixed(5); }
+  setMapFocus(false); state.panel = true; renderPanelOnly(); $("#panel").classList.add("is-open");
+}
+function closePanelKeep() { $("#panel").classList.remove("is-open"); state.panel = false; }
+function saveSpotForm() {
+  const f = state.spotForm, name = (f.name || "").trim();
+  if (!name) f.error = "Donne un nom au spot.";
+  else if (!Number.isFinite(f.lat) || !Number.isFinite(f.lon)) f.error = "Choisis la position du décollage sur la carte ou colle ses coordonnées.";
+  else if (f.profile !== "gonflage" && !f.orientations.length) f.error = "Coche au moins une orientation.";
+  else f.error = "";
+  if (f.error) { renderPanelOnly(); return; }
+  const c = { id: f.id || `perso-${Date.now().toString(36)}`, name, city: (f.city || "").trim(), lat: f.lat, lon: f.lon, profile: f.profile, orientations: f.profile === "gonflage" ? [] : f.orientations, tide: !!f.tide, notes: (f.notes || "").trim() };
+  const isNew = !f.id;
+  settings.custom = [...settings.custom.filter(x => x.id !== c.id), c];
+  if (isNew && !settings.favs.includes(c.id)) settings.favs = [...settings.favs, c.id];
+  saveSettings(); state.spotForm = null; rebuildSpots(); renderPanelOnly();
+  state.backupMsg = ""; refresh(true).then(() => { if (state.panel) renderPanelOnly(); });
+}
+/* Sauvegarde et restauration */
+function backupObj() { const { notifEnabled, ...s } = settings; return { app: "ParaSpot", version: 1, date: new Date().toISOString(), settings: s }; }
+function backupCode() { return "PARASPOT1:" + btoa(unescape(encodeURIComponent(JSON.stringify(backupObj())))); }
+function restoreFrom(text) {
+  let obj = null; const t = (text || "").trim();
+  try { obj = t.startsWith("PARASPOT1:") ? JSON.parse(decodeURIComponent(escape(atob(t.slice(10).replace(/\s/g, ""))))) : JSON.parse(t); } catch { obj = null; }
+  if (!obj || obj.app !== "ParaSpot" || typeof obj.settings !== "object") { state.backupMsg = "Ce code ou ce fichier n'est pas une sauvegarde ParaSpot."; renderPanelOnly(); return; }
+  const keep = ["level", "profiles", "scoreMin", "firstDeparture", "lastTrain", "theme", "model", "includeCar", "home", "trans", "includeTreuil", "hidden", "favs", "favsAsked", "custom", "kind", "legendHidden"];
+  keep.forEach(k => { if (k in obj.settings) settings[k] = obj.settings[k]; });
+  settings.favsAsked = true; saveSettings();
+  state.backupMsg = "Sauvegarde restaurée : l'app redémarre…"; renderPanelOnly();
+  setTimeout(() => location.reload(), 900);
 }
 /* COMPOSANT: choix des spots favoris (premier lancement et réglages) */
+function renderFavList(s) {
+  const norm = t => (t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const q = norm(state.favQ).trim();
+  let list = ALL_SPOTS.filter(x => !s.hidden.includes(x.id) && (s.includeTreuil || x.profile !== "treuil" || s.favs.includes(x.id)));
+  if (q) list = list.filter(x => norm(`${x.name} ${x.city} ${x.region} ${x.dept}`).includes(q));
+  if (!list.length) return `<p class="hint">Aucun spot ne correspond. Tu peux l'ajouter toi-même dans Réglages > Mes spots ajoutés.</p>`;
+  const homeD = homeDeptGuess(), groups = byDept(list), many = list.length > 60;
+  return `<div class="picker">${groups.map(([r, items]) => {
+    const n = items.filter(x => s.favs.includes(x.id)).length;
+    const open = q ? items.length <= 40 || groups.length === 1 : n || (homeD && r.includes(`(${homeD})`));
+    return `<details class="pk-reg" ${open ? "open" : ""}><summary><span class="pk-r">${esc(r)}</span><span class="pk-n">${n ? `${n} ★ · ` : ""}${items.length}</span></summary>
+      ${items.slice(0, many && !open ? 0 : 400).map(x => `<label class="check pk-spot pk-fav"><input type="checkbox" data-fav-toggle="${x.id}" ${s.favs.includes(x.id) ? "checked" : ""}>${kindIcon(x.kind)}<span>${esc(x.name)}<small>${esc(x.city.replace(/\s*\((\d{2}|2A|2B)\)/, ""))}${x.distKm != null ? ` · ${x.distKm} km` : ""}${x.imported ? ` · ${x.sources[0].replace(" (ODbL)", "")}` : ""}</small></span></label>`).join("")}</details>`;
+  }).join("")}</div>`;
+}
 function renderFavPicker(s) {
-  const groups = byDept(ALL_SPOTS.filter(x => !s.hidden.includes(x.id) && (s.includeTreuil || x.profile !== "treuil" || s.favs.includes(x.id))));
   const first = !s.favsAsked;
   return `<div class="panel-in">
     <div class="d-head"><div><h2 class="p-title" id="p-title">${first ? "Bienvenue sur ParaSpot" : "Mes spots favoris"}</h2></div>${first ? "" : `<button type="button" class="close" data-action="fav-done" aria-label="Valider et revenir aux réglages">${I.close}</button>`}</div>
     <p class="hint" style="font-size:15px">${first ? "Quels sont tes spots préférés ? " : ""}Coche-les : ils seront mis en avant dans l'app, et le bouton ${STAR} en bas de l'écran permet de passer de tes favoris à tous les spots. Tu pourras les changer dans les Réglages.</p>
     <p class="fav-count" id="fav-count">${s.favs.length} favori${s.favs.length > 1 ? "s" : ""}</p>
-    <div class="picker">${groups.map(([r, list]) => {
-      const n = list.filter(x => s.favs.includes(x.id)).length;
-      return `<details class="pk-reg" ${n || r.includes("(35)") ? "open" : ""}><summary><span class="pk-r">${esc(r)}</span><span class="pk-n">${n ? `${n} ★` : list.length}</span></summary>
-        ${list.map(x => `<label class="check pk-spot pk-fav"><input type="checkbox" data-fav-toggle="${x.id}" ${s.favs.includes(x.id) ? "checked" : ""}>${kindIcon(x.kind)}<span>${esc(x.name)}<small>${esc(x.city.replace(/\s*\(\d{2}\)/, ""))}${x.region && x.region !== "Rennes" ? " · " + esc(x.region) : ""}</small></span></label>`).join("")}</details>`;
-    }).join("")}</div>
+    <input class="txt" id="fav-q" placeholder="Chercher un spot, une ville, un département" value="${esc(state.favQ || "")}" autocomplete="off">
+    <div id="fav-list">${renderFavList(s)}</div>
     <div class="btn-row fav-actions"><button type="button" class="btn btn--wing" data-action="fav-done">${first ? "C'est parti" : "Valider"}</button>${first ? `<button type="button" class="btn btn--ghost" data-action="fav-skip">Plus tard</button>` : ""}</div>
   </div>`;
 }
@@ -1270,8 +1819,9 @@ function finishFavs(skip) {
   settings.favsAsked = true; state.favStep = false;
   if (!skip && settings.favs.length && first) { state.kind = "favoris"; settings.kind = "favoris"; }
   if (state.kind === "favoris" && !settings.favs.length) { state.kind = "tout"; settings.kind = "tout"; }
-  saveSettings();
+  saveSettings(); state.favQ = "";
   if (first) closePanel(); else renderPanelOnly();
+  syncFetch();
   if (!state.pinned) pickDefault();
   if (FORECAST) renderAll(false);
 }
@@ -1326,9 +1876,11 @@ function loadCache() {
   const p = store.get("fv-cache-v3", null);
   if (!p?.results?.length) return null;
   const results = p.results.map(r => ({ spot: ALL_SPOTS.find(s => s.id === r.id), tide: r.tide || {}, forecasts: Object.fromEntries(Object.entries(r.forecasts).map(([k, f]) => [k, unpackForecast(f)])) })).filter(r => r.spot);
-  return results.length ? { at: p.at, results } : null;
+  const stale = fetchSpots().some(s => !p.results.some(r => r.id === s.id));
+  return results.length ? { at: p.at, results, stale } : null;
 }
 function setupFromRaw() {
+  applySpotFilter();
   buildDays(RAW.results);
   UPDATED_AT = localIso(new Date(RAW.at));
   state.day = Math.min(state.day, DAYS.length - 1);
@@ -1339,18 +1891,18 @@ function renderWaiting() {
   $("#eyebrow").innerHTML = `<p class="st-eyebrow"><span class="live"></span>Prévisions</p>`;
   $("#statement").innerHTML = state.error
     ? `<div class="statement anim"><h1 class="st-word">${words("Pas de ciel.")}</h1><p class="st-line">${navigator.onLine ? "Le serveur météo ne répond pas : réessaie dans quelques minutes." : "Pas de connexion et aucune prévision enregistrée sur cet appareil."}</p><button type="button" class="st-cta" style="border:0;background:none;padding:0;min-height:var(--tap)" data-action="refresh">Réessayer ${I.chevron}</button></div>`
-    : `<div class="statement anim"><h1 class="st-word">${words("Lecture du ciel…")}</h1><p class="st-line">AROME HD, ECMWF et GFS pour ${ALL_SPOTS.length || ""} spots.</p></div>`;
+    : `<div class="statement anim"><h1 class="st-word">${words("Lecture du ciel…")}</h1><p class="st-line">AROME HD, ECMWF et GFS pour ${fetchSpots().length || ""} spots.</p></div>`;
   $("#carousel").innerHTML = ""; $("#scrub").innerHTML = ""; $("#kinds").innerHTML = renderKinds(state.kind);
 }
 let refreshing = false;
 async function refresh(manual) {
   if (refreshing) return;
-  if (!manual && RAW && Date.now() - RAW.at < 30 * 60e3) return; // cache de 30 min : ménage le quota Open-Meteo
+  if (!manual && RAW && !RAW.stale && Date.now() - RAW.at < 30 * 60e3) return; // cache de 30 min : ménage le quota Open-Meteo
   refreshing = true; state.loading = true;
   if (FORECAST) renderTop(); else renderWaiting();
   if (manual || !FORECAST) { document.body.classList.add("is-busy"); $("#loader").classList.add("is-on"); }
   try {
-    const results = await fetchAll(ALL_SPOTS, fetch, { models: MODEL_KEYS, primary: settings.model });
+    const results = await fetchAll(fetchSpots(), fetch, { models: MODEL_KEYS, primary: settings.model });
     RAW = { at: Date.now(), results };
     saveCache();
     state.error = false; state.offline = false;
@@ -1422,18 +1974,25 @@ async function init() {
     }).catch(() => {});
   }
   if ("Notification" in window && Notification.permission === "granted") settings.notifEnabled = true;
+  try { navigator.storage?.persist?.(); } catch { /* facultatif */ }
   windColors(); windResize();
-  initMap(); map.setView(RENNES, 7); homeView(true); buildLabels(); zoomClasses();
+  initMap(); map.setView(HOME_LL(), 7); homeView(true); buildLabels(); zoomClasses();
   $("#legend").innerHTML = renderLegend() + `<button type="button" class="info-x legend-x" data-action="legend-close" aria-label="Masquer la légende (elle reste dans les Réglages)">${I.close}</button>`;
   if (settings.legendHidden) document.body.classList.add("no-legend");
   applyTheme(); updateModelButton();
   windStart();
-  try { prepareSpots(await (await fetch("data/spots.json")).json()); } catch { state.error = true; renderWaiting(); return; }
-  STATIONS.forEach(st => L.marker([st.lat, st.lon], { icon: L.divIcon({ className: "", html: `<div class="stn">${I.train}</div>`, iconSize: [26, 26], iconAnchor: [13, 13] }), interactive: false, keyboard: false, title: "Gare de " + st.name }).addTo(map));
+  let data;
+  try { data = await (await fetch("data/spots.json")).json(); } catch { state.error = true; renderWaiting(); return; }
+  const opt = url => fetch(url).then(r => r.ok ? r.json() : null).catch(() => null);
+  const [france, gares, community] = await Promise.all([opt("data/france.json"), opt("data/gares.json"), opt("data/communaute.json")]);
+  prepareSpots(data, france?.spots || [], Array.isArray(gares) ? gares : [], community?.spots || []);
+  drawStations();
   const cached = loadCache();
   if (cached) { RAW = cached; setupFromRaw(); afterData(); openFromUrl(); }
-  if (!settings.favsAsked && !new URLSearchParams(location.search).get("spot")) openFavPicker();
   else renderWaiting();
+  const fromLink = new URLSearchParams(location.search).get("spot");
+  if (!settings.home && !fromLink) openSetup(true);
+  else if (!settings.favsAsked && !fromLink) openFavPicker();
   const had = !!FORECAST;
   await refresh(!cached);
   if (!had && FORECAST) { afterData(); openFromUrl(); }
