@@ -36,6 +36,10 @@ Voir [docs/INSTALLATION.md](docs/INSTALLATION.md).
 
 Code sous licence **PolyForm Noncommercial 1.0.0** : usage, copie et modification libres pour un usage non commercial, **vente interdite**. Voir `LICENSE` (texte officiel) et `LICENCE.md` (résumé en français et licences des données). Contact : tobalab@proton.me
 
+## Conditions d'utilisation et confidentialité
+
+Conditions d'utilisation : `docs/CGU.md` (à accepter dans l'app). Confidentialité et mentions légales : `docs/CONFIDENTIALITE.md`.
+
 ## Avertissement
 
 Outil d'aide à la décision. Il ne remplace ni la fiche FFVL, ni le panneau du site, ni une balise en temps réel, ni ton jugement sur place.

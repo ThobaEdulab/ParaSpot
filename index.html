@@ -2,9 +2,12 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
+<!-- Sécurité : l'app ne peut charger du code que depuis elle-même, et ne contacte que les services listés -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://*.tile.openstreetmap.fr https://*.tile.opentopomap.org; connect-src 'self' https://*.open-meteo.com https://geo.api.gouv.fr; frame-src https://www.spotair.mobi; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ParaSpot</title>
-<meta name="description" content="Où et quand gonfler ou voler depuis Rennes : créneaux, modèles AROME HD, ECMWF et GFS, fiches de sites et balises Spot Air.">
+<meta name="description" content="Où et quand gonfler ou voler depuis ta ville : créneaux, modèles AROME HD, ECMWF et GFS, fiches de sites et balises Spot Air.">
 <meta name="theme-color" content="#cfe3f2" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#081326" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.webmanifest">
@@ -15,9 +18,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="ParaSpot">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Unbounded:wght@500;600;700&display=swap" rel="stylesheet">
+<!-- Polices hébergées avec l'app (pas d'appel à Google Fonts : pas de transfert d'adresse IP) -->
+<link rel="stylesheet" href="vendor/fonts/fonts.css">
 <!-- Leaflet 1.9.4 (BSD-2-Clause, © Volodymyr Agafonkin) embarqué pour fonctionner hors-ligne -->
 <link rel="stylesheet" href="vendor/leaflet.css">
 <script src="vendor/leaflet.js"></script>
@@ -26,7 +28,7 @@
 <body>
 <!-- COMPOSANT: stage (fond de carte vectoriel + champ de vent + teinte du ciel) -->
 <div class="stage" id="stage" aria-hidden="false">
-  <div id="map" role="region" aria-label="Carte de la Bretagne et des spots. Pincer pour zoomer."></div>
+  <div id="map" role="region" aria-label="Carte des spots. Pincer pour zoomer."></div>
   <canvas id="wind" aria-hidden="true"></canvas>
   <div class="sky" id="sky" aria-hidden="true"></div>
 </div>

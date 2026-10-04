@@ -3,7 +3,7 @@
 // 2. calcule les créneaux favorables
 // 3. envoie une notification via ntfy et/ou Web Push
 import { readFile, writeFile } from "node:fs/promises";
-import { fetchAll, analyzeSpot, notificationText, toLocalDate } from "../scoring.js";
+import { fetchAll, analyzeSpot, notificationText, toLocalDate, meanForecast, MODEL_KEYS } from "../scoring.js";
 
 const root = new URL("../", import.meta.url);
 const spotsData = JSON.parse(await readFile(new URL("data/spots.json", root), "utf8"));
@@ -45,7 +45,10 @@ if (env.MOCK) {
   results = spots.map((s, i) => ({ spot: s, forecast: mock[i % mock.length].forecast, tide: {} }));
 } else {
   // Un seul modèle pour le robot (moins d'appels) : réglable dans data/config.json ("model": arome | ecmwf | gfs)
-  results = await fetchAll(spots, fetch, { models: [config.model || "arome"] });
+  // "moyenne" : on récupère les trois modèles et on calcule leur moyenne heure par heure
+  if (config.model === "moyenne") {
+    results = (await fetchAll(spots, fetch, { models: MODEL_KEYS, primary: "arome" })).map((r) => ({ ...r, forecast: meanForecast(r.forecasts) || r.forecast }));
+  } else results = await fetchAll(spots, fetch, { models: [config.model || "arome"] });
 }
 
 const nowHour = Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Paris", hour: "2-digit", hourCycle: "h23" }).format(now));

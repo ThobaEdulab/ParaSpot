@@ -1,6 +1,9 @@
 // ParaSpot v3 « Ciel » : interface issue de la maquette Claude Design, branchée sur scoring.js.
 // 1. données et adaptateur  2. utilitaires et composants (maquette)  3. moteur carte, vent, ciel  4. événements et démarrage
-import { fetchAll, analyzeSpot, profileFor, accessRange, toLocalDate, notificationText, agreement, MODELS, MODEL_KEYS, SECTORS, DEFAULT_PROFILES, LEVEL_SHIFT } from "./scoring.js";
+import { fetchAll, analyzeSpot, profileFor, accessRange, toLocalDate, notificationText, agreement, meanForecast, MODELS, MODEL_KEYS, SECTORS, DEFAULT_PROFILES, LEVEL_SHIFT } from "./scoring.js";
+/* Choix du modèle : les trois modèles, ou leur moyenne */
+const MODEL_CHOICES = [...MODEL_KEYS, "moyenne"];
+const MODEL_UI = { ...MODELS, moyenne: { label: "Moyenne des 3 modèles", res: "AROME HD, ECMWF, GFS", source: "Moyenne" } };
 import { GEO, RAILS, BASEMAP, PLACES_ALL } from "./basemap.js";
 import { VAPID_PUBLIC_KEY } from "./config.js";
 
@@ -78,16 +81,30 @@ function prepareSpots(data, france = FRANCE, gares = GARES, community = COMMUNIT
     const m = /\((\d{2}|2A|2B)\)/.exec(s.city || "");
     return { ...s, rules: s.rules || [], warnings: s.warnings || [], links: s.links || {}, stations: s.stations || [], access, baseAccess: access, baseLimit: !!s.limit, curated: true, dept: m ? m[1] : /Rennes/.test(s.city || "") ? "35" : "" };
   });
-  ALL_SPOTS = [...curated, ...FRANCE.map(franceToSpot)];
-  COMMUNITY.forEach(c => { try { if (c?.id && !ALL_SPOTS.some(s => s.id === c.id)) ALL_SPOTS.push({ ...customToSpot(c), custom: false, community: true, region: "Spots de la communauté", confidence: "communaute", sources: ["Proposé par un utilisateur, validé par ParaSpot"], rules: ["Spot proposé par un pilote : vérifie la fiche FFVL, le panneau ou le club local avant de voler."] }); } catch { /* ignoré */ } });
-  (settings.custom || []).forEach(c => { try { ALL_SPOTS.push(customToSpot(c)); } catch { /* spot ajouté illisible : ignoré */ } });
+  ALL_SPOTS = [...curated, ...FRANCE.filter(f => cleanNum(f?.lat, 41, 52) != null && cleanNum(f?.lon, -6, 10) != null).map(franceToSpot).filter(s => s.orientations.length)];
+  COMMUNITY.map(cleanCustom).filter(Boolean).forEach(c => { try { if (c?.id && !ALL_SPOTS.some(s => s.id === c.id)) ALL_SPOTS.push({ ...customToSpot(c), custom: false, community: true, region: "Spots de la communauté", confidence: "communaute", sources: ["Proposé par un utilisateur, validé par ParaSpot"], rules: ["Spot proposé par un pilote : vérifie la fiche FFVL, le panneau ou le club local avant de voler."] }); } catch { /* ignoré */ } });
+  settings.custom = (Array.isArray(settings.custom) ? settings.custom : []).map(cleanCustom).filter(Boolean);
+  settings.custom.forEach(c => { try { ALL_SPOTS.push(customToSpot(c)); } catch { /* spot ajouté illisible : ignoré */ } });
   buildGareIndex();
   ALL_SPOTS.forEach(s => { const r = computeAccess(s); s.access = r.access; s.limit = r.limit; s.reach = r.reach; s.distKm = Math.round(distKm(HOME_LL(), [s.lat, s.lon])); });
   computeFetchSet();
   applySpotFilter();
 }
+/* Sécurité : les données venues de l'extérieur (import, communauté, sauvegarde partagée) sont nettoyées avant usage */
+const SECTOR_CODES = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
+const cleanId = (v, prefix) => `${prefix}${String(v ?? "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 60)}`;
+const cleanDirs = o => Array.isArray(o) ? o.filter(d => SECTOR_CODES.includes(d)) : [];
+const cleanNum = (v, min, max) => { const n = Number(v); return Number.isFinite(n) && n >= min && n <= max ? n : null; };
+const cleanText = (v, max = 120) => String(v ?? "").replace(/[\u0000-\u001f]/g, " ").slice(0, max);
+function cleanCustom(c) {
+  const lat = cleanNum(c?.lat, 41, 52), lon = cleanNum(c?.lon, -6, 10);
+  if (lat == null || lon == null) return null;
+  const id = String(c.id || "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 60) || `perso-${Math.round(lat * 1e4)}${Math.round(lon * 1e4)}`;
+  return { id, name: cleanText(c.name, 60) || "Spot", city: cleanText(c.city, 60), lat, lon, profile: ["gonflage", "soaring", "plaine"].includes(c.profile) ? c.profile : "plaine", orientations: cleanDirs(c.orientations), tide: !!c.tide, notes: cleanText(c.notes, 400) };
+}
 function franceToSpot(f) {
   const ffvl = f.src === "ffvl";
+  f = { ...f, id: cleanId(f.id, ""), o: cleanDirs(f.o), ffvl: f.ffvl != null ? String(f.ffvl).replace(/\D/g, "") : null, d: /^(\d{2}|2A|2B)$/.test(f.d || "") ? f.d : "", n: cleanText(f.n, 80), c: cleanText(f.c, 60), alt: cleanNum(f.alt, 0, 5000) };
   return {
     id: f.id, name: f.n, city: f.c ? `${f.c}${f.d ? ` (${f.d})` : ""}` : f.d ? `Département ${f.d}` : "France", region: DEPT_NAMES[f.d] || "France", dept: f.d || "",
     lat: f.lat, lon: f.lon, orientations: f.o, elevation: f.alt ?? null,
@@ -200,11 +217,13 @@ function buildForecast() {
   if (!RAW) { FORECAST = null; return; }
   const today = toLocalDate(new Date()), nowH = nowHour();
   const ss = { ...scoringSettings(), today, nowHour: nowH };
-  const avail = Object.keys(RAW.results[0]?.forecasts || {});
-  usedModel = avail.includes(settings.model) ? settings.model : avail[0];
+  // moyenne calculée sur place à partir des modèles reçus (pas d'appel réseau en plus)
+  const withMean = RAW.results.map(r => { const m = meanForecast(r.forecasts); return { ...r, forecasts: m ? { ...r.forecasts, moyenne: m } : r.forecasts }; });
+  const avail = Object.keys(withMean[0]?.forecasts || {});
+  usedModel = avail.includes(settings.model) ? settings.model : avail.includes("arome") ? "arome" : avail[0];
   const stillOk = (spot, w) => w.date !== today || w.end > nowH + travelMinutes(spot) / 60;
   const pastFix = (d, h) => (d === today && h.hour < nowH ? { ...h, reachable: false, past: true } : h);
-  const analyses = RAW.results.map(({ spot, forecasts, tide }) => {
+  const analyses = withMean.map(({ spot, forecasts, tide }) => {
     const fresh = ALL_SPOTS.find(s => s.id === spot.id) || spot;
     const byModel = {};
     avail.forEach(k => { if (forecasts[k]) byModel[k] = analyzeSpot(fresh, forecasts[k], ss, tide); });
@@ -220,7 +239,7 @@ function buildForecast() {
       const hours = models[usedModel];
       bySpot[spot.id] = {
         hours, models,
-        agree: hours.map((h, i) => agreement(Object.values(models).map(m => m[i]))),
+        agree: hours.map((h, i) => agreement(Object.entries(models).filter(([k]) => k !== "moyenne").map(([, m]) => m[i]))),
         slots: a.windows.filter(w => w.date === d.date && stillOk(spot, w)).sort(bySlot),
         lowSlots: low.windows.filter(w => w.date === d.date && stillOk(spot, w)).sort(bySlot),
         sun: sun ? { sunrise: sun.sunrise.slice(11, 16), sunset: sun.sunset.slice(11, 16) } : null,
@@ -750,10 +769,11 @@ function renderDetail(spot, dayIndex, hour) {
     <div class="d-head">
       <div><h2 class="d-title" id="d-title">${esc(spot.name)}</h2>
         <p class="d-sub"><span>${kindIcon(spot.kind)}${practiceLabel(spot)} · ${esc(spot.city)}</span></p>
-        <p class="d-sub num"><span>${I.calendar}${esc(capFirst(day.long))}</span><span>${I.sunrise}${fmtHHMM(sun.sunrise)}</span><span>${I.sunset}${fmtHHMM(sun.sunset)}</span><span>${I.model}${esc(MODELS[usedModel].label)}</span></p></div>
+        <p class="d-sub num"><span>${I.calendar}${esc(capFirst(day.long))}</span><span>${I.sunrise}${fmtHHMM(sun.sunrise)}</span><span>${I.sunset}${fmtHHMM(sun.sunset)}</span><span>${I.model}${esc(MODEL_UI[usedModel].label)}</span></p></div>
       <span class="d-acts"><button type="button" class="s3-fav glass ${settings.favs.includes(spot.id) ? "is-on" : ""}" data-action="fav" data-spot="${spot.id}" aria-pressed="${settings.favs.includes(spot.id)}" aria-label="Favori">${STAR}</button><button type="button" class="close" data-action="close-detail" aria-label="Fermer">${ICON_DOWN}</button></span>
     </div>
     <div class="d-verdict"><span class="vbadge vbadge--${s.verdict.key}">${renderVerdictIcon(s.verdict.key)}${s.verdict.label}</span><b class="num">${slot ? fmtRange(slot.start, slot.end) : "Pas de créneau"}</b></div>
+    <p class="d-warn">Estimation automatique, pas une autorisation de voler : vérifie la fiche du site, la balise et les conditions sur place.</p>
     <section class="d-sec"><h3>Vent</h3><div class="instrument">${renderCompass(spot, d.hours, focus)}${renderGauge(spot, focus)}</div>
       <button type="button" class="mini-btn rose-btn" data-action="compass" aria-pressed="${compass.mode === "follow"}">${compass.mode === "follow" ? "Rose orientée comme ton téléphone · revenir au nord" : "Orienter la rose avec mon téléphone"}</button></section>
     ${spot.tide ? `<section class="d-sec"><h3>Marée</h3>${renderTide(spot, d)}</section>` : ""}
@@ -778,6 +798,7 @@ function renderDetail(spot, dayIndex, hour) {
 function renderPanel(s, notifState, onbStep, subJson) {
   const seg = (name, opts, val) => `<div class="seg" role="group" aria-label="${name}">${opts.map(([k, l]) => `<button type="button" data-setting="${name}" data-value="${k}" aria-pressed="${k === val}">${l}</button>`).join("")}</div>`;
   const head = `<div class="d-head"><div><h2 class="p-title" id="p-title">${onbStep >= 0 ? "Notifications" : "Réglages"}</h2></div><button type="button" class="close" data-action="${onbStep >= 0 ? "onb-back" : "close-panel"}" aria-label="${onbStep >= 0 ? "Retour aux réglages" : "Fermer"}">${I.close}</button></div>`;
+  if (state.cgu) return renderCgu(state.cgu);
   if (state.setup) return renderSetup(state.setup);
   if (state.favStep) return renderFavPicker(s);
   if (state.spotForm) return renderSpotForm(state.spotForm);
@@ -788,7 +809,7 @@ function renderPanel(s, notifState, onbStep, subJson) {
     <p class="hint" style="text-align:center">Sur Android, aucune installation n'est nécessaire : l'autorisation est demandée directement.</p></div>`;
   return `<div class="panel-in">${head}
     <div class="group"><div class="field"><span class="lbl">Niveau</span>${seg("level", Object.entries(LEVELS).map(([k, v]) => [k, v.label]), s.level)}${renderLevelHelp(s)}</div>
-      <div class="field"><span class="lbl">Modèle de prévision</span>${seg("model", MODEL_KEYS.map(k => [k, MODELS[k].label]), s.model)}<p class="hint">AROME HD (Météo-France, 1,5 km, 2 jours, comblé par AROME/ARPEGE au-delà), ECMWF IFS (9 km) ou GFS (NOAA). La fiche de chaque spot compare les trois.</p></div></div>
+      <div class="field"><span class="lbl">Modèle de prévision</span>${seg("model", MODEL_CHOICES.map(k => [k, k === "moyenne" ? "Moyenne" : MODELS[k].label]), s.model)}<p class="hint">AROME HD (Météo-France, 1,5 km, 2 jours), ECMWF (9 km) ou GFS (NOAA, 13 à 25 km). <b>Moyenne</b> : moyenne heure par heure des trois, plus stable, une bonne référence pour choisir son spot. La fiche de chaque spot compare les trois et la moyenne.</p></div></div>
     <div class="group">
       <div class="field"><div class="row"><label class="lbl" for="set-score">Score minimum d'un créneau</label><output class="big-val num" id="out-score">${s.scoreMin}</output></div><input type="range" id="set-score" min="30" max="90" step="5" value="${s.scoreMin}" data-setting="scoreMin">
         <p class="hint">${s.scoreMin >= 75 ? "Seulement les très bonnes conditions (Top) : moins de créneaux, mais plus sûrs." : s.scoreMin >= 55 ? "Créneaux Jouable et Top." : "Inclut des créneaux limites : plus de propositions, plus de risques de te déplacer pour rien."}</p>
@@ -811,6 +832,7 @@ function renderPanel(s, notifState, onbStep, subJson) {
         <button type="button" class="btn btn--ghost" data-action="setup-open">Modifier</button></div>
       <div class="field"><div class="row"><label class="lbl" for="set-dep">Premier départ (${esc(HOME().name)})</label><input type="time" id="set-dep" value="${s.firstDeparture}" data-setting="firstDeparture"></div></div>
       <div class="field"><div class="row"><label class="lbl" for="set-last">Dernier train retour</label><input type="time" id="set-last" value="${s.lastTrain}" data-setting="lastTrain"></div><p class="hint">Les heures hors de cette fenêtre sont grisées sur le ruban du temps.</p></div>
+      <div class="field"><label class="check"><input type="checkbox" data-setting="showFar" ${s.showFar !== false ? "checked" : ""}>Afficher les spots hors de portée (points gris, sans prévisions)</label></div>
       <div class="field"><label class="check"><input type="checkbox" data-setting="includeTreuil" ${s.includeTreuil ? "checked" : ""}>Afficher les terrains de treuil</label>
         <p class="hint">Treuils : ne se pratiquent qu'avec un club. Saint-Séglin et Massérac sont des terrains FFVL, Crocy et Martigny viennent de wikiparapente, Sougéal seulement de ParaglidingEarth : à confirmer auprès des clubs.</p></div>
       <div class="field"><div class="row"><span class="lbl">Spots favoris</span><span class="status ${s.favs.length ? "status--on" : "status--off"}">${s.favs.length || "Aucun"}</span></div><p class="hint">Tes favoris sont mis en avant (étoile) et le bouton étoile en bas de l'écran n'affiche qu'eux.</p><button type="button" class="btn btn--ghost" data-action="fav-open">${STAR}Choisir mes spots favoris</button></div>
@@ -830,7 +852,7 @@ function renderPanel(s, notifState, onbStep, subJson) {
         ${s.custom?.length ? `<p class="hint"><b>Proposer</b> envoie le spot par mail à ParaSpot : une fois vérifié, il est ajouté pour tout le monde. <b>Notifications</b> : télécharge le fichier ci-dessous et dépose-le dans le dossier <code>data</code> du dépôt GitHub (nom <code>mes-spots.json</code>) pour que le robot surveille aussi tes spots.</p>
         <button type="button" class="btn btn--ghost" data-action="custom-export">${I.bell}Fichier pour les notifications</button>` : ""}</div>
       <div class="field"><span class="lbl">Sauvegarde</span>
-        <p class="hint">Tes réglages, favoris et spots ajoutés sont enregistrés sur ce téléphone. Fais une sauvegarde pour les retrouver si le téléphone les efface, ou pour les passer sur un autre appareil.</p>
+        <p class="hint">Tes réglages, favoris et spots ajoutés sont enregistrés sur ce téléphone. Fais une sauvegarde pour les retrouver si le téléphone les efface, ou pour les passer sur un autre appareil. Elle contient ta ville de départ : ne la partage qu'avec des personnes de confiance.</p>
         <div class="btn-row"><button type="button" class="btn btn--ghost" data-action="backup-file">Télécharger ma sauvegarde</button><button type="button" class="btn btn--ghost" data-action="backup-copy">Copier mon code</button></div>
         <label class="lbl" for="restore-code" style="font-size:14px">Restaurer : colle un code ou choisis un fichier de sauvegarde</label>
         <textarea id="restore-code" class="sub-box" placeholder="PARASPOT1:..." rows="3"></textarea>
@@ -840,6 +862,8 @@ function renderPanel(s, notifState, onbStep, subJson) {
     </div>
     <div class="group"><div class="field"><span class="lbl">Légende de la carte</span><div class="legend-in">${renderLegend()}</div><label class="check"><input type="checkbox" data-legend-toggle="1" ${s.legendHidden ? "" : "checked"}>Afficher la légende quand je déplace la carte</label></div></div>
     <div class="group"><div class="field"><span class="lbl">Installer sur le téléphone</span><p class="hint">Android (Chrome) : menu ⋮ puis « Installer l'application ». iPhone (Safari) : bouton Partager puis « Sur l'écran d'accueil ».</p>${installPrompt ? `<button type="button" class="btn btn--wing" data-action="install">Installer ParaSpot</button>` : ""}</div></div>
+    <div class="group"><div class="field"><details class="explain"><summary>${I.info}Confidentialité, sécurité et mentions légales</summary>${PRIVACY_HTML}</details>
+      <button type="button" class="btn btn--ghost" data-action="cgu-read">Conditions d'utilisation${settings.cgu ? ` (acceptées le ${new Date(settings.cgu.date).toLocaleDateString("fr-FR")})` : ""}</button></div></div>
     <div class="group"><div class="field"><span class="lbl">Contact</span><p class="hint">Une idée, un bug, un spot à corriger ? Écris-nous.</p>
       <a class="btn btn--ghost" href="mailto:tobalab@proton.me?subject=${encodeURIComponent("ParaSpot")}">${I.mail}Contacter ParaSpot</a>
       <p class="hint">ParaSpot est gratuit, pour un usage non commercial : la vente de l'application est interdite (licence PolyForm Noncommercial 1.0.0). <a href="LICENCE.md" target="_blank" rel="noopener">Lire la licence</a></p></div></div>
@@ -850,7 +874,7 @@ function renderPanel(s, notifState, onbStep, subJson) {
 /* =========================================================
    MOTEUR : caméra, champ de vent, ciel
    ========================================================= */
-const state = { subJson: "", kindInit: true, windOn: true, layer: "plan", day: 0, kind: ["tout","gonflage","vol","favoris"].includes(settings.kind) ? settings.kind : "tout", sel: null, pinned: false, setup: null, favStep: false, spotForm: null, picking: false, delConfirm: null, backupMsg: "", hour: 14, playing: false, detail: false, panel: false, onbStep: -1, loading: false, offline: !navigator.onLine, notifState: "" };
+const state = { subJson: "", kindInit: true, windOn: true, layer: "plan", day: 0, kind: ["tout","gonflage","vol","favoris"].includes(settings.kind) ? settings.kind : "tout", sel: null, pinned: false, cgu: null, cguRefused: false, setup: null, favStep: false, spotForm: null, picking: false, delConfirm: null, backupMsg: "", hour: 14, playing: false, detail: false, panel: false, onbStep: -1, loading: false, offline: !navigator.onLine, notifState: "" };
 const $ = s => document.querySelector(s);
 const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -1120,8 +1144,10 @@ function drawStations() {
 function renderFar() {
   if (!farLayer || !map) return;
   farLayer.clearLayers();
+  if (settings.showFar === false) return;
   const b = map.getBounds().pad(0.15), z = map.getZoom(), cell = z >= 9 ? 0 : 34;
-  const list = ALL_SPOTS.filter(s => !FETCH_IDS.has(s.id) && (settings.includeTreuil || s.profile !== "treuil") && b.contains([s.lat, s.lon]));
+  // mêmes filtres que les spots en couleur : Tout / Gonflage / Vol / favoris, et spots masqués dans « Mes spots »
+  const list = ALL_SPOTS.filter(s => !FETCH_IDS.has(s.id) && kindOk(s, state.kind) && !settings.hidden.includes(s.id) && (settings.includeTreuil || s.profile !== "treuil") && b.contains([s.lat, s.lon]));
   // regroupement par case d'écran quand on est loin : un point gris avec le nombre de spots
   const cells = new Map();
   list.forEach(s => {
@@ -1317,7 +1343,7 @@ function pinSpot(id) {
 function unpin() { state.pinned = false; pickDefault(); renderAll(false); }
 function refreshCards() { document.querySelectorAll(".card").forEach(c => c.classList.toggle("is-sel", c.dataset.spot === state.sel)); }
 function syncSelection(fly = false) {
-  const x = selItem(); if (!x) return; state.sel = x.spot.id;
+  const x = selItem(); if (!x) { state.sel = null; renderMarkers(); renderScrubOnly(); return; } state.sel = x.spot.id;
   document.querySelectorAll(".card").forEach(c => c.classList.toggle("is-sel", c.dataset.spot === state.sel));
   renderRoute(x.spot);
   renderMarkers(); renderScrubOnly();
@@ -1336,7 +1362,7 @@ function setHour(h, fromDetail) {
   if (state.detail) { updateDetailHour(h); updateModelCompareHour(h); }
 }
 function renderAll(fly = false) {
-  renderTop(); renderDock(); syncSelection(fly); applySky();
+  renderTop(); renderDock(); syncSelection(fly); applySky(); renderFar();
   requestAnimationFrame(() => { const c = $(`.card[data-spot="${state.sel}"]`); if (c) c.scrollIntoView({ inline: "center", block: "nearest", behavior: "instant" }); });
 }
 
@@ -1378,6 +1404,8 @@ addEventListener("popstate", () => {
   if (state.picking) { endPick(null); navPush("sub"); return; }
   if (state.detail) { closeDetail(); return; }
   if (state.panel) {
+    if (state.cgu === "accept" && !cguOk()) { navPush("panel"); return; }
+    if (state.cgu) { state.cgu = null; renderPanelOnly(); return; }
     if (state.setup) { if (state.setup.first) { navPush("panel"); return; } state.setup = null; renderPanelOnly(); return; }
     if (state.spotForm) { state.spotForm = null; renderPanelOnly(); return; }
     if (state.favStep) { finishFavs(false, true); return; }
@@ -1388,7 +1416,7 @@ addEventListener("popstate", () => {
 });
 function openPanel() { navPush("panel"); state.panel = true; renderPanelOnly(); $("#panel").classList.add("is-open"); setTimeout(() => $("#panel").focus(), 50); }
 function renderPanelOnly() { $("#panel").innerHTML = renderPanel(settings, state.notifState, state.onbStep, state.subJson); syncPickerHeads(); }
-function closePanel() { if (state.favStep && !settings.favsAsked) { settings.favsAsked = true; saveSettings(); } if (state.setup?.first) return; // premier lancement : la ville de départ est nécessaire
+function closePanel() { if (state.cgu === "accept" && !cguOk()) return; if (state.favStep && !settings.favsAsked) { settings.favsAsked = true; saveSettings(); } if (state.setup?.first) return; // premier lancement : la ville de départ est nécessaire
   state.panel = false; state.onbStep = -1; state.favStep = false; state.setup = null; state.spotForm = null; state.delConfirm = null; state.backupMsg = ""; $("#panel").classList.remove("is-open"); }
 function applyTheme() {
   if (settings.theme === "system") document.documentElement.removeAttribute("data-theme"); else document.documentElement.setAttribute("data-theme", settings.theme);
@@ -1425,6 +1453,7 @@ async function testNotification() {
 }
 
 /* ---------- Événements ---------- */
+document.addEventListener("click", e => { if (e.target.closest("[data-stop]")) e.stopPropagation(); }, true);
 document.addEventListener("click", e => {
   const seg = e.target.closest("[data-setting][data-value]");
   if (seg) { settings[seg.dataset.setting] = seg.dataset.value; saveSettings(); if (seg.dataset.setting === "theme") applyTheme(); if (["level", "model"].includes(seg.dataset.setting)) { buildForecast(); if (seg.dataset.setting === "model") pickDefault(); renderAll(false); updateModelButton(); } renderPanelOnly(); return; }
@@ -1456,6 +1485,10 @@ document.addEventListener("click", e => {
     saveSettings(); applySpotFilter(); if (!items().some(x => x.spot.id === state.sel)) { state.pinned = false; pickDefault(); } if (FORECAST) renderAll(false); renderPanelOnly();
   }
   else if (a === "setup-open") openSetup(false);
+  else if (a === "cgu-read") { navPush("sub"); state.cguBack = state.setup; state.cgu = "read"; renderPanelOnly(); $("#panel").scrollTop = 0; }
+  else if (a === "cgu-close") { navDone(); state.cgu = null; renderPanelOnly(); }
+  else if (a === "cgu-accept") { acceptCgu(); state.cgu = null; state.cguRefused = false; navDone(); closePanel(); if (!settings.favsAsked) setTimeout(openFavPicker, 400); }
+  else if (a === "cgu-refuse") { state.cguRefused = true; renderPanelOnly(); }
   else if (a === "compass") setCompassMode(compass.mode === "north" ? "follow" : "north");
   else if (a === "pf-reset") { settings.profiles = {}; saveSettings(); buildForecast(); renderAll(false); renderPanelOnly(); }
   else if (a === "setup-cancel") { navDone(); state.setup = null; renderPanelOnly(); }
@@ -1508,7 +1541,7 @@ document.addEventListener("click", e => {
     if (state.detail) { const b = $("#detail [data-action='fav']"); if (b) { const on = settings.favs.includes(id); b.classList.toggle("is-on", on); b.setAttribute("aria-pressed", String(on)); } }
   }
   else if (a === "layer") { state.layer = LAYERS[(LAYERS.indexOf(state.layer) + 1) % LAYERS.length]; setTiles(); }
-  else if (a === "model") { settings.model = MODEL_KEYS[(MODEL_KEYS.indexOf(settings.model) + 1) % MODEL_KEYS.length]; saveSettings(); buildForecast(); if (!state.detail && !state.pinned) pickDefault(); renderAll(false); updateModelButton(); showInfo(`Modèle : ${MODELS[settings.model].label}`, MODEL_INFO[settings.model]); if (state.detail) openDetail(state.sel); }
+  else if (a === "model") { settings.model = MODEL_CHOICES[(MODEL_CHOICES.indexOf(settings.model) + 1) % MODEL_CHOICES.length]; saveSettings(); buildForecast(); if (!state.detail && !state.pinned) pickDefault(); renderAll(false); updateModelButton(); showInfo(`Modèle : ${MODEL_UI[settings.model].label}`, MODEL_INFO[settings.model]); if (state.detail) openDetail(state.sel); }
   else if (a === "copy-sub") { navigator.clipboard?.writeText(state.subJson).then(() => { state.notifState = "Abonnement copié."; renderPanelOnly(); }).catch(() => {}); }
   else if (a === "install") { installPrompt?.prompt(); installPrompt = null; renderPanelOnly(); }
   else if (a === "overview") { frameAll(); }
@@ -1564,6 +1597,7 @@ document.addEventListener("change", e => {
     if (msg) { msg.textContent = "Seuils enregistrés."; msg.classList.remove("sf-err"); }
     buildForecast(); renderAll(false); return;
   }
+  if (e.target.dataset?.st === "ack" && state.setup) { state.setup.ack = e.target.checked; return; }
   if (e.target.dataset?.st && state.setup) { state.setup.trans[e.target.dataset.st] = e.target.checked; renderPanelOnly(); return; }
   if (e.target.id === "restore-file" && e.target.files?.[0]) { e.target.files[0].text().then(restoreFrom); return; }
   if (e.target.dataset?.sf === "tide" && state.spotForm) { state.spotForm.tide = e.target.checked; return; }
@@ -1600,6 +1634,7 @@ document.addEventListener("change", e => {
   else if (k === "scoreMin") settings[k] = +e.target.value;
   else if (e.target.value) settings[k] = e.target.value;
   saveSettings();
+  if (k === "showFar") { renderFar(); return; }
   if (k === "includeTreuil") { syncFetch(); if (!items().some(x => x.spot.id === state.sel)) pickDefault(); }
   if (["scoreMin", "firstDeparture", "lastTrain", "includeCar", "includeTreuil"].includes(k)) { buildForecast(); renderAll(false); renderPanelOnly(); }
 });
@@ -1632,20 +1667,20 @@ if (window.matchMedia) matchMedia("(prefers-color-scheme: dark)").addEventListen
 function modelSummary(d, hour) {
   const i = d.hours.findIndex(h => h.hour === hour);
   if (i < 0) return "";
-  const parts = MODEL_KEYS.filter(k => d.models[k]).map(k => [k, d.models[k]]).map(([k, hs]) => hs[i].missing ? `${MODELS[k].label} : pas de donnée` : `${MODELS[k].label} ${hs[i].wind} km/h ${frDir(sectorCode(hs[i].dir))}`);
+  const parts = MODEL_CHOICES.filter(k => d.models[k]).map(k => [k, d.models[k]]).map(([k, hs]) => { const lab = k === "moyenne" ? "Moyenne" : MODELS[k].label; return hs[i].missing ? `${lab} : pas de donnée` : `${lab} ${hs[i].wind} km/h ${frDir(sectorCode(hs[i].dir))}`; });
   const a = d.agree[i];
   return `À ${hour}h : ${parts.join(" · ")}. <b>${esc(a.label)}</b>${a.level !== "inconnu" ? ` (écart ${a.windSpread} km/h, ${a.dirSpread}°)` : ""}.`;
 }
 function renderModelCompare(spot, d, focusHour) {
-  const keys = MODEL_KEYS.filter(k => d.models[k]);
+  const keys = MODEL_CHOICES.filter(k => d.models[k]);
   if (keys.length < 2) return `<p class="hint">Un seul modèle a répondu pour l'instant : la comparaison s'affichera à la prochaine mise à jour.</p>`;
   const head = `<div class="mc-row mc-head"><span class="mc-lab"></span>${d.hours.map(h => `<span class="mc-h num ${h.hour === focusHour ? "is-focus" : ""}" data-h="${h.hour}">${h.hour}h</span>`).join("")}</div>`;
-  const rows = keys.map(k => `<div class="mc-row ${k === usedModel ? "is-used" : ""}"><span class="mc-lab">${esc(MODELS[k].label)}<small>${esc(MODELS[k].res)}</small></span>${d.models[k].map(h =>
-    `<button type="button" class="mc-c mcv--${h.missing ? "none" : h.verdict.key} ${h.hour === focusHour ? "is-focus" : ""} ${h.filled ? "is-filled" : ""}" data-action="hour" data-hour="${h.hour}" data-h="${h.hour}" aria-label="${esc(MODELS[k].label)} ${h.hour}h : ${h.missing ? "pas de donnée" : `${h.wind} km/h de ${FR_LONG[sectorCode(h.dir)]}, ${h.verdict.label}`}">${h.missing ? "-" : `${renderWindArrow(h.dir, 14)}<b class="num">${h.wind}</b>`}</button>`).join("")}</div>`).join("");
+  const rows = keys.map(k => `<div class="mc-row ${k === usedModel ? "is-used" : ""} ${k === "moyenne" ? "mc-mean" : ""}"><span class="mc-lab">${esc(k === "moyenne" ? "Moyenne" : MODEL_UI[k].label)}<small>${esc(k === "moyenne" ? "des 3" : MODEL_UI[k].res)}</small></span>${d.models[k].map(h =>
+    `<button type="button" class="mc-c mcv--${h.missing ? "none" : h.verdict.key} ${h.hour === focusHour ? "is-focus" : ""} ${h.filled ? "is-filled" : ""}" data-action="hour" data-hour="${h.hour}" data-h="${h.hour}" aria-label="${esc(MODEL_UI[k].label)} ${h.hour}h : ${h.missing ? "pas de donnée" : `${h.wind} km/h de ${FR_LONG[sectorCode(h.dir)]}, ${h.verdict.label}`}">${h.missing ? "-" : `${renderWindArrow(h.dir, 14)}<b class="num">${h.wind}</b>`}</button>`).join("")}</div>`).join("");
   const agree = `<div class="mc-row mc-agree"><span class="mc-lab">Accord</span>${d.agree.map((a, i) => `<span class="mc-a mc-a--${a.level} ${d.hours[i].hour === focusHour ? "is-focus" : ""}" data-h="${d.hours[i].hour}" title="${esc(a.label)}"></span>`).join("")}</div>`;
   return `<div class="mc" id="mc" role="group" aria-label="Comparaison des modèles heure par heure">${head}${rows}${agree}</div>
     <p class="mc-sum" id="mc-sum">${modelSummary(d, focusHour)}</p>
-    <p class="hint">Le score et les créneaux utilisent ${esc(MODELS[usedModel].label)} (changer avec le bouton modèle en bas de l'écran). Cases claires : AROME HD comblé par AROME/ARPEGE au-delà de son horizon. Pastilles : vert = modèles d'accord, orange = partiel, rouge = désaccord.</p>`;
+    <p class="hint">Le score et les créneaux utilisent ${esc(MODEL_UI[usedModel].label)} (changer avec le bouton modèle en bas de l'écran). Cases claires : AROME HD comblé par AROME/ARPEGE au-delà de son horizon. Pastilles : vert = modèles d'accord, orange = partiel, rouge = désaccord.</p>`;
 }
 function updateModelCompareHour(h) {
   const d = FORECAST?.[state.day]?.bySpot[state.sel];
@@ -1690,8 +1725,8 @@ function renderSpotAir(spot) {
   const list = ids.length ? `https://www.spotair.mobi/widget/wind/list?stations=${ids.join(",")}&mode=free_flight&unit=kmh&dark=${isDark()}` : null;
   const open = `https://www.spotair.mobi?lat=${spot.lat}&lng=${spot.lon}&zoom=12&layers=spotpg,wind`;
   return `<div class="sa">
-    ${navigator.onLine ? `<iframe class="sa-map" loading="lazy" src="${esc(map)}" title="Carte Spot Air : décollages et balises autour du site"></iframe>
-      ${list ? `<iframe class="sa-wind" loading="lazy" style="height:${80 * ids.length + 30}px" src="${esc(list)}" title="Balises de vent en temps réel"></iframe>` : ""}`
+    ${navigator.onLine ? `<iframe class="sa-map" loading="lazy" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox" referrerpolicy="strict-origin-when-cross-origin" src="${esc(map)}" title="Carte Spot Air : décollages et balises autour du site"></iframe>
+      ${list ? `<iframe class="sa-wind" loading="lazy" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox" referrerpolicy="strict-origin-when-cross-origin" style="height:${80 * ids.length + 30}px" src="${esc(list)}" title="Balises de vent en temps réel"></iframe>` : ""}`
       : `<p class="hint">Hors connexion : la carte et les balises Spot Air s'afficheront au retour du réseau.</p>`}
     <div class="links">${spot.links.spotair ? `<a class="lk" href="${esc(spot.links.spotair)}" target="_blank" rel="noopener">${I.ext}Fiche Spot Air du site</a>` : ""}<a class="lk" href="${esc(open)}" target="_blank" rel="noopener">${I.pin}Carte Spot Air</a></div>
     <p class="hint">Carte, décollages FFVL et balises en temps réel : Spot Air (spotair.mobi).${ids.length ? "" : " Pas de balise identifiée pour ce site : la carte montre les balises proches."}</p>
@@ -1702,7 +1737,7 @@ function renderSpotPicker(s) {
   return `<div class="pk-all"><button type="button" class="mini-btn" data-action="spots-all" data-on="1">Tout sélectionner</button><button type="button" class="mini-btn" data-action="spots-all" data-on="0">Tout désélectionner</button></div>
     <div class="picker">${groups.map(([r, list]) => {
     const on = list.filter(x => !s.hidden.includes(x.id)).length;
-    return `<details class="pk-reg" data-ids="${esc(list.map(x => x.id).join(","))}" data-mode="show"><summary><label class="check" onclick="event.stopPropagation()"><input type="checkbox" class="pk-head" data-region-toggle="${esc(list.map(x => x.id).join(","))}" ${on === list.length ? "checked" : ""}>${esc(r)}</label><span class="pk-n">${on}/${list.length}</span></summary>
+    return `<details class="pk-reg" data-ids="${esc(list.map(x => x.id).join(","))}" data-mode="show"><summary><label class="check" data-stop="1"><input type="checkbox" class="pk-head" data-region-toggle="${esc(list.map(x => x.id).join(","))}" ${on === list.length ? "checked" : ""}>${esc(r)}</label><span class="pk-n">${on}/${list.length}</span></summary>
       ${list.map(x => `<label class="check pk-spot"><input type="checkbox" data-spot-toggle="${x.id}" ${s.hidden.includes(x.id) ? "" : "checked"}>${kindIcon(x.kind)}${esc(x.name)}</label>`).join("")}</details>`;
   }).join("")}</div>`;
 }
@@ -1751,6 +1786,30 @@ function renderCustomProfiles(s) {
     <p class="hint" id="pf-msg">En km/h. Il faut : vent mini ≤ idéal de ≤ à ≤ vent maxi ≤ rafales maxi.</p>
     <button type="button" class="btn btn--ghost" data-action="pf-reset">Revenir aux valeurs Intermédiaire</button></div>`;
 }
+/* Conditions générales d'utilisation : à accepter au premier lancement et à chaque nouvelle version */
+const CGU_VERSION = "2026-10-04";
+const CGU_HTML = `<p>Version du 4 octobre 2026</p><h4>1. Objet</h4><p>ParaSpot est une application web gratuite et non commerciale qui affiche des prévisions météo et une note indicative pour des sites de parapente et de gonflage. Utiliser l'application suppose d'accepter ces conditions.</p><h4>2. Une aide à la décision, pas une autorisation de voler</h4><ul><li>Les notes (Top, Jouable, Limite, Non), créneaux, plans de vol, horaires de marée, temps de trajet et recommandations sont <b>calculés automatiquement</b> à partir de prévisions et de données de tiers. Ce sont des <b>estimations</b>.</li><li>Une prévision peut être fausse. Les conditions réelles (vent, rafales, brise, turbulence, orage, marée) peuvent être très différentes de ce que l'app affiche.</li><li>Les fiches de sites (orientations, accès, règles, niveau) peuvent être incomplètes, anciennes ou erronées, en particulier les sites importés automatiquement, ajoutés par un utilisateur ou proposés par la communauté.</li><li><b>ParaSpot ne remplace jamais</b> : la fiche officielle du site (FFVL, club gestionnaire), le panneau sur place, une balise en temps réel, l'observation des conditions sur place, l'avis d'un moniteur ou de pilotes locaux, ni le jugement du pilote.</li></ul><h4>3. Engagements de l'utilisateur</h4><p>En utilisant ParaSpot, tu reconnais que :</p><ul><li>le parapente et le gonflage sont des activités à risque, qui peuvent entraîner des blessures graves ou mortelles ;</li><li><b>tu restes seul responsable</b> de ta décision de te rendre sur un site, de gonfler ou de voler, et de la vérification des conditions réelles avant et pendant la pratique ;</li><li>tu pratiques selon ton niveau, avec un matériel adapté et entretenu, et, pour voler, avec l'assurance de responsabilité civile aérienne requise (incluse par exemple dans la licence FFVL) ;</li><li>tu respectes les règles de chaque site, la réglementation de l'espace aérien, les propriétaires et les consignes locales ;</li><li>les mineurs utilisent l'application sous la responsabilité de leurs parents ou de leur encadrement.</li></ul><h4>4. Absence de garantie et responsabilité</h4><ul><li>ParaSpot est fourni <b>gratuitement et « en l'état »</b>, sans garantie d'exactitude, d'exhaustivité, de mise à jour ni de disponibilité.</li><li>Dans toute la mesure permise par la loi, l'éditeur ne pourra être tenu responsable des dommages résultant de l'utilisation de l'application ou des informations qu'elle affiche, ni d'une décision prise sur leur base, ni d'une indisponibilité du service ou des services tiers (Open-Meteo, Spot Air, FFVL, ParaglidingEarth, SNCF, OpenStreetMap…).</li><li>Cette clause ne limite pas les droits que la loi garantit et ne pourrait pas être écartée par contrat.</li></ul><h4>5. Spots ajoutés et proposés</h4><p>Les spots ajoutés par un utilisateur restent sur son téléphone, sous sa responsabilité. Un spot proposé pour tout le monde est relu avant publication, sans garantie de son exactitude. Signale toute erreur à tobalab@proton.me.</p><h4>6. Notifications</h4><p>Les alertes sont envoyées automatiquement, avec un éventuel retard ou une absence d'envoi. Elles ne constituent pas une invitation à voler.</p><h4>7. Données personnelles</h4><p>ParaSpot ne collecte pas de données sur un serveur. Le détail figure dans la page « Confidentialité » (docs/CONFIDENTIALITE.md).</p><h4>8. Propriété intellectuelle</h4><p>Le code est publié sous licence PolyForm Noncommercial 1.0.0 : la vente de l'application est interdite. Les données de tiers gardent leur licence (voir LICENCE.md).</p><h4>9. Modification et droit applicable</h4><p>Ces conditions peuvent évoluer : la nouvelle version est alors présentée à l'ouverture de l'app et doit être acceptée. Elles sont soumises au droit français.</p><p>Contact : tobalab@proton.me</p>`;
+const cguOk = () => settings.cgu?.version === CGU_VERSION;
+function renderCgu(mode) {
+  const accept = mode === "accept";
+  return `<div class="panel-in">
+    <div class="d-head"><div><h2 class="p-title" id="p-title">Conditions d'utilisation</h2></div>${accept ? "" : `<button type="button" class="close" data-action="cgu-close" aria-label="Fermer">${I.close}</button>`}</div>
+    ${accept ? `<p class="cgu-intro">${settings.cgu ? "Les conditions d'utilisation ont changé." : "Avant d'utiliser ParaSpot, lis et accepte ses conditions d'utilisation."} L'essentiel : <b>ParaSpot donne des estimations, pas une autorisation de voler. Tu restes seul responsable de ta décision.</b></p>` : ""}
+    <div class="cgu">${CGU_HTML}</div>
+    ${accept ? `<div class="btn-row fav-actions"><button type="button" class="btn btn--wing" data-action="cgu-accept">J'ai lu et j'accepte</button><button type="button" class="btn btn--ghost" data-action="cgu-refuse">Je refuse</button></div>
+      ${state.cguRefused ? `<p class="hint sf-err" role="alert">Sans acceptation, ParaSpot ne peut pas être utilisé. Tu peux fermer l'app, ou relire et accepter.</p>` : ""}` : ""}
+  </div>`;
+}
+function acceptCgu() { settings.cgu = { version: CGU_VERSION, date: new Date().toISOString() }; settings.ackAt = settings.cgu.date.slice(0, 10); saveSettings(); }
+const PRIVACY_HTML = `
+  <p><b>Éditeur</b> : ParaSpot, projet personnel gratuit et non commercial. Contact : <a href="mailto:tobalab@proton.me">tobalab@proton.me</a>.</p>
+  <p><b>Hébergement</b> : GitHub Pages, GitHub Inc., 88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, États-Unis. Comme tout hébergeur, GitHub enregistre l'adresse IP des visiteurs dans ses journaux techniques.</p>
+  <p><b>Tes données</b> : ParaSpot ne crée pas de compte, ne collecte rien sur un serveur et n'utilise ni cookie, ni publicité, ni mesure d'audience. Ta ville de départ, tes réglages, tes favoris et tes spots ajoutés restent sur ton téléphone. Pour tout effacer : supprime l'app ou les données du site dans ton navigateur.</p>
+  <p><b>Ta position</b> : elle sert seulement sur ton téléphone (boussole et « Utiliser ma position »). Pour afficher le nom de ta commune, elle est envoyée une fois au service public geo.api.gouv.fr.</p>
+  <p><b>Services contactés par ton téléphone</b> (ils reçoivent ton adresse IP) : Open-Meteo (prévisions et marées pour les positions des spots, recherche de ville), geo.api.gouv.fr (code postal, commune), Spot Air (carte et balises dans la fiche d'un spot), OpenStreetMap France et OpenTopoMap (fonds « Détail » et « Relief »). Les polices et le fond de carte « Plan » sont hébergés avec l'app.</p>
+  <p><b>Code de sauvegarde</b> : il contient ta ville de départ et tes spots ajoutés. Ne le partage qu'avec des personnes de confiance.</p>
+  <p><b>Sécurité</b> : ParaSpot est une aide à la décision. Elle ne remplace ni la fiche officielle du site, ni le panneau sur place, ni une balise en temps réel, ni ton jugement, ni l'avis d'un moniteur. Tu restes seul responsable de ta décision de voler.</p>
+  <p>Licence : usage non commercial (PolyForm Noncommercial 1.0.0), vente interdite. <a href="LICENCE.md" target="_blank" rel="noopener">Licence et sources des données</a> · <a href="docs/CONFIDENTIALITE.md" target="_blank" rel="noopener">Confidentialité</a> · <a href="docs/CGU.md" target="_blank" rel="noopener">Conditions d'utilisation</a></p>`;
 /* COMPOSANT: ville de départ et transport (premier lancement et réglages) */
 function transportSummary(t) {
   const parts = [];
@@ -1779,6 +1838,10 @@ function renderSetup(st) {
         ${t.car ? `<div class="sub-opts"><span class="hint">Temps de route maximum :</span>${seg("st-drive", [[60, "1 h"], [90, "1 h 30"], [120, "2 h"], [150, "2 h 30"], [180, "3 h"], [240, "4 h"]], t.maxDrive)}</div>` : ""}
         <p class="hint">Les spots proches de chez toi (moins de ${t.softKm} km) sont toujours proposés. Les temps de train et de route sont estimés d'après les distances : vérifie toujours les horaires.</p></div>
     </div>
+    ${st.first ? `<div class="group"><div class="field"><span class="lbl">Avant de commencer</span>
+      <p class="hint">ParaSpot est une aide à la décision, gratuite et sans garantie. Elle ne remplace ni la fiche du site, ni le panneau sur place, ni une balise en temps réel, ni ton jugement de pilote. Tes réglages restent sur ton téléphone : rien n'est envoyé à ParaSpot.</p>
+      <button type="button" class="mini-btn" data-action="cgu-read">Lire les conditions d'utilisation</button>
+      <label class="check"><input type="checkbox" data-st="ack" ${st.ack ? "checked" : ""}>J'ai lu et j'accepte les conditions d'utilisation : ParaSpot donne des estimations, je reste seul responsable de ma décision de voler.</label></div></div>` : ""}
     <div class="btn-row fav-actions"><button type="button" class="btn btn--wing" data-action="setup-save">${st.first ? "Continuer" : "Enregistrer"}</button></div>
   </div>`;
 }
@@ -1823,6 +1886,8 @@ function setupSave() {
   const st = state.setup;
   if (!st.home) { st.msg = "Choisis ta ville de départ (Chercher, puis touche la bonne ville)."; renderPanelOnly(); return; }
   if (!st.trans.train && !st.trans.car) { st.msg = "Choisis au moins un mode de transport."; renderPanelOnly(); return; }
+  if (st.first && !st.ack) { st.msg = "Coche « J'ai lu et j'accepte les conditions d'utilisation » en bas de l'écran pour continuer."; renderPanelOnly(); return; }
+  if (st.first) acceptCgu();
   const moved = !settings.home || distKm([settings.home.lat, settings.home.lon], [st.home.lat, st.home.lon]) > 1;
   settings.home = st.home; settings.trans = { ...st.trans }; saveSettings();
   const first = st.first; state.setup = null; HOME_GARE = undefined;
@@ -1923,8 +1988,21 @@ function restoreFrom(text) {
   let obj = null; const t = (text || "").trim();
   try { obj = t.startsWith("PARASPOT1:") ? JSON.parse(decodeURIComponent(escape(atob(t.slice(10).replace(/\s/g, ""))))) : JSON.parse(t); } catch { obj = null; }
   if (!obj || obj.app !== "ParaSpot" || typeof obj.settings !== "object") { state.backupMsg = "Ce code ou ce fichier n'est pas une sauvegarde ParaSpot."; renderPanelOnly(); return; }
-  const keep = ["level", "profiles", "scoreMin", "firstDeparture", "lastTrain", "theme", "model", "includeCar", "home", "trans", "includeTreuil", "hidden", "favs", "favsAsked", "custom", "kind", "legendHidden"];
-  keep.forEach(k => { if (k in obj.settings) settings[k] = obj.settings[k]; });
+  const keep = ["level", "profiles", "scoreMin", "firstDeparture", "lastTrain", "theme", "model", "includeCar", "home", "trans", "includeTreuil", "hidden", "favs", "favsAsked", "custom", "kind", "legendHidden", "showFar", "cgu"];
+  const o = obj.settings, ok = {
+    level: v => Object.keys(LEVELS).includes(v), scoreMin: v => cleanNum(v, 30, 90) != null, firstDeparture: v => /^\d{2}:\d{2}$/.test(v), lastTrain: v => /^\d{2}:\d{2}$/.test(v),
+    theme: v => ["system", "light", "dark"].includes(v), model: v => MODEL_CHOICES.includes(v), includeCar: v => typeof v === "boolean", includeTreuil: v => typeof v === "boolean",
+    hidden: v => Array.isArray(v), favs: v => Array.isArray(v), favsAsked: v => typeof v === "boolean", custom: v => Array.isArray(v), kind: v => ["tout", "gonflage", "vol", "favoris"].includes(v),
+    legendHidden: v => typeof v === "boolean", showFar: v => typeof v === "boolean", cgu: v => v && typeof v.version === "string" && typeof v.date === "string", profiles: v => v && typeof v === "object", trans: v => v && typeof v === "object",
+    home: v => v && cleanNum(v.lat, 41, 52) != null && cleanNum(v.lon, -6, 10) != null
+  };
+  keep.forEach(k => { if (k in o && ok[k]?.(o[k])) settings[k] = o[k]; });
+  settings.hidden = settings.hidden.map(String).map(x => x.replace(/[^A-Za-z0-9_-]/g, ""));
+  settings.favs = settings.favs.map(String).map(x => x.replace(/[^A-Za-z0-9_-]/g, ""));
+  settings.custom = settings.custom.map(cleanCustom).filter(Boolean);
+  if (settings.home) settings.home = { name: cleanText(settings.home.name, 60), lat: +settings.home.lat, lon: +settings.home.lon };
+  if (settings.profiles) Object.keys(settings.profiles).forEach(k => { if (!["gonflage", "soaring", "plaine", "treuil"].includes(k)) delete settings.profiles[k]; else Object.keys(settings.profiles[k]).forEach(f => { settings.profiles[k][f] = cleanNum(settings.profiles[k][f], 0, 80) ?? DEFAULT_PROFILES[k][f]; }); });
+  settings.trans = { train: !!settings.trans?.train, car: !!settings.trans?.car, soft: ["pied", "velo", "vel"].includes(settings.trans?.soft) ? settings.trans.soft : "vel", softKm: cleanNum(settings.trans?.softKm, 1, 30) ?? 10, maxDrive: cleanNum(settings.trans?.maxDrive, 30, 600) ?? 150 };
   settings.favsAsked = true; saveSettings();
   state.backupMsg = "Sauvegarde restaurée : l'app redémarre…"; renderPanelOnly();
   setTimeout(() => location.reload(), 900);
@@ -1947,7 +2025,7 @@ function renderFavList(s) {
     const n = items.filter(x => s.favs.includes(x.id)).length;
     const open = q ? items.length <= 40 || groups.length === 1 : n || (homeD && r.includes(`(${homeD})`));
     const ids = items.map(x => x.id).join(",");
-    return `<details class="pk-reg" ${open ? "open" : ""} data-ids="${esc(ids)}" data-mode="fav"><summary><label class="check pk-r" onclick="event.stopPropagation()"><input type="checkbox" class="pk-head" data-fav-group="${esc(ids)}" ${n === items.length ? "checked" : ""}>${esc(r)}</label><span class="pk-n">${n} ★ / ${items.length}</span></summary>
+    return `<details class="pk-reg" ${open ? "open" : ""} data-ids="${esc(ids)}" data-mode="fav"><summary><label class="check pk-r" data-stop="1"><input type="checkbox" class="pk-head" data-fav-group="${esc(ids)}" ${n === items.length ? "checked" : ""}>${esc(r)}</label><span class="pk-n">${n} ★ / ${items.length}</span></summary>
       ${items.slice(0, many && !open ? 0 : 400).map(x => `<label class="check pk-spot pk-fav"><input type="checkbox" data-fav-toggle="${x.id}" ${s.favs.includes(x.id) ? "checked" : ""}>${kindIcon(x.kind)}<span>${esc(x.name)}<small>${esc(x.city.replace(/\s*\((\d{2}|2A|2B)\)/, ""))}${x.distKm != null ? ` · ${x.distKm} km` : ""}${x.imported ? ` · ${x.sources[0].replace(" (ODbL)", "")}` : ""}</small></span></label>`).join("")}</details>`;
   }).join("")}</div>`;
 }
@@ -1984,6 +2062,7 @@ function renderLegend() {
 const MODEL_INFO = {
   arome: "Météo-France, maille de 1,5 km : le plus précis ici, surtout pour les brises côtières et le relief. Couvre environ 2 jours ; au-delà, AROME/ARPEGE prend le relais (cases « secours »).",
   ecmwf: "Centre européen, maille de 9 km, jusqu'à 15 jours. Très fiable sur la situation générale, moins fin pour les effets locaux (côte, brise).",
+  moyenne: "Pour chaque heure : vent et rafales moyens des trois modèles, direction moyenne, pluie moyenne et le temps le plus défavorable (orage, brouillard). Plus stable qu'un modèle seul : une bonne référence pour choisir son spot. Si les modèles divergent fort, la moyenne peut cacher un risque : regarde la comparaison dans la fiche du spot.",
   gfs: "NOAA (États-Unis), maille de 13 à 25 km, jusqu'à 16 jours. Le plus grossier des trois : à prendre comme troisième avis."
 };
 let infoTimer = null;
@@ -1994,7 +2073,7 @@ function showInfo(title, text) {
 }
 function hideInfo() { clearTimeout(infoTimer); $("#info").classList.remove("is-on"); }
 function updateModelButton() {
-  document.querySelectorAll('[data-action="model"]').forEach(b => { b.querySelector("span").textContent = { arome: "AROME", ecmwf: "ECMWF", gfs: "GFS" }[settings.model]; b.setAttribute("aria-label", `Modèle de prévision : ${MODELS[settings.model].label}. Changer.`); });
+  document.querySelectorAll('[data-action="model"]').forEach(b => { b.querySelector("span").textContent = { arome: "AROME", ecmwf: "ECMWF", gfs: "GFS", moyenne: "MOYENNE" }[settings.model] || "AROME"; b.setAttribute("aria-label", `Modèle de prévision : ${MODEL_UI[settings.model]?.label || "AROME HD"}. Changer.`); });
 }
 
 /* =========================================================
@@ -2052,7 +2131,7 @@ async function refresh(manual) {
   if (FORECAST) renderTop(); else renderWaiting();
   if (manual || !FORECAST) { document.body.classList.add("is-busy"); $("#loader").classList.add("is-on"); }
   try {
-    const results = await fetchAll(fetchSpots(), fetch, { models: MODEL_KEYS, primary: settings.model });
+    const results = await fetchAll(fetchSpots(), fetch, { models: MODEL_KEYS, primary: settings.model === "moyenne" ? "arome" : settings.model });
     RAW = { at: Date.now(), results };
     saveCache();
     state.error = false; state.offline = false;
@@ -2141,8 +2220,9 @@ async function init() {
   if (cached) { RAW = cached; setupFromRaw(); afterData(); openFromUrl(); }
   else renderWaiting();
   const fromLink = new URLSearchParams(location.search).get("spot");
+  if (settings.home && !cguOk()) { state.cgu = "accept"; state.panel = true; navPush("panel"); renderPanelOnly(); $("#panel").classList.add("is-open"); }
   if (!settings.home && !fromLink) openSetup(true);
-  else if (!settings.favsAsked && !fromLink) openFavPicker();
+  else if (!settings.favsAsked && !fromLink && cguOk()) openFavPicker();
   const had = !!FORECAST;
   await refresh(!cached);
   if (!had && FORECAST) { afterData(); openFromUrl(); }

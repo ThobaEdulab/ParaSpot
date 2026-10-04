@@ -1,9 +1,9 @@
 // Service worker ParaSpot : hors-ligne + notifications push.
 // Incrémenter VERSION à chaque modification de l'interface pour forcer la mise à jour sur le téléphone.
-const VERSION = "paraspot-v13";
-const SHELL = ["./", "index.html", "styles.css", "app.js", "scoring.js", "basemap.js", "config.js", "data/spots.json", "manifest.webmanifest", "vendor/leaflet.js", "vendor/leaflet.css",
+const VERSION = "paraspot-v17";
+const SHELL = ["./", "index.html", "styles.css", "app.js", "scoring.js", "basemap.js", "config.js", "data/spots.json", "manifest.webmanifest", "vendor/leaflet.js", "vendor/leaflet.css", "vendor/fonts/fonts.css", "vendor/fonts/manrope-latin-wght-normal.woff2", "vendor/fonts/unbounded-latin-wght-normal.woff2",
   "icons/icon-192.png", "icons/icon.svg", "icons/badge-96.png", "icons/apple-touch-icon.png"];
-const CDN = ["fonts.googleapis.com", "fonts.gstatic.com"];
+const CDN = [];
 // Tuiles des fonds « Détail » et « Relief » : mises en cache au fil de la navigation (limitées)
 const TILES = ["tile.openstreetmap.fr", "tile.opentopomap.org"];
 

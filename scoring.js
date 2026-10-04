@@ -152,6 +152,33 @@ export function normalizeForecast(om, fb = null) {
   };
 }
 
+// Moyenne des modèles (AROME HD, ECMWF, GFS) heure par heure : vent et rafales moyens,
+// direction moyenne pondérée par la force du vent, pluie moyenne, temps le plus défavorable (orage, brouillard).
+export function meanForecast(forecasts) {
+  const list = Object.values(forecasts || {}).filter((f) => f?.hours?.length);
+  if (list.length < 2) return null;
+  const byTime = new Map();
+  list.forEach((f) => f.hours.forEach((h) => { if (!byTime.has(h.time)) byTime.set(h.time, []); byTime.get(h.time).push(h); }));
+  const avg = (arr) => (arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : null);
+  const days = list.find((f) => f.days && Object.keys(f.days).length)?.days || {};
+  const hours = [...byTime.keys()].sort().map((t) => {
+    const all = byTime.get(t), hs = all.filter((h) => !h.missing);
+    const base = all[0];
+    if (!hs.length) return { ...base, missing: true, models: 0 };
+    let sx = 0, sy = 0;
+    hs.forEach((h) => { const r = (h.dir * Math.PI) / 180, w = Math.max(h.wind, 1); sx += Math.sin(r) * w; sy += Math.cos(r) * w; });
+    const dir = ((Math.atan2(sx, sy) * 180) / Math.PI + 360) % 360;
+    const num = (k) => avg(hs.map((h) => h[k]).filter((v) => v != null));
+    return {
+      time: t, date: base.date, hour: base.hour, missing: false, filled: hs.some((h) => h.filled), gustEstimated: hs.some((h) => h.gustEstimated),
+      wind: num("wind"), gust: num("gust"), dir, rain: num("rain") ?? 0, rainProb: num("rainProb"),
+      code: Math.max(...hs.map((h) => h.code || 0)), cloud: num("cloud"), temp: num("temp"), cape: num("cape") ?? 0,
+      isDay: hs.filter((h) => h.isDay).length >= hs.length / 2, models: hs.length
+    };
+  });
+  return { days, hours, mean: true };
+}
+
 // Accord entre modèles à une heure donnée : écart de vent (km/h) et de direction (degrés).
 export function agreement(hours) {
   const hs = hours.filter((h) => h && !h.missing);

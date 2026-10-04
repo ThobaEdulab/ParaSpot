@@ -27,4 +27,4 @@ Ces éléments gardent leur propre licence, qui ne change pas :
 | Carte de balises | Spot Air (widgets) | Conditions de Spot Air |
 | Bibliothèque de carte | Leaflet | BSD 2 clauses |
 
-Les fichiers de données issus de bases ODbL (`data/france.json`, `data/gares.json`) restent sous ODbL : ils peuvent être réutilisés selon cette licence, en citant les sources.
+Les fichiers de données issus de ces bases gardent leur licence : `data/gares.json` (SNCF) et la partie FFVL de `data/france.json` sous ODbL, la partie ParaglidingEarth de `data/france.json` sous CC BY-SA 3.0. Ils peuvent être réutilisés selon ces licences, en citant les sources. Les polices Manrope et Unbounded (`vendor/fonts`) sont sous SIL Open Font License 1.1.
