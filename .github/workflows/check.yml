@@ -2,9 +2,13 @@ name: Alertes vol et gonflage
 
 on:
   schedule:
-    # Heures UTC. Été (UTC+2) : 7h05 et 18h35 à Rennes. Hiver (UTC+1) : 6h05 et 17h35.
-    - cron: "5 5 * * *"
-    - cron: "35 16 * * *"
+    # Heures UTC. Les alertes partent à 8h et 17h, heure de Paris, été comme hiver :
+    # le robot est lancé à 6h, 7h, 15h et 16h UTC et n'envoie que si c'est l'une des heures
+    # de "notifyHours" dans data/config.json (8 et 17 par défaut). GitHub peut ajouter 5 à 30 min de retard.
+    - cron: "0 6 * * *"
+    - cron: "0 7 * * *"
+    - cron: "0 15 * * *"
+    - cron: "0 16 * * *"
   workflow_dispatch:
     inputs:
       mode:
@@ -26,7 +30,8 @@ jobs:
       - run: npm install --omit=dev --no-audit --no-fund
       - name: Calcul des créneaux et notification
         env:
-          RUN_MODE: ${{ github.event.inputs.mode || (github.event.schedule == '5 5 * * *' && 'morning' || 'evening') }}
+          RUN_MODE: ${{ github.event.inputs.mode }}
+          SCHEDULE: ${{ github.event.schedule }}
           APP_URL: ${{ vars.APP_URL }}
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
@@ -39,7 +44,7 @@ jobs:
       # GitHub désactive les tâches planifiées d'un dépôt public sans activité depuis 60 jours.
       # Un petit commit le 1er et le 15 du mois évite ça.
       - name: Maintien en vie du planning
-        if: github.event.schedule == '35 16 * * *'
+        if: github.event.schedule == '0 16 * * *'
         run: |
           d=$(date -u +%d)
           if [ "$d" = "01" ] || [ "$d" = "15" ]; then
