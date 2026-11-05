@@ -4,7 +4,7 @@
 //   data/france.json : sites de décollage (FFVL en priorité, ParaglidingEarth en complément)
 //   data/gares.json  : gares voyageurs SNCF [nom, lat, lon]
 // Sources et licences :
-//   - FFVL, liste des sites de pratique (data.gouv.fr), licence ODbL annoncée par la FFVL
+//   - FFVL, « Terrains de pratique de la FFVL » (data.gouv.fr, mis à jour chaque jour), Licence Ouverte Etalab 2.0
 //   - ParaglidingEarth (API publique)
 //   - SNCF Open Data, gares de voyageurs (ODbL)
 //   - geo.api.gouv.fr (commune et département de chaque site)
@@ -13,14 +13,9 @@
 
 import { writeFile, readFile } from "node:fs/promises";
 
-// La FFVL demande désormais une clé d'API (à demander à informatique@ffvl.fr), rangée dans le secret GitHub FFVL_KEY.
-// Si la FFVL indique une autre adresse avec sa clé, il suffit de la mettre dans la variable GitHub FFVL_URL ({key} sera remplacé).
-const FFVL_KEY = process.env.FFVL_KEY || "";
-const FFVL_URLS = process.env.FFVL_URL
-  ? [process.env.FFVL_URL.replace("{key}", encodeURIComponent(FFVL_KEY))]
-  : FFVL_KEY
-    ? [`https://data.ffvl.fr/json/sites.json?key=${encodeURIComponent(FFVL_KEY)}`, `https://data.ffvl.fr/api/?base=terrains&mode=json&key=${encodeURIComponent(FFVL_KEY)}`]
-    : ["https://data.ffvl.fr/json/sites.json"];
+// FFVL : jeu de données « Terrains de pratique de la FFVL » sur data.gouv.fr (fichier terrains.json, sans clé).
+// Adresse stable de la ressource (redirige vers le fichier du jour). La variable GitHub FFVL_URL permet de la changer sans toucher au code.
+const FFVL_URLS = [process.env.FFVL_URL || "https://www.data.gouv.fr/api/1/datasets/r/4375c95d-cf26-4e71-b72d-2e09be5a0e36"];
 const PGE_URL = (n, s, e, w) => `https://www.paraglidingearth.com/api/geojson/getBoundingBoxSites.php?north=${n}&south=${s}&east=${e}&west=${w}&limit=3000&style=detailled`;
 const GARES_URL = "https://ressources.data.sncf.com/api/explore/v2.1/catalog/datasets/gares-de-voyageurs/exports/json?lang=fr&timezone=Europe%2FParis";
 const GEO_URL = (lat, lon) => `https://geo.api.gouv.fr/communes?lat=${lat}&lon=${lon}&fields=nom,codeDepartement&format=json`;
@@ -114,31 +109,58 @@ async function ffvl() {
       const r = await fetch(u, { headers: { "User-Agent": "ParaSpot (application libre de prévisions parapente)", Accept: "application/json" } });
       const txt = await r.text();
       try { data = JSON.parse(txt); console.log("FFVL : fichier reçu."); break; }
-      catch { console.log(`FFVL : ${u.replace(FFVL_KEY || "\u0000", "***")} répond (HTTP ${r.status}) mais pas en JSON. Message complet de la FFVL :\n${txt.slice(0, 800)}`); }
+      catch { console.log(`FFVL : ${u} répond (HTTP ${r.status}) mais pas en JSON. Début de la réponse :\n${txt.slice(0, 800)}`); }
     } catch (e) { console.log(`FFVL : adresse injoignable (${e.message}).`); }
   }
   if (!data) { console.log("FFVL : aucune adresse ne répond, import FFVL ignoré (ParaglidingEarth seul)."); return []; }
-  const list = findList(data) || [];
-  console.log(`FFVL : ${list.length} entrées reçues.`);
-  if (list[0]) console.log("FFVL, exemple de fiche :", JSON.stringify(list[0]).slice(0, 900));
-  const out = []; let noCoord = 0, notTakeoff = 0, noOrient = 0, notPara = 0;
+  const list0 = findList(data) || [];
+  console.log(`FFVL : ${list0.length} terrains reçus.`);
+  if (list0[0]) console.log("FFVL, exemple de fiche :", JSON.stringify(list0[0]).slice(0, 1500));
+  // Un terrain peut contenir plusieurs décollages (tableau d'objets avec coordonnées) : on les déplie
+  const hasCoords = o => o && typeof o === "object" && coords(flat(o));
+  const list = [];
+  for (const raw of list0) {
+    const kids = Object.entries(raw || {}).filter(([k, v]) => Array.isArray(v) && v.length && v.every(x => x && typeof x === "object") && v.some(hasCoords) && !/atterr|landing/i.test(k));
+    if (kids.length) {
+      const parent = Object.fromEntries(Object.entries(raw).filter(([, v]) => !Array.isArray(v) || !v.some?.(x => x && typeof x === "object")));
+      kids.forEach(([, arr]) => arr.filter(hasCoords).forEach((child, n) => list.push({ ...parent, ...child, _parentId: raw.suid ?? raw.id ?? parent.id, _n: n, _parentName: raw.nom ?? raw.name ?? raw.toponym })));
+    } else list.push(raw);
+  }
+  if (list.length !== list0.length) console.log(`FFVL : ${list.length} points après dépliage des décollages.`);
+  const stat = {}, statP = {};
+  const out = []; let noCoord = 0, notTakeoff = 0, noOrient = 0, notPara = 0, gonf = 0;
   for (const raw of list) {
     const f = flat(raw);
     const c = coords(f); if (!c || !inFrance(...c)) { noCoord++; continue; }
     const all = Object.values(f).filter(v => typeof v === "string").join(" ").toLowerCase();
-    const type = String(pick(f, ["type", "type_site", "nature", "categorie", "sous_type", "type_terrain"]) ?? "").toLowerCase();
-    if (/atterr/.test(type) && !/d[ée]co/.test(type)) { notTakeoff++; continue; }
-    const practice = String(pick(f, ["pratiques", "pratique", "activites", "activite", "disciplines"]) ?? "").toLowerCase();
-    if (practice && /delta|cerf/.test(practice) && !/parapente|para/.test(practice)) { notPara++; continue; }
-    const o = orientations(f); if (!o.length) { noOrient++; continue; }
-    const name = String(pick(f, ["nom", "name", "toponyme", "libelle", "titre", "site", "nom_site"]) ?? "").trim();
+    const type = String(pick(f, ["type", "type_site", "nature", "categorie", "sous_type", "type_terrain", "typeterrain", "kind"]) ?? "").toLowerCase();
+    stat[type || "(vide)"] = (stat[type || "(vide)"] || 0) + 1;
+    if (/atterr|landing/.test(type) && !/d[ée]co|takeoff/.test(type)) { notTakeoff++; continue; }
+    const pr = pick(f, ["pratiques", "pratique", "activites", "activite", "disciplines", "discipline", "activities"]);
+    const practice = (Array.isArray(pr) ? pr.join(" ") : String(pr ?? "")).toLowerCase();
+    statP[practice || "(vide)"] = (statP[practice || "(vide)"] || 0) + 1;
+    if (practice && !/parapente|paraglid|vol libre|gonflage/.test(practice)) { notPara++; continue; }
+    const isGonflage = /gonflage|pente.?[ée]cole/.test(type) && !/d[ée]co/.test(type);
+    let o = orientations(f);
+    if (!o.length && isGonflage) o = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+    if (!o.length) { noOrient++; continue; }
+    const base = String(raw._parentName ?? "").trim();
+    let name = String(pick(f, ["nom", "name", "toponyme", "toponym", "libelle", "titre", "site", "nom_site"]) ?? "").trim();
+    if (base && name && name !== base && !name.toLowerCase().includes(base.toLowerCase())) name = `${base} - ${name}`;
+    name = name || base;
     if (!name) { noCoord++; continue; }
-    const id = pick(f, ["suid", "id", "id_terrain", "terrain_id", "uid", "numero"]);
-    const alt = num(pick(f, ["altitude", "alt", "altitude_deco", "takeoff_altitude"]));
+    const pid = raw._parentId ?? pick(f, ["suid", "id", "id_terrain", "terrain_id", "uid", "numero"]);
+    const id = raw._n != null && raw._n > 0 ? `${pid}-${raw._n}` : pid;
+    const alt = num(pick(f, ["altitude", "alt", "altitude_deco", "takeoff_altitude", "elevation"]));
     const soaring = /soaring|bord de mer|falaise|dune/.test(all);
-    out.push({ id: `ffvl-${id ?? out.length}`, n: name, lat: c[0], lon: c[1], o, p: soaring ? "soaring" : "plaine", alt: Number.isFinite(alt) ? Math.round(alt) : null, src: "ffvl", ffvl: id ?? null, treuil: /treuil/.test(all) || undefined });
+    if (isGonflage) gonf++;
+    out.push({ id: `ffvl-${id ?? out.length}`, n: name, lat: c[0], lon: c[1], o, p: isGonflage ? "gonflage" : soaring ? "soaring" : "plaine", alt: Number.isFinite(alt) ? Math.round(alt) : null, src: "ffvl", ffvl: pid ?? null, treuil: /treuil/.test(all) || undefined });
   }
-  console.log(`FFVL : ${out.length} décollages gardés (sans coordonnées ${noCoord}, atterrissages ${notTakeoff}, delta seul ${notPara}, sans orientation ${noOrient}).`);
+  const top = s => Object.entries(s).sort((x, y) => y[1] - x[1]).slice(0, 12).map(([k, v]) => `${k.slice(0, 40)} (${v})`).join(", ");
+  console.log(`FFVL, types de terrain : ${top(stat)}`);
+  console.log(`FFVL, pratiques : ${top(statP)}`);
+  console.log(`FFVL : dont ${gonf} terrains de gonflage.`);
+  console.log(`FFVL : ${out.length} sites gardés (sans coordonnées ${noCoord}, atterrissages ${notTakeoff}, sans parapente ${notPara}, sans orientation ${noOrient}).`);
   return out;
 }
 
@@ -237,7 +259,7 @@ if (final.length < 50 && previous && previous.length > 50) {
 } else {
   await writeFile("data/france.json", JSON.stringify({
     version: new Date().toISOString().slice(0, 10),
-    note: "Sites importés automatiquement. FFVL (ODbL) et ParaglidingEarth. Orientations et accès à vérifier sur la fiche du site avant chaque vol.",
+    note: "Sites importés automatiquement. FFVL (Licence Ouverte Etalab 2.0) et ParaglidingEarth (CC BY-SA 3.0). Orientations et accès à vérifier sur la fiche du site avant chaque vol.",
     spots: final
   }));
   console.log(`data/france.json : ${final.length} sites (${final.filter(s => s.src === "ffvl").length} FFVL, ${final.filter(s => s.src === "pge").length} ParaglidingEarth).`);

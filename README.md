@@ -44,4 +44,4 @@ Conditions d'utilisation : `docs/CGU.md` (à accepter dans l'app). Confidentiali
 
 Outil d'aide à la décision. Il ne remplace ni la fiche FFVL, ni le panneau du site, ni une balise en temps réel, ni ton jugement sur place.
 
-Données météo : [Open-Meteo](https://open-meteo.com/) (CC BY 4.0). Sites : FFVL (liste des sites de pratique, ODbL), ParaglidingEarth. Gares : SNCF Open Data (ODbL). Communes : geo.api.gouv.fr.
+Données météo : [Open-Meteo](https://open-meteo.com/) (CC BY 4.0). Sites : FFVL (terrains de pratique, data.gouv.fr, Licence Ouverte Etalab 2.0), ParaglidingEarth (CC BY-SA 3.0). Gares : SNCF Open Data (ODbL). Communes : geo.api.gouv.fr.

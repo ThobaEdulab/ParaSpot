@@ -1,6 +1,6 @@
 // Service worker ParaSpot : hors-ligne + notifications push.
 // Incrémenter VERSION à chaque modification de l'interface pour forcer la mise à jour sur le téléphone.
-const VERSION = "paraspot-v17";
+const VERSION = "paraspot-v19";
 const SHELL = ["./", "index.html", "styles.css", "app.js", "scoring.js", "basemap.js", "config.js", "data/spots.json", "manifest.webmanifest", "vendor/leaflet.js", "vendor/leaflet.css", "vendor/fonts/fonts.css", "vendor/fonts/manrope-latin-wght-normal.woff2", "vendor/fonts/unbounded-latin-wght-normal.woff2",
   "icons/icon-192.png", "icons/icon.svg", "icons/badge-96.png", "icons/apple-touch-icon.png"];
 const CDN = [];

@@ -19,7 +19,7 @@ Ces éléments gardent leur propre licence, qui ne change pas :
 | Élément | Source | Licence |
 |---|---|---|
 | Prévisions météo et marées, recherche de ville | Open-Meteo | CC BY 4.0, usage gratuit non commercial |
-| Sites de vol (`data/france.json`) | FFVL, liste des sites de pratique ; ParaglidingEarth | ODbL (FFVL) ; CC BY-SA 3.0 (ParaglidingEarth) |
+| Sites de vol (`data/france.json`) | FFVL, « Terrains de pratique de la FFVL » (data.gouv.fr) ; ParaglidingEarth | Licence Ouverte Etalab 2.0 (FFVL) ; CC BY-SA 3.0 (ParaglidingEarth) |
 | Gares (`data/gares.json`) | SNCF Open Data | ODbL |
 | Communes | geo.api.gouv.fr | Licence Ouverte Etalab |
 | Fond de carte embarqué | Natural Earth | Domaine public |
@@ -27,4 +27,4 @@ Ces éléments gardent leur propre licence, qui ne change pas :
 | Carte de balises | Spot Air (widgets) | Conditions de Spot Air |
 | Bibliothèque de carte | Leaflet | BSD 2 clauses |
 
-Les fichiers de données issus de ces bases gardent leur licence : `data/gares.json` (SNCF) et la partie FFVL de `data/france.json` sous ODbL, la partie ParaglidingEarth de `data/france.json` sous CC BY-SA 3.0. Ils peuvent être réutilisés selon ces licences, en citant les sources. Les polices Manrope et Unbounded (`vendor/fonts`) sont sous SIL Open Font License 1.1.
+Les fichiers de données issus de ces bases gardent leur licence : `data/gares.json` (SNCF) sous ODbL, la partie FFVL de `data/france.json` sous Licence Ouverte Etalab 2.0 (source : FFVL), la partie ParaglidingEarth de `data/france.json` sous CC BY-SA 3.0. Ils peuvent être réutilisés selon ces licences, en citant les sources. Les polices Manrope et Unbounded (`vendor/fonts`) sont sous SIL Open Font License 1.1.

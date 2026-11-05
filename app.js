@@ -108,10 +108,10 @@ function franceToSpot(f) {
   return {
     id: f.id, name: f.n, city: f.c ? `${f.c}${f.d ? ` (${f.d})` : ""}` : f.d ? `Département ${f.d}` : "France", region: DEPT_NAMES[f.d] || "France", dept: f.d || "",
     lat: f.lat, lon: f.lon, orientations: f.o, elevation: f.alt ?? null,
-    description: ffvl ? "Site de la liste FFVL, importé automatiquement : l'app connaît sa position et ses orientations. Consulte la fiche FFVL pour le niveau, l'atterrissage et les règles." : "Site importé de ParaglidingEarth (base communautaire) : position et orientations à vérifier auprès des pilotes locaux.",
+    description: f.p === "gonflage" ? "Terrain de gonflage de la liste FFVL, importé automatiquement : consulte sa fiche FFVL pour l'accès et les règles." : ffvl ? "Site de la liste FFVL, importé automatiquement : l'app connaît sa position et ses orientations. Consulte la fiche FFVL pour le niveau, l'atterrissage et les règles." : "Site importé de ParaglidingEarth (base communautaire) : position et orientations à vérifier auprès des pilotes locaux.",
     level: "", landing: "", rules: ["Consulte la fiche du site (FFVL, club local) avant de voler : règles, niveau, atterrissage, espace aérien."], warnings: [],
     links: f.ffvl ? { ffvl: `https://federation.ffvl.fr/terrain/${f.ffvl}`, spotair: `https://www.spotair.mobi/spotpg/ffvl/${f.ffvl}` } : { spotair: `https://www.spotair.mobi?lat=${f.lat}&lng=${f.lon}&zoom=14&layers=spotpg,wind` },
-    confidence: ffvl ? "moyenne" : "faible", sources: [ffvl ? "FFVL (ODbL)" : "ParaglidingEarth"], kind: "vol", profile: f.treuil ? "treuil" : f.p === "soaring" ? "soaring" : "plaine",
+    confidence: ffvl ? "moyenne" : "faible", sources: [ffvl ? "FFVL (Licence Ouverte)" : "ParaglidingEarth"], kind: f.p === "gonflage" ? "gonflage" : "vol", profile: f.p === "gonflage" ? "gonflage" : f.treuil ? "treuil" : f.p === "soaring" ? "soaring" : "plaine",
     stations: [], tide: false, levelFfvl: null, imported: true, access: { mode: "voiture", rideKm: 0, trainMinutes: 0, ride: "" }
   };
 }
@@ -799,6 +799,7 @@ function renderPanel(s, notifState, onbStep, subJson) {
   const seg = (name, opts, val) => `<div class="seg" role="group" aria-label="${name}">${opts.map(([k, l]) => `<button type="button" data-setting="${name}" data-value="${k}" aria-pressed="${k === val}">${l}</button>`).join("")}</div>`;
   const head = `<div class="d-head"><div><h2 class="p-title" id="p-title">${onbStep >= 0 ? "Notifications" : "Réglages"}</h2></div><button type="button" class="close" data-action="${onbStep >= 0 ? "onb-back" : "close-panel"}" aria-label="${onbStep >= 0 ? "Retour aux réglages" : "Fermer"}">${I.close}</button></div>`;
   if (state.cgu) return renderCgu(state.cgu);
+  if (state.share) return renderShare(state.share);
   if (state.setup) return renderSetup(state.setup);
   if (state.favStep) return renderFavPicker(s);
   if (state.spotForm) return renderSpotForm(state.spotForm);
@@ -836,7 +837,9 @@ function renderPanel(s, notifState, onbStep, subJson) {
       <div class="field"><label class="check"><input type="checkbox" data-setting="includeTreuil" ${s.includeTreuil ? "checked" : ""}>Afficher les terrains de treuil</label>
         <p class="hint">Treuils : ne se pratiquent qu'avec un club. Saint-Séglin et Massérac sont des terrains FFVL, Crocy et Martigny viennent de wikiparapente, Sougéal seulement de ParaglidingEarth : à confirmer auprès des clubs.</p></div>
       <div class="field"><div class="row"><span class="lbl">Spots favoris</span><span class="status ${s.favs.length ? "status--on" : "status--off"}">${s.favs.length || "Aucun"}</span></div><p class="hint">Tes favoris sont mis en avant (étoile) et le bouton étoile en bas de l'écran n'affiche qu'eux.</p><button type="button" class="btn btn--ghost" data-action="fav-open">${STAR}Choisir mes spots favoris</button></div>
-      <div class="field"><span class="lbl">Mes spots</span><p class="hint">Décoche les spots que tu ne veux pas voir sur la carte ni dans les cartes.</p>${renderSpotPicker(s)}</div>
+      <div class="field"><span class="lbl">Spots visibles sur la carte</span><p class="hint">Ce n'est pas la liste de tes favoris (étoile) : ici, tout ce qui est coché s'affiche sur la carte et dans les cartes en bas. Décoche les spots que tu ne veux jamais voir.</p>
+        <button type="button" class="btn btn--ghost" data-action="spots-favs" ${s.favs.length ? "" : "disabled"}>${STAR}N'afficher que mes favoris (${s.favs.length})</button>
+        ${renderSpotPicker(s)}</div>
     </div>
     <div class="group">
       <div class="field"><div class="row"><span class="lbl">Alertes créneaux</span><span class="status ${s.notifEnabled ? "status--on" : "status--off"}">${s.notifEnabled ? "Actives" : "Inactives"}</span></div>
@@ -867,14 +870,14 @@ function renderPanel(s, notifState, onbStep, subJson) {
     <div class="group"><div class="field"><span class="lbl">Contact</span><p class="hint">Une idée, un bug, un spot à corriger ? Écris-nous.</p>
       <a class="btn btn--ghost" href="mailto:tobalab@proton.me?subject=${encodeURIComponent("ParaSpot")}">${I.mail}Contacter ParaSpot</a>
       <p class="hint">ParaSpot est gratuit, pour un usage non commercial : la vente de l'application est interdite (licence PolyForm Noncommercial 1.0.0). <a href="LICENCE.md" target="_blank" rel="noopener">Lire la licence</a></p></div></div>
-    <p class="hint">Prévisions Open-Meteo (AROME HD et AROME/ARPEGE Météo-France, ECMWF IFS, NOAA GFS ; CC BY 4.0), marées Open-Meteo Marine indicatives. Fiches : wikiparapente.fr, FFVL, ParaglidingEarth, spots.guru, clubs. Sites de France : liste FFVL (ODbL) et ParaglidingEarth (CC BY-SA 3.0), importés chaque semaine. Gares : SNCF Open Data (ODbL). Communes : geo.api.gouv.fr. Recherche de ville : Open-Meteo. Balises et carte : Spot Air. Fond de carte embarqué : Natural Earth. ${ALL_SPOTS.length} spots.</p>
+    <p class="hint">Prévisions Open-Meteo (AROME HD et AROME/ARPEGE Météo-France, ECMWF IFS, NOAA GFS ; CC BY 4.0), marées Open-Meteo Marine indicatives. Fiches : wikiparapente.fr, FFVL, ParaglidingEarth, spots.guru, clubs. Sites de France : terrains de pratique de la FFVL (data.gouv.fr, Licence Ouverte Etalab 2.0) et ParaglidingEarth (CC BY-SA 3.0), importés chaque semaine. Gares : SNCF Open Data (ODbL). Communes : geo.api.gouv.fr. Recherche de ville : Open-Meteo. Balises et carte : Spot Air. Fond de carte embarqué : Natural Earth. ${ALL_SPOTS.length} spots.</p>
   </div>`;
 }
 
 /* =========================================================
    MOTEUR : caméra, champ de vent, ciel
    ========================================================= */
-const state = { subJson: "", kindInit: true, windOn: true, layer: "plan", day: 0, kind: ["tout","gonflage","vol","favoris"].includes(settings.kind) ? settings.kind : "tout", sel: null, pinned: false, cgu: null, cguRefused: false, setup: null, favStep: false, spotForm: null, picking: false, delConfirm: null, backupMsg: "", hour: 14, playing: false, detail: false, panel: false, onbStep: -1, loading: false, offline: !navigator.onLine, notifState: "" };
+const state = { subJson: "", kindInit: true, windOn: true, layer: "plan", day: 0, kind: ["tout","gonflage","vol","favoris"].includes(settings.kind) ? settings.kind : "tout", sel: null, pinned: false, share: null, cgu: null, cguRefused: false, setup: null, favStep: false, spotForm: null, picking: false, delConfirm: null, backupMsg: "", hour: 14, playing: false, detail: false, panel: false, onbStep: -1, loading: false, offline: !navigator.onLine, notifState: "" };
 const $ = s => document.querySelector(s);
 const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -1406,6 +1409,7 @@ addEventListener("popstate", () => {
   if (state.panel) {
     if (state.cgu === "accept" && !cguOk()) { navPush("panel"); return; }
     if (state.cgu) { state.cgu = null; renderPanelOnly(); return; }
+    if (state.share) { state.share = null; renderPanelOnly(); return; }
     if (state.setup) { if (state.setup.first) { navPush("panel"); return; } state.setup = null; renderPanelOnly(); return; }
     if (state.spotForm) { state.spotForm = null; renderPanelOnly(); return; }
     if (state.favStep) { finishFavs(false, true); return; }
@@ -1416,6 +1420,19 @@ addEventListener("popstate", () => {
 });
 function openPanel() { navPush("panel"); state.panel = true; renderPanelOnly(); $("#panel").classList.add("is-open"); setTimeout(() => $("#panel").focus(), 50); }
 function renderPanelOnly() { $("#panel").innerHTML = renderPanel(settings, state.notifState, state.onbStep, state.subJson); syncPickerHeads(); }
+function renderShare(sh) {
+  return `<div class="panel-in">
+    <div class="d-head"><div><h2 class="p-title" id="p-title">Proposer ce spot</h2></div><button type="button" class="close" data-action="share-close" aria-label="Fermer">${I.close}</button></div>
+    <p class="hint" style="font-size:15px">Ta proposition part par mail à <b>tobalab@proton.me</b>. Une fois le spot vérifié, il est ajouté pour tout le monde.</p>
+    <div class="btn-row"><button type="button" class="btn btn--wing" data-action="share-mail">${I.mail}Ouvrir ma messagerie</button><button type="button" class="btn btn--ghost" data-action="share-copy">Copier le texte</button></div>
+    <p class="hint">Si rien ne s'ouvre (pas d'application de mail configurée, ou messagerie dans le navigateur), touche « Copier le texte » et colle-le dans un nouveau mail.</p>
+    ${sh.msg ? `<p class="hint" role="status"><b>${esc(sh.msg)}</b></p>` : ""}
+    <label class="lbl" for="share-text" style="font-size:14px">Texte du mail</label>
+    <textarea id="share-text" class="sub-box" rows="14" readonly>Objet : ${esc(sh.subject)}
+
+${esc(sh.body)}</textarea>
+  </div>`;
+}
 function closePanel() { if (state.cgu === "accept" && !cguOk()) return; if (state.favStep && !settings.favsAsked) { settings.favsAsked = true; saveSettings(); } if (state.setup?.first) return; // premier lancement : la ville de départ est nécessaire
   state.panel = false; state.onbStep = -1; state.favStep = false; state.setup = null; state.spotForm = null; state.delConfirm = null; state.backupMsg = ""; $("#panel").classList.remove("is-open"); }
 function applyTheme() {
@@ -1479,6 +1496,11 @@ document.addEventListener("click", e => {
     saveSettings(); const l = $("#fav-list"); if (l) l.innerHTML = renderFavList(settings); syncPickerHeads();
     const c = $("#fav-count"); if (c) c.textContent = `${settings.favs.length} favori${settings.favs.length > 1 ? "s" : ""}`;
   }
+  else if (a === "spots-favs") {
+    const ids = ALL_SPOTS.filter(x => FETCH_IDS.has(x.id)).map(x => x.id);
+    settings.hidden = ids.filter(id => !settings.favs.includes(id));
+    saveSettings(); applySpotFilter(); if (!items().some(x => x.spot.id === state.sel)) { state.pinned = false; pickDefault(); } if (FORECAST) renderAll(false); renderPanelOnly();
+  }
   else if (a === "spots-all") {
     const ids = ALL_SPOTS.filter(x => FETCH_IDS.has(x.id)).map(x => x.id);
     settings.hidden = el.dataset.on === "1" ? settings.hidden.filter(x => !ids.includes(x)) : [...new Set([...settings.hidden, ...ids])];
@@ -1504,8 +1526,16 @@ document.addEventListener("click", e => {
     const c = settings.custom.find(x => x.id === el.dataset.id); if (!c) return;
     const dirs = c.profile === "gonflage" ? "toutes (gonflage)" : c.orientations.map(frDir).join(", ");
     const body = `Bonjour,\n\nJe propose ce spot pour ParaSpot :\n\nNom : ${c.name}\nCommune : ${c.city || "?"}\nPratique : ${{ gonflage: "Gonflage", soaring: "Vol bord de mer", plaine: "Vol pente" }[c.profile]}\nOrientations : ${dirs}\nPosition du décollage : ${c.lat}, ${c.lon} (https://www.google.com/maps/search/?api=1&query=${c.lat},${c.lon})\nBord de mer : ${c.tide ? "oui" : "non"}\nNotes : ${c.notes || "-"}\n\nComment je connais ce spot (club, fiche FFVL, pratique régulière) : \n\nCode à coller dans data/communaute.json :\n${JSON.stringify({ ...c, id: c.id.replace(/^perso-/, "comm-") })}\n`;
-    location.href = `mailto:tobalab@proton.me?subject=${encodeURIComponent(`ParaSpot - proposition de spot : ${c.name}`)}&body=${encodeURIComponent(body)}`;
+    const subject = `ParaSpot - proposition de spot : ${c.name}`;
+    navPush("sub"); state.share = { subject, body, msg: "" }; renderPanelOnly(); $("#panel").scrollTop = 0;
   }
+  else if (a === "share-mail") { location.href = `mailto:tobalab@proton.me?subject=${encodeURIComponent(state.share.subject)}&body=${encodeURIComponent(state.share.body)}`; }
+  else if (a === "share-copy") {
+    const txt = `À : tobalab@proton.me\nObjet : ${state.share.subject}\n\n${state.share.body}`;
+    navigator.clipboard?.writeText(txt).then(() => { state.share.msg = "Texte copié : colle-le dans un nouveau mail (Gmail, Outlook, Proton…) envoyé à tobalab@proton.me."; renderPanelOnly(); })
+      .catch(() => { const t = $("#share-text"); if (t) { t.focus(); t.select(); } state.share.msg = "Copie automatique impossible : sélectionne le texte et copie-le à la main."; renderPanelOnly(); });
+  }
+  else if (a === "share-close") { navDone(); state.share = null; renderPanelOnly(); }
   else if (a === "custom-export") {
     const blob = new Blob([JSON.stringify({ note: "Spots ajoutés dans ParaSpot, pour le robot de notifications. À déposer dans data/mes-spots.json.", spots: settings.custom }, null, 1)], { type: "application/json" });
     const url = URL.createObjectURL(blob), lk = document.createElement("a");
@@ -1571,7 +1601,7 @@ document.addEventListener("toggle", e => {
   let list = ALL_SPOTS.filter(x => !s.hidden.includes(x.id) && (s.includeTreuil || x.profile !== "treuil" || s.favs.includes(x.id)));
   if (q) list = list.filter(x => norm(`${x.name} ${x.city} ${x.region} ${x.dept} ${DEPT_NAMES[x.dept] || ""}`).includes(q));
   const g = byDept(list).find(([r]) => r === name); if (!g) return;
-  tmp.innerHTML = g[1].map(x => `<label class="check pk-spot pk-fav"><input type="checkbox" data-fav-toggle="${x.id}" ${s.favs.includes(x.id) ? "checked" : ""}>${kindIcon(x.kind)}<span>${esc(x.name)}<small>${esc(x.city.replace(/\s*\((\d{2}|2A|2B)\)/, ""))}${x.distKm != null ? ` · ${x.distKm} km` : ""}${x.imported ? ` · ${x.sources[0].replace(" (ODbL)", "")}` : ""}</small></span></label>`).join("");
+  tmp.innerHTML = g[1].map(x => `<label class="check pk-spot pk-fav"><input type="checkbox" data-fav-toggle="${x.id}" ${s.favs.includes(x.id) ? "checked" : ""}>${kindIcon(x.kind)}<span>${esc(x.name)}<small>${esc(x.city.replace(/\s*\((\d{2}|2A|2B)\)/, ""))}${x.distKm != null ? ` · ${x.distKm} km` : ""}${x.imported ? ` · ${x.sources[0].replace(/ \(.*\)$/, "")}` : ""}</small></span></label>`).join("");
   d.append(...tmp.childNodes);
 }, true);
 document.addEventListener("input", e => {
@@ -2000,10 +2030,14 @@ function restoreFrom(text) {
   settings.hidden = settings.hidden.map(String).map(x => x.replace(/[^A-Za-z0-9_-]/g, ""));
   settings.favs = settings.favs.map(String).map(x => x.replace(/[^A-Za-z0-9_-]/g, ""));
   settings.custom = settings.custom.map(cleanCustom).filter(Boolean);
+  // tes spots ajoutés font partie de tes favoris et ne sont jamais masqués après une restauration
+  settings.custom.forEach(c => { if (!settings.favs.includes(c.id)) settings.favs.push(c.id); });
+  settings.hidden = settings.hidden.filter(id => !settings.custom.some(c => c.id === id));
   if (settings.home) settings.home = { name: cleanText(settings.home.name, 60), lat: +settings.home.lat, lon: +settings.home.lon };
   if (settings.profiles) Object.keys(settings.profiles).forEach(k => { if (!["gonflage", "soaring", "plaine", "treuil"].includes(k)) delete settings.profiles[k]; else Object.keys(settings.profiles[k]).forEach(f => { settings.profiles[k][f] = cleanNum(settings.profiles[k][f], 0, 80) ?? DEFAULT_PROFILES[k][f]; }); });
   settings.trans = { train: !!settings.trans?.train, car: !!settings.trans?.car, soft: ["pied", "velo", "vel"].includes(settings.trans?.soft) ? settings.trans.soft : "vel", softKm: cleanNum(settings.trans?.softKm, 1, 30) ?? 10, maxDrive: cleanNum(settings.trans?.maxDrive, 30, 600) ?? 150 };
   settings.favsAsked = true; saveSettings();
+  try { sessionStorage.setItem("ps-restored", JSON.stringify({ favs: settings.favs.length, custom: settings.custom.length, hidden: settings.hidden.length, home: settings.home?.name || "" })); } catch { /* facultatif */ }
   state.backupMsg = "Sauvegarde restaurée : l'app redémarre…"; renderPanelOnly();
   setTimeout(() => location.reload(), 900);
 }
@@ -2026,7 +2060,7 @@ function renderFavList(s) {
     const open = q ? items.length <= 40 || groups.length === 1 : n || (homeD && r.includes(`(${homeD})`));
     const ids = items.map(x => x.id).join(",");
     return `<details class="pk-reg" ${open ? "open" : ""} data-ids="${esc(ids)}" data-mode="fav"><summary><label class="check pk-r" data-stop="1"><input type="checkbox" class="pk-head" data-fav-group="${esc(ids)}" ${n === items.length ? "checked" : ""}>${esc(r)}</label><span class="pk-n">${n} ★ / ${items.length}</span></summary>
-      ${items.slice(0, many && !open ? 0 : 400).map(x => `<label class="check pk-spot pk-fav"><input type="checkbox" data-fav-toggle="${x.id}" ${s.favs.includes(x.id) ? "checked" : ""}>${kindIcon(x.kind)}<span>${esc(x.name)}<small>${esc(x.city.replace(/\s*\((\d{2}|2A|2B)\)/, ""))}${x.distKm != null ? ` · ${x.distKm} km` : ""}${x.imported ? ` · ${x.sources[0].replace(" (ODbL)", "")}` : ""}</small></span></label>`).join("")}</details>`;
+      ${items.slice(0, many && !open ? 0 : 400).map(x => `<label class="check pk-spot pk-fav"><input type="checkbox" data-fav-toggle="${x.id}" ${s.favs.includes(x.id) ? "checked" : ""}>${kindIcon(x.kind)}<span>${esc(x.name)}<small>${esc(x.city.replace(/\s*\((\d{2}|2A|2B)\)/, ""))}${x.distKm != null ? ` · ${x.distKm} km` : ""}${x.imported ? ` · ${x.sources[0].replace(/ \(.*\)$/, "")}` : ""}</small></span></label>`).join("")}</details>`;
   }).join("")}</div>`;
 }
 function renderFavPicker(s) {
@@ -2220,6 +2254,10 @@ async function init() {
   if (cached) { RAW = cached; setupFromRaw(); afterData(); openFromUrl(); }
   else renderWaiting();
   const fromLink = new URLSearchParams(location.search).get("spot");
+  try {
+    const rs = JSON.parse(sessionStorage.getItem("ps-restored") || "null");
+    if (rs) { sessionStorage.removeItem("ps-restored"); setTimeout(() => showInfo("Sauvegarde restaurée", `Départ : ${rs.home || "inchangé"} · ${rs.favs} favori${rs.favs > 1 ? "s" : ""} · ${rs.custom} spot${rs.custom > 1 ? "s" : ""} ajouté${rs.custom > 1 ? "s" : ""} · ${rs.hidden} spot${rs.hidden > 1 ? "s" : ""} masqué${rs.hidden > 1 ? "s" : ""}. Les spots ajoutés apparaissent dès que leurs prévisions sont chargées.`), 1500); }
+  } catch { /* facultatif */ }
   if (settings.home && !cguOk()) { state.cgu = "accept"; state.panel = true; navPush("panel"); renderPanelOnly(); $("#panel").classList.add("is-open"); }
   if (!settings.home && !fromLink) openSetup(true);
   else if (!settings.favsAsked && !fromLink && cguOk()) openFavPicker();
