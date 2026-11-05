@@ -10,7 +10,18 @@ const spotsData = JSON.parse(await readFile(new URL("data/spots.json", root), "u
 const config = JSON.parse(await readFile(new URL("data/config.json", root), "utf8"));
 
 const env = process.env;
-const mode = env.RUN_MODE || (new Date().getUTCHours() < 12 ? "morning" : "evening");
+// Heure d'envoi : lancement planifié -> on ne garde que les heures de Paris voulues (8h et 17h par défaut)
+const parisHour = (d) => Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Paris", hour: "2-digit", hourCycle: "h23" }).format(d));
+const notifyHours = Array.isArray(config.notifyHours) && config.notifyHours.length ? config.notifyHours : [8, 17];
+let plannedHour = null;
+if (env.SCHEDULE) {
+  // heure UTC prévue par la ligne cron (et non l'heure réelle, souvent en retard de quelques minutes)
+  const utcH = Number(env.SCHEDULE.trim().split(/\s+/)[1]);
+  const d = new Date(); d.setUTCHours(utcH, 0, 0, 0);
+  plannedHour = parisHour(d);
+  if (!notifyHours.includes(plannedHour)) { console.log(`Lancement de ${utcH}h UTC = ${plannedHour}h à Paris : pas une heure d'envoi (${notifyHours.join("h, ")}h). Rien à faire.`); process.exit(0); }
+}
+const mode = env.RUN_MODE || ((plannedHour ?? parisHour(new Date())) < 12 ? "morning" : "evening");
 const now = new Date();
 const today = toLocalDate(now);
 const tomorrow = toLocalDate(new Date(now.getTime() + 86400000));

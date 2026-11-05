@@ -164,8 +164,13 @@ function computeAccess(s) {
   return { access: { mode: "voiture", driveKm: km, driveMinutes: min, nearStation: sg ? sg.name : "", rideKm: 0, trainMinutes: 0, ride: "", estimated: true }, limit: false, reach: t.car && min <= t.maxDrive };
 }
 /* Spots dont on charge les prévisions : atteignables, favoris et ajoutés, les plus proches d'abord */
+/* Zone des spots : selon mes transports (défaut), dans un rayon autour de chez moi, ou toute la France */
+let ZONE_COUNT = 0;
+const ZONES = [["transport", "Selon mes transports"], [25, "25 km"], [50, "50 km"], [100, "100 km"], [200, "200 km"], ["france", "Toute la France"]];
+function zoneOk(s) { const z = settings.zone ?? "transport"; return z === "france" ? true : typeof z === "number" ? s.distKm <= z : s.reach; }
 function computeFetchSet() {
-  const want = ALL_SPOTS.filter(s => (s.reach || settings.favs.includes(s.id) || s.custom) && (settings.includeTreuil || s.profile !== "treuil" || settings.favs.includes(s.id)))
+  ZONE_COUNT = ALL_SPOTS.filter(s => zoneOk(s) && (settings.includeTreuil || s.profile !== "treuil")).length;
+  const want = ALL_SPOTS.filter(s => (zoneOk(s) || settings.favs.includes(s.id) || s.custom) && (settings.includeTreuil || s.profile !== "treuil" || settings.favs.includes(s.id)))
     .sort((x, y) => (settings.favs.includes(y.id) - settings.favs.includes(x.id)) || x.distKm - y.distKm);
   FETCH_IDS = new Set(want.slice(0, MAX_FETCH).map(s => s.id));
 }
@@ -838,7 +843,13 @@ function renderPanel(s, notifState, onbStep, subJson) {
         <p class="hint">Treuils : ne se pratiquent qu'avec un club. Saint-Séglin et Massérac sont des terrains FFVL, Crocy et Martigny viennent de wikiparapente, Sougéal seulement de ParaglidingEarth : à confirmer auprès des clubs.</p></div>
       <div class="field"><div class="row"><span class="lbl">Spots favoris</span><span class="status ${s.favs.length ? "status--on" : "status--off"}">${s.favs.length || "Aucun"}</span></div><p class="hint">Tes favoris sont mis en avant (étoile) et le bouton étoile en bas de l'écran n'affiche qu'eux.</p><button type="button" class="btn btn--ghost" data-action="fav-open">${STAR}Choisir mes spots favoris</button></div>
       <div class="field"><span class="lbl">Spots visibles sur la carte</span><p class="hint">Ce n'est pas la liste de tes favoris (étoile) : ici, tout ce qui est coché s'affiche sur la carte et dans les cartes en bas. Décoche les spots que tu ne veux jamais voir.</p>
-        <button type="button" class="btn btn--ghost" data-action="spots-favs" ${s.favs.length ? "" : "disabled"}>${STAR}N'afficher que mes favoris (${s.favs.length})</button>
+        <span class="lbl" style="font-size:14px">Zone des spots</span>
+        <div class="seg" role="group" aria-label="Zone des spots">${ZONES.map(([k, l]) => `<button type="button" data-action="zone" data-value="${k}" aria-pressed="${String(s.zone ?? "transport") === String(k)}">${l}</button>`).join("")}</div>
+        <p class="hint">${(s.zone ?? "transport") === "transport" ? "Les spots que tu peux atteindre avec tes modes de transport (Départ et transport)." : s.zone === "france" ? "Tous les spots connus en France." : `Les spots à moins de ${s.zone} km à vol d'oiseau de ${esc(HOME().name)}.`} ${ZONE_COUNT} spots dans la zone${ZONE_COUNT > MAX_FETCH ? ` : prévisions chargées pour les ${MAX_FETCH} plus proches (et tes favoris), les autres restent en points gris` : ""}.</p>
+        <span class="lbl" style="font-size:14px">Liste des spots</span>
+        <div class="seg" role="group" aria-label="Spots montrés dans la liste"><button type="button" data-action="pick-view" data-value="all" aria-pressed="${!state.pickFav}">Tous les spots</button><button type="button" data-action="pick-view" data-value="fav" aria-pressed="${!!state.pickFav}" ${s.favs.length ? "" : "disabled"}>${STAR} Mes favoris (${s.favs.length})</button></div>
+        <div class="pk-all"><button type="button" class="mini-btn" data-action="spots-sel" data-on="1">Tout sélectionner</button><button type="button" class="mini-btn" data-action="spots-sel" data-on="0">Tout désélectionner</button></div>
+        <p class="hint">Les deux boutons agissent sur les spots de la liste ci-dessous${state.pickFav ? " (tes favoris)" : ""}. Coché = affiché sur la carte.</p>
         ${renderSpotPicker(s)}</div>
     </div>
     <div class="group">
@@ -1150,7 +1161,7 @@ function renderFar() {
   if (settings.showFar === false) return;
   const b = map.getBounds().pad(0.15), z = map.getZoom(), cell = z >= 9 ? 0 : 34;
   // mêmes filtres que les spots en couleur : Tout / Gonflage / Vol / favoris, et spots masqués dans « Mes spots »
-  const list = ALL_SPOTS.filter(s => !FETCH_IDS.has(s.id) && kindOk(s, state.kind) && !settings.hidden.includes(s.id) && (settings.includeTreuil || s.profile !== "treuil") && b.contains([s.lat, s.lon]));
+  const list = ALL_SPOTS.filter(s => !FETCH_IDS.has(s.id) && (typeof settings.zone !== "number" || s.distKm <= settings.zone) && kindOk(s, state.kind) && !settings.hidden.includes(s.id) && (settings.includeTreuil || s.profile !== "treuil") && b.contains([s.lat, s.lon]));
   // regroupement par case d'écran quand on est loin : un point gris avec le nombre de spots
   const cells = new Map();
   list.forEach(s => {
@@ -1496,6 +1507,16 @@ document.addEventListener("click", e => {
     saveSettings(); const l = $("#fav-list"); if (l) l.innerHTML = renderFavList(settings); syncPickerHeads();
     const c = $("#fav-count"); if (c) c.textContent = `${settings.favs.length} favori${settings.favs.length > 1 ? "s" : ""}`;
   }
+  else if (a === "zone") {
+    const v = el.dataset.value; settings.zone = /^\d+$/.test(v) ? +v : v; saveSettings();
+    syncFetch(true); if (!items().some(x => x.spot.id === state.sel)) { state.pinned = false; pickDefault(); } if (FORECAST) renderAll(false); renderPanelOnly();
+  }
+  else if (a === "pick-view") { state.pickFav = el.dataset.value === "fav"; renderPanelOnly(); }
+  else if (a === "spots-sel") {
+    const ids = pickerSpots(settings).map(x => x.id);
+    settings.hidden = el.dataset.on === "1" ? settings.hidden.filter(x => !ids.includes(x)) : [...new Set([...settings.hidden, ...ids])];
+    saveSettings(); applySpotFilter(); if (!items().some(x => x.spot.id === state.sel)) { state.pinned = false; pickDefault(); } if (FORECAST) renderAll(false); renderPanelOnly();
+  }
   else if (a === "spots-favs") {
     const ids = ALL_SPOTS.filter(x => FETCH_IDS.has(x.id)).map(x => x.id);
     settings.hidden = ids.filter(id => !settings.favs.includes(id));
@@ -1503,7 +1524,7 @@ document.addEventListener("click", e => {
   }
   else if (a === "spots-all") {
     const ids = ALL_SPOTS.filter(x => FETCH_IDS.has(x.id)).map(x => x.id);
-    settings.hidden = el.dataset.on === "1" ? settings.hidden.filter(x => !ids.includes(x)) : [...new Set([...settings.hidden, ...ids])];
+    settings.hidden = el.dataset.scope === "all" ? [] : el.dataset.on === "1" ? settings.hidden.filter(x => !ids.includes(x)) : [...new Set([...settings.hidden, ...ids])];
     saveSettings(); applySpotFilter(); if (!items().some(x => x.spot.id === state.sel)) { state.pinned = false; pickDefault(); } if (FORECAST) renderAll(false); renderPanelOnly();
   }
   else if (a === "setup-open") openSetup(false);
@@ -1762,10 +1783,11 @@ function renderSpotAir(spot) {
     <p class="hint">Carte, décollages FFVL et balises en temps réel : Spot Air (spotair.mobi).${ids.length ? "" : " Pas de balise identifiée pour ce site : la carte montre les balises proches."}</p>
   </div>`;
 }
+function pickerSpots(s) { return ALL_SPOTS.filter(x => FETCH_IDS.has(x.id) && (s.includeTreuil || x.profile !== "treuil") && (!state.pickFav || s.favs.includes(x.id))); }
 function renderSpotPicker(s) {
-  const groups = byDept(ALL_SPOTS.filter(x => FETCH_IDS.has(x.id) && (s.includeTreuil || x.profile !== "treuil")));
-  return `<div class="pk-all"><button type="button" class="mini-btn" data-action="spots-all" data-on="1">Tout sélectionner</button><button type="button" class="mini-btn" data-action="spots-all" data-on="0">Tout désélectionner</button></div>
-    <div class="picker">${groups.map(([r, list]) => {
+  const groups = byDept(pickerSpots(s));
+  if (!groups.length) return `<p class="hint">Aucun spot dans cette liste.</p>`;
+  return `<div class="picker">${groups.map(([r, list]) => {
     const on = list.filter(x => !s.hidden.includes(x.id)).length;
     return `<details class="pk-reg" data-ids="${esc(list.map(x => x.id).join(","))}" data-mode="show"><summary><label class="check" data-stop="1"><input type="checkbox" class="pk-head" data-region-toggle="${esc(list.map(x => x.id).join(","))}" ${on === list.length ? "checked" : ""}>${esc(r)}</label><span class="pk-n">${on}/${list.length}</span></summary>
       ${list.map(x => `<label class="check pk-spot"><input type="checkbox" data-spot-toggle="${x.id}" ${s.hidden.includes(x.id) ? "" : "checked"}>${kindIcon(x.kind)}${esc(x.name)}</label>`).join("")}</details>`;
@@ -2018,12 +2040,12 @@ function restoreFrom(text) {
   let obj = null; const t = (text || "").trim();
   try { obj = t.startsWith("PARASPOT1:") ? JSON.parse(decodeURIComponent(escape(atob(t.slice(10).replace(/\s/g, ""))))) : JSON.parse(t); } catch { obj = null; }
   if (!obj || obj.app !== "ParaSpot" || typeof obj.settings !== "object") { state.backupMsg = "Ce code ou ce fichier n'est pas une sauvegarde ParaSpot."; renderPanelOnly(); return; }
-  const keep = ["level", "profiles", "scoreMin", "firstDeparture", "lastTrain", "theme", "model", "includeCar", "home", "trans", "includeTreuil", "hidden", "favs", "favsAsked", "custom", "kind", "legendHidden", "showFar", "cgu"];
+  const keep = ["level", "profiles", "scoreMin", "firstDeparture", "lastTrain", "theme", "model", "includeCar", "home", "trans", "includeTreuil", "hidden", "favs", "favsAsked", "custom", "kind", "legendHidden", "showFar", "cgu", "zone"];
   const o = obj.settings, ok = {
     level: v => Object.keys(LEVELS).includes(v), scoreMin: v => cleanNum(v, 30, 90) != null, firstDeparture: v => /^\d{2}:\d{2}$/.test(v), lastTrain: v => /^\d{2}:\d{2}$/.test(v),
     theme: v => ["system", "light", "dark"].includes(v), model: v => MODEL_CHOICES.includes(v), includeCar: v => typeof v === "boolean", includeTreuil: v => typeof v === "boolean",
     hidden: v => Array.isArray(v), favs: v => Array.isArray(v), favsAsked: v => typeof v === "boolean", custom: v => Array.isArray(v), kind: v => ["tout", "gonflage", "vol", "favoris"].includes(v),
-    legendHidden: v => typeof v === "boolean", showFar: v => typeof v === "boolean", cgu: v => v && typeof v.version === "string" && typeof v.date === "string", profiles: v => v && typeof v === "object", trans: v => v && typeof v === "object",
+    legendHidden: v => typeof v === "boolean", showFar: v => typeof v === "boolean", zone: v => ["transport", "france", 25, 50, 100, 200].includes(v), cgu: v => v && typeof v.version === "string" && typeof v.date === "string", profiles: v => v && typeof v === "object", trans: v => v && typeof v === "object",
     home: v => v && cleanNum(v.lat, 41, 52) != null && cleanNum(v.lon, -6, 10) != null
   };
   keep.forEach(k => { if (k in o && ok[k]?.(o[k])) settings[k] = o[k]; });
